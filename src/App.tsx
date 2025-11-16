@@ -13,6 +13,7 @@ import Alunos from "./pages/Alunos";
 import Professores from "./pages/Professores";
 import Financeiro from "./pages/Financeiro";
 import Predio from "./pages/Predio";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
 // Direção
@@ -53,6 +54,7 @@ const AppRoutes = () => {
       <Route path="/professores" element={<ProtectedRoute><Professores /></ProtectedRoute>} />
       <Route path="/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
       <Route path="/predio" element={<ProtectedRoute><Predio /></ProtectedRoute>} />
+      <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
 
       {/* Direção */}
       <Route path="/direcao/usuarios" element={<ProtectedRoute allowedRoles={["direcao"]}><Usuarios /></ProtectedRoute>} />
