@@ -14,16 +14,602 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alunos: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          data_nascimento: string
+          endereco: string | null
+          id: string
+          nome_completo: string
+          responsavel_id: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          data_nascimento: string
+          endereco?: string | null
+          id?: string
+          nome_completo: string
+          responsavel_id: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          data_nascimento?: string
+          endereco?: string | null
+          id?: string
+          nome_completo?: string
+          responsavel_id?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anamneses: {
+        Row: {
+          alergias: string | null
+          aluno_id: string
+          condicoes_medicas: string | null
+          contato_emergencia_nome: string | null
+          contato_emergencia_relacao: string | null
+          contato_emergencia_telefone: string | null
+          created_at: string
+          id: string
+          medicamentos: string | null
+          observacoes: string | null
+          tipo_sanguineo: string | null
+          updated_at: string
+        }
+        Insert: {
+          alergias?: string | null
+          aluno_id: string
+          condicoes_medicas?: string | null
+          contato_emergencia_nome?: string | null
+          contato_emergencia_relacao?: string | null
+          contato_emergencia_telefone?: string | null
+          created_at?: string
+          id?: string
+          medicamentos?: string | null
+          observacoes?: string | null
+          tipo_sanguineo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alergias?: string | null
+          aluno_id?: string
+          condicoes_medicas?: string | null
+          contato_emergencia_nome?: string | null
+          contato_emergencia_relacao?: string | null
+          contato_emergencia_telefone?: string | null
+          created_at?: string
+          id?: string
+          medicamentos?: string | null
+          observacoes?: string | null
+          tipo_sanguineo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamneses_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: true
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atividades: {
+        Row: {
+          ativa: boolean
+          capacidade_maxima: number | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string
+          valor_mensal: number
+        }
+        Insert: {
+          ativa?: boolean
+          capacidade_maxima?: number | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+          valor_mensal: number
+        }
+        Update: {
+          ativa?: boolean
+          capacidade_maxima?: number | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+          valor_mensal?: number
+        }
+        Relationships: []
+      }
+      custos_predio: {
+        Row: {
+          created_at: string
+          data_competencia: string
+          id: string
+          item: string
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_competencia: string
+          id?: string
+          item: string
+          tipo: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data_competencia?: string
+          id?: string
+          item?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      funcionarios: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          funcao: string
+          id: string
+          nome: string
+          salario: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          funcao: string
+          id?: string
+          nome: string
+          salario: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          funcao?: string
+          id?: string
+          nome?: string
+          salario?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      locacoes: {
+        Row: {
+          created_at: string
+          data: string
+          evento: string
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          observacoes: string | null
+          responsavel_nome: string
+          responsavel_telefone: string | null
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          evento: string
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          observacoes?: string | null
+          responsavel_nome: string
+          responsavel_telefone?: string | null
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          evento?: string
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          observacoes?: string | null
+          responsavel_nome?: string
+          responsavel_telefone?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      matriculas: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          id: string
+          observacoes: string | null
+          status: Database["public"]["Enums"]["status_matricula"]
+          turma_id: string
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          id?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["status_matricula"]
+          turma_id: string
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["status_matricula"]
+          turma_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matriculas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matriculas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      observacoes: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data: string
+          id: string
+          observacao: string
+          professor_id: string
+          tipo: string
+          turma_id: string
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data?: string
+          id?: string
+          observacao: string
+          professor_id: string
+          tipo: string
+          turma_id: string
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data?: string
+          id?: string
+          observacao?: string
+          professor_id?: string
+          tipo?: string
+          turma_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "observacoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagamentos: {
+        Row: {
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string
+          forma_pagamento: string | null
+          id: string
+          matricula_id: string
+          observacoes: string | null
+          status: Database["public"]["Enums"]["status_pagamento"]
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          forma_pagamento?: string | null
+          id?: string
+          matricula_id: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["status_pagamento"]
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          forma_pagamento?: string | null
+          id?: string
+          matricula_id?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["status_pagamento"]
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_matricula_id_fkey"
+            columns: ["matricula_id"]
+            isOneToOne: false
+            referencedRelation: "matriculas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presencas: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          matricula_id: string
+          observacao: string | null
+          presente: boolean
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          id?: string
+          matricula_id: string
+          observacao?: string | null
+          presente: boolean
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          matricula_id?: string
+          observacao?: string | null
+          presente?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presencas_matricula_id_fkey"
+            columns: ["matricula_id"]
+            isOneToOne: false
+            referencedRelation: "matriculas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professores: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          especialidade: string | null
+          id: string
+          percentual_comissao: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          especialidade?: string | null
+          id?: string
+          percentual_comissao?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          especialidade?: string | null
+          id?: string
+          percentual_comissao?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          nome_completo: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id: string
+          nome_completo: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          nome_completo?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      turmas: {
+        Row: {
+          ativa: boolean
+          atividade_id: string
+          capacidade_maxima: number
+          created_at: string
+          dias_semana: string[]
+          horario: string
+          id: string
+          nome: string
+          professor_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          atividade_id: string
+          capacidade_maxima: number
+          created_at?: string
+          dias_semana: string[]
+          horario: string
+          id?: string
+          nome: string
+          professor_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          atividade_id?: string
+          capacidade_maxima?: number
+          created_at?: string
+          dias_semana?: string[]
+          horario?: string
+          id?: string
+          nome?: string
+          professor_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turmas_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turmas_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_professor_turma: {
+        Args: { _turma_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_responsavel_aluno: {
+        Args: { _aluno_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "direcao" | "coordenacao" | "professor" | "responsavel"
+      status_matricula: "pendente" | "ativa" | "cancelada" | "concluida"
+      status_pagamento: "pendente" | "pago" | "atrasado" | "cancelado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +736,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["direcao", "coordenacao", "professor", "responsavel"],
+      status_matricula: ["pendente", "ativa", "cancelada", "concluida"],
+      status_pagamento: ["pendente", "pago", "atrasado", "cancelado"],
+    },
   },
 } as const
