@@ -8,6 +8,19 @@ import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Building2, UserCircle, GraduationCap, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z.string().trim().email({ message: "Email inválido" }).max(255, { message: "Email muito longo" }),
+  password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }).max(100, { message: "Senha muito longa" }),
+});
+
+const signupSchema = z.object({
+  name: z.string().trim().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }).max(100, { message: "Nome muito longo" }),
+  email: z.string().trim().email({ message: "Email inválido" }).max(255, { message: "Email muito longo" }),
+  password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }).max(100, { message: "Senha muito longa" }),
+  role: z.enum(["direcao", "coordenacao", "professor", "responsavel"], { message: "Selecione um perfil válido" }),
+});
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -29,7 +42,18 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { error } = await login(email, password);
+    const validation = loginSchema.safeParse({ email, password });
+    
+    if (!validation.success) {
+      toast({
+        title: "Erro de validação",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const { error } = await login(validation.data.email, validation.data.password);
     
     if (error) {
       toast({
@@ -44,16 +68,29 @@ const Login = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRole) {
+    
+    const validation = signupSchema.safeParse({ 
+      name, 
+      email, 
+      password, 
+      role: selectedRole 
+    });
+    
+    if (!validation.success) {
       toast({
-        title: "Selecione um perfil",
-        description: "Por favor, selecione seu perfil de acesso",
+        title: "Erro de validação",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
     }
     
-    const { error } = await signup(email, password, name, selectedRole);
+    const { error } = await signup(
+      validation.data.email, 
+      validation.data.password, 
+      validation.data.name, 
+      validation.data.role
+    );
     
     if (error) {
       toast({
