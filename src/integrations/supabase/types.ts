@@ -151,6 +151,42 @@ export type Database = {
         }
         Relationships: []
       }
+      coordenador_atividades: {
+        Row: {
+          atividade_id: string
+          coordenador_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          atividade_id: string
+          coordenador_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          atividade_id?: string
+          coordenador_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordenador_atividades_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordenador_atividades_coordenador_id_fkey"
+            columns: ["coordenador_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custos_predio: {
         Row: {
           created_at: string
@@ -663,6 +699,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_coordenador_atividade: {
+        Args: { _atividade_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_coordenador_turma: {
+        Args: { _turma_id: string; _user_id: string }
         Returns: boolean
       }
       is_professor_turma: {

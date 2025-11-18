@@ -16,6 +16,11 @@ import {
   Calendar,
   ClipboardList,
   TrendingUp,
+  LayoutDashboard,
+  Dumbbell,
+  UserCog,
+  AlertCircle,
+  BarChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -30,40 +35,43 @@ const getNavigationByRole = (role: string) => {
   switch (role) {
     case "direcao":
       return [
-        { name: "Dashboard", href: "/", icon: Home },
-        { name: "Usuários", href: "/direcao/usuarios", icon: Users },
-        { name: "Professores", href: "/professores", icon: UserCircle },
-        { name: "Atividades", href: "/atividades", icon: GraduationCap },
+        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Alunos", href: "/alunos", icon: Users },
+        { name: "Atividades", href: "/atividades", icon: Dumbbell },
+        { name: "Professores", href: "/professores", icon: GraduationCap },
         { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
+        { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },
-        { name: "Gestão do Prédio", href: "/predio", icon: Building2 },
+        { name: "Prédio", href: "/predio", icon: Building2 },
       ];
     case "coordenacao":
       return [
-        { name: "Dashboard", href: "/", icon: Home },
+        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Minhas Atividades", href: "/atividades", icon: Dumbbell },
+        { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
+        { name: "Alunos", href: "/alunos", icon: Users },
         { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: FileText },
-        { name: "Atividades", href: "/atividades", icon: GraduationCap },
-        { name: "Professores", href: "/professores", icon: UserCircle },
-        { name: "Inadimplentes", href: "/coordenacao/inadimplentes", icon: DollarSign },
-        { name: "Relatórios", href: "/coordenacao/relatorios", icon: TrendingUp },
+        { name: "Inadimplentes", href: "/coordenacao/inadimplentes", icon: AlertCircle },
+        { name: "Relatórios", href: "/coordenacao/relatorios", icon: BarChart },
+        { name: "Financeiro", href: "/financeiro", icon: DollarSign },
       ];
     case "professor":
       return [
-        { name: "Dashboard", href: "/", icon: Home },
-        { name: "Minhas Turmas", href: "/professor/turmas", icon: GraduationCap },
-        { name: "Alunos", href: "/professor/alunos", icon: Users },
-        { name: "Presença", href: "/professor/presenca", icon: UserCheck },
-        { name: "Observações", href: "/professor/observacoes", icon: ClipboardList },
+        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Minhas Turmas", href: "/professor/turmas", icon: Users },
+        { name: "Meus Alunos", href: "/professor/alunos", icon: Users },
+        { name: "Presença", href: "/professor/presenca", icon: Calendar },
+        { name: "Observações", href: "/professor/observacoes", icon: FileText },
         { name: "Comissões", href: "/professor/comissoes", icon: DollarSign },
       ];
     case "responsavel":
       return [
-        { name: "Dashboard", href: "/", icon: Home },
-        { name: "Atividades", href: "/responsavel/atividades", icon: GraduationCap },
+        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Nova Matrícula", href: "/responsavel/nova-matricula", icon: FileText },
+        { name: "Atividades Matriculadas", href: "/responsavel/atividades-matriculadas", icon: Dumbbell },
         { name: "Pagamentos", href: "/responsavel/pagamentos", icon: DollarSign },
-        { name: "Relatórios", href: "/responsavel/relatorios", icon: FileText },
-        { name: "Nova Matrícula", href: "/responsavel/matricula", icon: UserCircle },
-        { name: "Anamnese", href: "/responsavel/anamnese", icon: ClipboardList },
+        { name: "Relatórios do Aluno", href: "/responsavel/relatorios-aluno", icon: BarChart },
+        { name: "Anamnese", href: "/responsavel/anamnese", icon: FileText },
       ];
     default:
       return [];
