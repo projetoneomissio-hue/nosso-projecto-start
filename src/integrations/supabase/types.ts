@@ -109,6 +109,13 @@ export type Database = {
             referencedRelation: "alunos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "anamneses_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: true
+            referencedRelation: "alunos_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       atividades: {
@@ -289,6 +296,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "matriculas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos_secure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "matriculas_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
@@ -337,6 +351,13 @@ export type Database = {
             columns: ["aluno_id"]
             isOneToOne: false
             referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "observacoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos_secure"
             referencedColumns: ["id"]
           },
           {
@@ -587,9 +608,56 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      alunos_secure: {
+        Row: {
+          cpf: string | null
+          created_at: string | null
+          data_nascimento: string | null
+          endereco: string | null
+          id: string | null
+          nome_completo: string | null
+          responsavel_id: string | null
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cpf?: never
+          created_at?: string | null
+          data_nascimento?: string | null
+          endereco?: string | null
+          id?: string | null
+          nome_completo?: string | null
+          responsavel_id?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cpf?: never
+          created_at?: string | null
+          data_nascimento?: string | null
+          endereco?: string | null
+          id?: string | null
+          nome_completo?: string | null
+          responsavel_id?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      get_aluno_cpf: {
+        Args: { aluno_id: string; cpf_value: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -605,6 +673,7 @@ export type Database = {
         Args: { _aluno_id: string; _user_id: string }
         Returns: boolean
       }
+      mask_cpf: { Args: { cpf_value: string }; Returns: string }
     }
     Enums: {
       app_role: "direcao" | "coordenacao" | "professor" | "responsavel"
