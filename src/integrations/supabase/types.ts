@@ -247,6 +247,42 @@ export type Database = {
         }
         Relationships: []
       }
+      invitations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          token: string
+          updated_at: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          token: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       locacoes: {
         Row: {
           created_at: string
@@ -718,6 +754,10 @@ export type Database = {
         Returns: boolean
       }
       mask_cpf: { Args: { cpf_value: string }; Returns: string }
+      validate_invitation_token: {
+        Args: { _email: string; _token: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
     }
     Enums: {
       app_role: "direcao" | "coordenacao" | "professor" | "responsavel"

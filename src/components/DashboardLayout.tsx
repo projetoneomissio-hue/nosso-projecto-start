@@ -21,6 +21,7 @@ import {
   UserCog,
   AlertCircle,
   BarChart,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -41,6 +42,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Professores", href: "/professores", icon: GraduationCap },
         { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
         { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
+        { name: "Convites", href: "/convites", icon: Mail },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },
         { name: "Prédio", href: "/predio", icon: Building2 },
       ];
