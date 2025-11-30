@@ -1,10 +1,10 @@
 project_id = "wanvrxtpqvxvczuzqhui"
 
 [functions.send-invitation-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-payment-reminder]
 verify_jwt = true
 
 [functions.send-notifications]
-verify_jwt = false
+verify_jwt = true

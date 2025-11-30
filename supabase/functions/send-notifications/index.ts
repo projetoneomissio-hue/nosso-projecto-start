@@ -13,17 +13,54 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Verify JWT token from Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const gmailEmail = Deno.env.get("GMAIL_EMAIL");
     const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD");
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
       throw new Error("Supabase credentials not configured");
     }
 
     if (!gmailEmail || !gmailPassword) {
       throw new Error("Gmail credentials not configured");
+    }
+
+    // Verify user authentication
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Check if user has coordenacao or direcao role (only these can trigger notifications)
+    const { data: roleData, error: roleError } = await supabaseAuth
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError || !roleData || !['direcao', 'coordenacao'].includes(roleData.role)) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Insufficient permissions' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);

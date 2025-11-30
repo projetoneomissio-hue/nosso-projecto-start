@@ -20,6 +20,46 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('Received email request');
     
+    // Verify JWT token from Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Check if user has direcao role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError || !roleData || roleData.role !== 'direcao') {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Only direcao role can send invitations' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    
     const { to, inviteToken, role }: EmailRequest = await req.json();
     console.log('Sending invitation to:', to, 'Role:', role);
 
@@ -36,7 +76,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get app URL
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const appUrl = supabaseUrl.replace('supabase.co', 'lovable.app');
 
     // Translate role to Portuguese
