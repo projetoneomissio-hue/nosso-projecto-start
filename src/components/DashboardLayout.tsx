@@ -43,6 +43,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
         { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
         { name: "Convites", href: "/convites", icon: Mail },
+        { name: "Notificações", href: "/coordenacao/notificacoes", icon: AlertCircle },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },
         { name: "Prédio", href: "/predio", icon: Building2 },
       ];
@@ -54,6 +55,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Alunos", href: "/alunos", icon: Users },
         { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: FileText },
         { name: "Inadimplentes", href: "/coordenacao/inadimplentes", icon: AlertCircle },
+        { name: "Notificações", href: "/coordenacao/notificacoes", icon: Mail },
         { name: "Relatórios", href: "/coordenacao/relatorios", icon: BarChart },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },
       ];
