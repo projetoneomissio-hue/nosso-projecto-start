@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Shield, Download } from "lucide-react";
+import { Loader2, Shield, Download, Copy, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function MfaSetup() {
@@ -17,6 +17,9 @@ export default function MfaSetup() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [factorId, setFactorId] = useState<string>("");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -28,6 +31,15 @@ export default function MfaSetup() {
     }
     enrollMfa();
   }, [user, navigate]);
+
+  const generateRecoveryCodes = () => {
+    const codes: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      codes.push(code);
+    }
+    return codes;
+  };
 
   const enrollMfa = async () => {
     setIsLoading(true);
@@ -43,6 +55,10 @@ export default function MfaSetup() {
         setQrCode(data.totp.qr_code);
         setSecret(data.totp.secret);
         setFactorId(data.id);
+        
+        // Gera códigos de recuperação
+        const codes = generateRecoveryCodes();
+        setRecoveryCodes(codes);
       }
     } catch (error: any) {
       console.error("Error enrolling MFA:", error);
@@ -53,6 +69,26 @@ export default function MfaSetup() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const saveRecoveryCodes = async () => {
+    if (!user) return;
+
+    try {
+      const codeInserts = recoveryCodes.map((code) => ({
+        user_id: user.id,
+        code: code,
+      }));
+
+      const { error } = await supabase
+        .from("mfa_recovery_codes")
+        .insert(codeInserts);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error("Error saving recovery codes:", error);
+      throw error;
     }
   };
 
@@ -75,12 +111,16 @@ export default function MfaSetup() {
 
       if (error) throw error;
 
+      // Salva códigos de recuperação
+      await saveRecoveryCodes();
+
       toast({
         title: "MFA ativado com sucesso!",
         description: "Sua conta agora está protegida com autenticação de dois fatores.",
       });
 
-      navigate("/dashboard");
+      // Mostra códigos de recuperação
+      setShowRecoveryCodes(true);
     } catch (error: any) {
       console.error("Error verifying MFA:", error);
       toast({
@@ -93,18 +133,99 @@ export default function MfaSetup() {
     }
   };
 
-  const downloadRecoveryCodes = async () => {
-    // In a real implementation, you would generate and display recovery codes
+  const copyCode = async (code: string) => {
+    await navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const downloadRecoveryCodes = () => {
+    const text = recoveryCodes.join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "neo-missio-recovery-codes.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+    
     toast({
-      title: "Códigos de recuperação",
-      description: "Em desenvolvimento: Salve seus códigos de recuperação em local seguro",
+      title: "Códigos salvos",
+      description: "Guarde estes códigos em local seguro!",
     });
+  };
+
+  const finishSetup = () => {
+    navigate("/");
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (showRecoveryCodes) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Shield className="h-6 w-6 text-primary" />
+              <CardTitle className="text-2xl">Códigos de Recuperação</CardTitle>
+            </div>
+            <CardDescription>
+              Salve estes códigos em local seguro. Você precisará deles caso perca acesso ao seu autenticador.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert variant="destructive">
+              <AlertDescription>
+                <strong>IMPORTANTE:</strong> Estes códigos só são exibidos uma vez. Cada código pode ser usado apenas uma vez.
+              </AlertDescription>
+            </Alert>
+
+            <div className="grid grid-cols-2 gap-2">
+              {recoveryCodes.map((code, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-2 bg-muted rounded-md"
+                >
+                  <code className="text-sm font-mono">{code}</code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyCode(code)}
+                    className="h-6 w-6 p-0"
+                  >
+                    {copiedCode === code ? (
+                      <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Button
+                onClick={downloadRecoveryCodes}
+                variant="outline"
+                className="w-full"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Baixar Códigos
+              </Button>
+
+              <Button onClick={finishSetup} className="w-full">
+                Concluir Configuração
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -157,25 +278,14 @@ export default function MfaSetup() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Button
-                  onClick={verifyAndEnableMfa}
-                  disabled={isVerifying || verificationCode.length !== 6}
-                  className="w-full"
-                >
-                  {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Verificar e Ativar MFA
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={downloadRecoveryCodes}
-                  className="w-full"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Baixar Códigos de Recuperação
-                </Button>
-              </div>
+              <Button
+                onClick={verifyAndEnableMfa}
+                disabled={isVerifying || verificationCode.length !== 6}
+                className="w-full"
+              >
+                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verificar e Ativar MFA
+              </Button>
             </div>
           )}
         </CardContent>
