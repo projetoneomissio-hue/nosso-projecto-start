@@ -43,6 +43,7 @@ import Pagamentos from "./pages/responsavel/Pagamentos";
 import RelatoriosAluno from "./pages/responsavel/RelatoriosAluno";
 import NovaMatricula from "./pages/responsavel/NovaMatricula";
 import Anamnese from "./pages/responsavel/Anamnese";
+import CadastrarAluno from "./pages/responsavel/CadastrarAluno";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ const AppRoutes = () => {
       <Route path="/responsavel/pagamentos" element={<ProtectedRoute allowedRoles={["responsavel"]}><Pagamentos /></ProtectedRoute>} />
       <Route path="/responsavel/relatorios-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><RelatoriosAluno /></ProtectedRoute>} />
       <Route path="/responsavel/anamnese" element={<ProtectedRoute allowedRoles={["responsavel"]}><Anamnese /></ProtectedRoute>} />
+      <Route path="/responsavel/cadastrar-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><CadastrarAluno /></ProtectedRoute>} />
 
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />

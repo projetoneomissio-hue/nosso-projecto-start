@@ -1,125 +1,247 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const Predio = () => {
+  const { data: custos, isLoading: loadingCustos } = useQuery({
+    queryKey: ["custos-predio"],
+    queryFn: async () => {
+      const now = new Date();
+      const currentMonth = format(now, "yyyy-MM");
+
+      const { data, error } = await supabase
+        .from("custos_predio")
+        .select("*")
+        .gte("data_competencia", `${currentMonth}-01`)
+        .order("data_competencia", { ascending: false });
+
+      if (error) throw error;
+
+      const total = (data || []).reduce((acc, c) => acc + Number(c.valor), 0);
+      return { items: data || [], total };
+    },
+  });
+
+  const { data: funcionarios, isLoading: loadingFunc } = useQuery({
+    queryKey: ["funcionarios"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("funcionarios")
+        .select("*")
+        .eq("ativo", true)
+        .order("nome");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: locacoes, isLoading: loadingLoc } = useQuery({
+    queryKey: ["locacoes"],
+    queryFn: async () => {
+      const now = new Date();
+      const currentMonth = format(now, "yyyy-MM");
+
+      const { data, error } = await supabase
+        .from("locacoes")
+        .select("*")
+        .gte("data", `${currentMonth}-01`)
+        .order("data", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const getTipoLabel = (tipo: string) => {
+    return tipo === "fixo" ? "Fixo" : "Variável";
+  };
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Gestão do Prédio</h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie custos, funcionários e locações
+            Controle de custos, funcionários e locações
           </p>
         </div>
 
-        <Tabs defaultValue="custos" className="space-y-6">
+        <Tabs defaultValue="custos" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="custos">Custos</TabsTrigger>
             <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
             <TabsTrigger value="locacoes">Locações</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="custos">
-            <Card>
-              <CardHeader>
-                <CardTitle>Custos Mensais do Prédio</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { item: "Energia Elétrica", valor: 850, tipo: "fixo" },
-                    { item: "Água", valor: 320, tipo: "fixo" },
-                    { item: "Internet", valor: 180, tipo: "fixo" },
-                    { item: "Segurança", valor: 1200, tipo: "fixo" },
-                    { item: "Limpeza", valor: 600, tipo: "variavel" },
-                    { item: "Manutenção", valor: 450, tipo: "variavel" },
-                  ].map((custo, i) => (
-                    <div key={i} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{custo.item}</p>
-                        <Badge variant="secondary" className="mt-1">{custo.tipo}</Badge>
-                      </div>
-                      <p className="text-lg font-bold">R$ {custo.valor}</p>
-                    </div>
-                  ))}
-                  <div className="border-t pt-4 flex justify-between items-center font-bold text-lg">
-                    <span>Total Mensal:</span>
-                    <span>R$ 3.600</span>
+          <TabsContent value="custos" className="space-y-4 mt-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Custos Mensais do Prédio</h2>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Adicionar Custo
+              </Button>
+            </div>
+
+            {loadingCustos ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
                   </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <div className="grid gap-4">
+                  {custos?.items.map((custo) => (
+                    <Card key={custo.id}>
+                      <CardContent className="p-4 flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold">{custo.item}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(custo.data_competencia), "MMMM yyyy", {
+                              locale: ptBR,
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold">
+                            R$ {Number(custo.valor).toFixed(2).replace(".", ",")}
+                          </p>
+                          <Badge variant="secondary">{getTipoLabel(custo.tipo)}</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Total Mensal</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold">
+                      R$ {custos?.total.toFixed(2).replace(".", ",")}
+                    </p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
 
-          <TabsContent value="funcionarios">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Funcionários</CardTitle>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Novo Funcionário
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { nome: "José Silva", funcao: "Zelador", salario: 1800 },
-                    { nome: "Maria Santos", funcao: "Limpeza", salario: 1600 },
-                    { nome: "Pedro Costa", funcao: "Segurança", salario: 2200 },
-                  ].map((func, i) => (
-                    <div key={i} className="flex justify-between items-center p-4 border rounded-lg">
+          <TabsContent value="funcionarios" className="space-y-4 mt-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Funcionários do Prédio</h2>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Adicionar Funcionário
+              </Button>
+            </div>
+
+            {loadingFunc ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <Skeleton className="h-16 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : !funcionarios || funcionarios.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-muted-foreground">
+                    Nenhum funcionário cadastrado
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {funcionarios.map((func) => (
+                  <Card key={func.id}>
+                    <CardContent className="p-4 flex justify-between items-center">
                       <div>
                         <h3 className="font-semibold">{func.nome}</h3>
                         <p className="text-sm text-muted-foreground">{func.funcao}</p>
                       </div>
-                      <p className="font-bold">R$ {func.salario}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="text-right">
+                        <p className="text-lg font-bold">
+                          R$ {Number(func.salario).toFixed(2).replace(".", ",")}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="locacoes">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Locações Agendadas</CardTitle>
-                  <Button className="gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Nova Locação
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { evento: "Aniversário - Maria", data: "28/01/2024", horario: "14h-18h", valor: 800 },
-                    { evento: "Workshop Yoga", data: "03/02/2024", horario: "9h-13h", valor: 600 },
-                    { evento: "Palestra Educação", data: "10/02/2024", horario: "19h-22h", valor: 500 },
-                  ].map((locacao, i) => (
-                    <div key={i} className="p-4 border rounded-lg space-y-2">
-                      <div className="flex justify-between items-start">
+          <TabsContent value="locacoes" className="space-y-4 mt-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Locações Agendadas</h2>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Locação
+              </Button>
+            </div>
+
+            {loadingLoc ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <Skeleton className="h-20 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : !locacoes || locacoes.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-muted-foreground">Nenhuma locação agendada</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {locacoes.map((loc) => (
+                  <Card key={loc.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h3 className="font-semibold">{locacao.evento}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                            <Calendar className="h-3 w-3" />
-                            {locacao.data} • {locacao.horario}
+                          <h3 className="font-semibold">{loc.evento}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {loc.responsavel_nome}
                           </p>
                         </div>
-                        <Badge variant="default">R$ {locacao.valor}</Badge>
+                        <p className="text-lg font-bold">
+                          R$ {Number(loc.valor).toFixed(2).replace(".", ",")}
+                        </p>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="text-sm text-muted-foreground">
+                        <p>
+                          Data: {format(new Date(loc.data), "dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                        <p>
+                          Horário: {loc.horario_inicio} - {loc.horario_fim}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
