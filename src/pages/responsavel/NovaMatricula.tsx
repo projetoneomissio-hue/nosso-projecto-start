@@ -6,145 +6,312 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { z } from "zod";
 
 const matriculaSchema = z.object({
-  nomeAluno: z.string().trim().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }).max(100, { message: "Nome muito longo" }),
-  dataNascimento: z.string().refine((date) => {
-    const birthDate = new Date(date);
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    return age >= 0 && age <= 100;
-  }, { message: "Data de nascimento inválida" }),
-  cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$/, { message: "CPF inválido" }).optional().or(z.literal("")),
-  atividade: z.string().min(1, { message: "Selecione uma atividade" }),
-  turma: z.string().min(1, { message: "Selecione uma turma" }),
+  aluno_id: z.string().uuid("Selecione um aluno"),
+  turma_id: z.string().uuid("Selecione uma turma"),
 });
-
 
 const NovaMatricula = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    nomeAluno: "",
-    dataNascimento: "",
-    cpf: "",
-    atividade: "",
-    turma: "",
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [selectedAlunoId, setSelectedAlunoId] = useState("");
+  const [selectedAtividadeId, setSelectedAtividadeId] = useState("");
+  const [selectedTurmaId, setSelectedTurmaId] = useState("");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Fetch alunos do responsável
+  const { data: alunos, isLoading: loadingAlunos } = useQuery({
+    queryKey: ["alunos-responsavel", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("alunos")
+        .select("id, nome_completo, data_nascimento")
+        .eq("responsavel_id", user.id);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch atividades ativas
+  const { data: atividades } = useQuery({
+    queryKey: ["atividades-ativas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("atividades")
+        .select("id, nome, descricao, valor_mensal")
+        .eq("ativa", true)
+        .order("nome");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch turmas da atividade selecionada
+  const { data: turmas, isLoading: loadingTurmas } = useQuery({
+    queryKey: ["turmas-atividade", selectedAtividadeId],
+    queryFn: async () => {
+      if (!selectedAtividadeId) return [];
+
+      const { data, error } = await supabase
+        .from("turmas")
+        .select(`
+          id,
+          nome,
+          horario,
+          dias_semana,
+          capacidade_maxima,
+          matriculas(count)
+        `)
+        .eq("atividade_id", selectedAtividadeId)
+        .eq("ativa", true);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedAtividadeId,
+  });
+
+  // Mutation para criar matrícula
+  const criarMatriculaMutation = useMutation({
+    mutationFn: async (data: { aluno_id: string; turma_id: string }) => {
+      const dataInicio = new Date().toISOString().split("T")[0];
+
+      const { error } = await supabase
+        .from("matriculas")
+        .insert([
+          {
+            aluno_id: data.aluno_id,
+            turma_id: data.turma_id,
+            data_inicio: dataInicio,
+            status: "pendente",
+          },
+        ]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["matriculas-aluno"] });
+      toast({
+        title: "Matrícula solicitada!",
+        description: "Aguarde a aprovação da coordenação.",
+      });
+      // Limpa formulário
+      setSelectedAlunoId("");
+      setSelectedAtividadeId("");
+      setSelectedTurmaId("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao solicitar matrícula",
+        description: error.message || "Não foi possível solicitar a matrícula.",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const validation = matriculaSchema.safeParse(formData);
-    
-    if (!validation.success) {
-      toast({
-        title: "Erro de validação",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
+
+    try {
+      const validated = matriculaSchema.parse({
+        aluno_id: selectedAlunoId,
+        turma_id: selectedTurmaId,
       });
-      return;
+      setFormErrors({});
+      criarMatriculaMutation.mutate({
+        aluno_id: validated.aluno_id,
+        turma_id: validated.turma_id,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0].toString()] = err.message;
+          }
+        });
+        setFormErrors(errors);
+      }
     }
-    
-    toast({
-      title: "Matrícula solicitada!",
-      description: "Aguarde a aprovação da coordenação",
-    });
-    
-    setFormData({
-      nomeAluno: "",
-      dataNascimento: "",
-      cpf: "",
-      atividade: "",
-      turma: "",
-    });
   };
+
+  const atividadeSelecionada = atividades?.find((a) => a.id === selectedAtividadeId);
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Nova Matrícula</h1>
           <p className="text-muted-foreground mt-1">
-            Inscreva seu filho em uma atividade
+            Inscreva seu aluno em uma atividade
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Dados da Matrícula</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="aluno">Nome do Aluno</Label>
-                <Input 
-                  id="aluno" 
-                  placeholder="Nome completo"
-                  value={formData.nomeAluno}
-                  onChange={(e) => setFormData({ ...formData, nomeAluno: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
+        {loadingAlunos ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : alunos && alunos.length === 0 ? (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Você precisa cadastrar um aluno antes de solicitar uma matrícula.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Dados da Matrícula</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nascimento">Data de Nascimento</Label>
-                  <Input 
-                    id="nascimento" 
-                    type="date"
-                    value={formData.dataNascimento}
-                    onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="aluno">Selecione o Aluno *</Label>
+                  <Select value={selectedAlunoId} onValueChange={setSelectedAlunoId}>
+                    <SelectTrigger id="aluno">
+                      <SelectValue placeholder="Selecione o aluno" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {alunos?.map((aluno) => (
+                        <SelectItem key={aluno.id} value={aluno.id}>
+                          {aluno.nome_completo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formErrors.aluno_id && (
+                    <p className="text-sm text-destructive">{formErrors.aluno_id}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <Input 
-                    id="cpf" 
-                    placeholder="000.000.000-00"
-                    value={formData.cpf}
-                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                  />
+                  <Label htmlFor="atividade">Selecione a Atividade *</Label>
+                  <Select
+                    value={selectedAtividadeId}
+                    onValueChange={(value) => {
+                      setSelectedAtividadeId(value);
+                      setSelectedTurmaId(""); // Reset turma ao mudar atividade
+                    }}
+                  >
+                    <SelectTrigger id="atividade">
+                      <SelectValue placeholder="Selecione uma atividade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {atividades?.map((atividade) => (
+                        <SelectItem key={atividade.id} value={atividade.id}>
+                          {atividade.nome} - R${" "}
+                          {parseFloat(atividade.valor_mensal.toString()).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                          /mês
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="atividade">Atividade</Label>
-                <Select value={formData.atividade} onValueChange={(value) => setFormData({ ...formData, atividade: value })}>
-                  <SelectTrigger id="atividade">
-                    <SelectValue placeholder="Selecione uma atividade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="jiujitsu">Jiu-Jitsu</SelectItem>
-                    <SelectItem value="bale">Balé</SelectItem>
-                    <SelectItem value="musica">Música</SelectItem>
-                    <SelectItem value="desenho">Desenho</SelectItem>
-                    <SelectItem value="reforco">Reforço Escolar</SelectItem>
-                    <SelectItem value="pilates">Pilates</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {atividadeSelecionada && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>{atividadeSelecionada.nome}</strong>
+                      {atividadeSelecionada.descricao && (
+                        <p className="mt-1">{atividadeSelecionada.descricao}</p>
+                      )}
+                      <p className="mt-2 font-semibold">
+                        Valor Mensal: R${" "}
+                        {parseFloat(atividadeSelecionada.valor_mensal.toString()).toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="turma">Turma/Horário</Label>
-                <Select value={formData.turma} onValueChange={(value) => setFormData({ ...formData, turma: value })}>
-                  <SelectTrigger id="turma">
-                    <SelectValue placeholder="Selecione o horário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="seg-qua-14">Segunda e Quarta 14h-15h</SelectItem>
-                    <SelectItem value="ter-qui-15">Terça e Quinta 15h-16h</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {selectedAtividadeId && (
+                  <div className="space-y-2">
+                    <Label htmlFor="turma">Selecione a Turma/Horário *</Label>
+                    {loadingTurmas ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : turmas && turmas.length > 0 ? (
+                      <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
+                        <SelectTrigger id="turma">
+                          <SelectValue placeholder="Selecione o horário" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {turmas.map((turma) => {
+                            const matriculasCount = turma.matriculas?.[0]?.count || 0;
+                            const vagasDisponiveis = turma.capacidade_maxima - matriculasCount;
+                            const turmaLotada = vagasDisponiveis <= 0;
 
-              <div className="pt-4">
-                <Button type="submit" className="w-full">Solicitar Matrícula</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                            return (
+                              <SelectItem
+                                key={turma.id}
+                                value={turma.id}
+                                disabled={turmaLotada}
+                              >
+                                {turma.nome} - {turma.dias_semana.join(", ")} {turma.horario}
+                                {turmaLotada ? " (Lotada)" : ` (${vagasDisponiveis} vagas)`}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma turma disponível para esta atividade.
+                      </p>
+                    )}
+                    {formErrors.turma_id && (
+                      <p className="text-sm text-destructive">{formErrors.turma_id}</p>
+                    )}
+                  </div>
+                )}
+
+                {selectedTurmaId && (
+                  <div className="pt-4">
+                    <Alert>
+                      <AlertDescription>
+                        <strong>Atenção:</strong> Após solicitar a matrícula, aguarde a aprovação
+                        da coordenação. Você será notificado sobre o status.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+
+                <div className="pt-4">
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={criarMatriculaMutation.isPending || !selectedAlunoId || !selectedTurmaId}
+                  >
+                    {criarMatriculaMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Solicitar Matrícula
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );

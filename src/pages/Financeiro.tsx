@@ -1,100 +1,396 @@
+import { useRef } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Download, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 const Financeiro = () => {
+  const { toast } = useToast();
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  // Receita mensal (pagamentos pagos)
+  const { data: receitaMensal } = useQuery({
+    queryKey: ["financeiro-receita-mensal"],
+    queryFn: async () => {
+      const hoje = new Date();
+      const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("valor")
+        .eq("status", "pago")
+        .gte("data_pagamento", primeiroDia.toISOString())
+        .lte("data_pagamento", ultimoDia.toISOString());
+
+      if (error) throw error;
+      return data?.reduce((acc, p) => acc + parseFloat(p.valor.toString()), 0) || 0;
+    },
+  });
+
+  // Receita por atividade
+  const { data: receitaPorAtividade } = useQuery({
+    queryKey: ["financeiro-receita-atividade"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("matriculas")
+        .select(`
+          turma:turmas(
+            atividade:atividades(nome, valor_mensal)
+          )
+        `)
+        .eq("status", "ativa");
+
+      if (error) throw error;
+
+      const receitas: Record<string, number> = {};
+      data?.forEach((m: any) => {
+        const atividade = m.turma?.atividade?.nome;
+        const valor = parseFloat(m.turma?.atividade?.valor_mensal?.toString() || "0");
+        if (atividade) {
+          receitas[atividade] = (receitas[atividade] || 0) + valor;
+        }
+      });
+
+      return Object.entries(receitas).map(([nome, valor]) => ({
+        nome,
+        valor,
+      }));
+    },
+  });
+
+  // Inadimplência
+  const { data: inadimplencia } = useQuery({
+    queryKey: ["financeiro-inadimplencia"],
+    queryFn: async () => {
+      const hoje = new Date().toISOString().split("T")[0];
+
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("valor")
+        .eq("status", "pendente")
+        .lt("data_vencimento", hoje);
+
+      if (error) throw error;
+
+      return {
+        valor: data?.reduce((acc, p) => acc + parseFloat(p.valor.toString()), 0) || 0,
+        quantidade: data?.length || 0,
+      };
+    },
+  });
+
+  // Receita dos últimos 6 meses
+  const { data: receitaMeses, isLoading: loadingMeses } = useQuery({
+    queryKey: ["financeiro-receita-meses"],
+    queryFn: async () => {
+      const meses = [];
+      const hoje = new Date();
+
+      for (let i = 5; i >= 0; i--) {
+        const mes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+        const primeiroDia = new Date(mes.getFullYear(), mes.getMonth(), 1);
+        const ultimoDia = new Date(mes.getFullYear(), mes.getMonth() + 1, 0);
+
+        const { data, error } = await supabase
+          .from("pagamentos")
+          .select("valor")
+          .eq("status", "pago")
+          .gte("data_pagamento", primeiroDia.toISOString())
+          .lte("data_pagamento", ultimoDia.toISOString());
+
+        if (error) throw error;
+
+        const total = data?.reduce((acc, p) => acc + parseFloat(p.valor.toString()), 0) || 0;
+
+        meses.push({
+          mes: mes.toLocaleDateString("pt-BR", { month: "short" }),
+          receita: total,
+        });
+      }
+
+      return meses;
+    },
+  });
+
+  // Despesas (custos do prédio + salários dos funcionários)
+  const { data: despesas } = useQuery({
+    queryKey: ["financeiro-despesas"],
+    queryFn: async () => {
+      const hoje = new Date();
+      const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+      const dataCompetencia = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
+
+      const { data: custos, error: e1 } = await supabase
+        .from("custos_predio")
+        .select("valor")
+        .eq("data_competencia", dataCompetencia);
+
+      const { data: funcionarios, error: e2 } = await supabase
+        .from("funcionarios")
+        .select("salario")
+        .eq("ativo", true);
+
+      if (e1 || e2) throw e1 || e2;
+
+      const totalCustos = custos?.reduce((acc, c) => acc + parseFloat(c.valor.toString()), 0) || 0;
+      const totalSalarios = funcionarios?.reduce((acc, f) => acc + parseFloat(f.salario.toString()), 0) || 0;
+
+      return {
+        total: totalCustos + totalSalarios,
+        custos: totalCustos,
+        salarios: totalSalarios,
+      };
+    },
+  });
+
+  const lucroLiquido = (receitaMensal || 0) - (despesas?.total || 0);
+  const margemLucro = receitaMensal ? ((lucroLiquido / receitaMensal) * 100).toFixed(1) : 0;
+
+  const exportarPDF = async () => {
+    if (!reportRef.current) return;
+
+    try {
+      toast({
+        title: "Gerando PDF...",
+        description: "Aguarde enquanto o relatório é gerado.",
+      });
+
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= 297;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+
+      pdf.save(`relatorio-financeiro-${new Date().toISOString().split("T")[0]}.pdf`);
+
+      toast({
+        title: "PDF gerado!",
+        description: "O relatório foi baixado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível gerar o relatório.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Financeiro</h1>
-          <p className="text-muted-foreground mt-1">
-            Controle financeiro completo do projeto
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Financeiro</h1>
+            <p className="text-muted-foreground mt-1">
+              Controle financeiro completo do projeto
+            </p>
+          </div>
+          <Button onClick={exportarPDF} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Exportar PDF
+          </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Receita Mensal</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">R$ 24.500</div>
-              <p className="text-xs text-muted-foreground">+8% do mês anterior</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Despesas</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">R$ 12.300</div>
-              <p className="text-xs text-muted-foreground">Fixas + Variáveis</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">R$ 12.200</div>
-              <p className="text-xs text-muted-foreground">Margem de 49.8%</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inadimplência</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">R$ 1.850</div>
-              <p className="text-xs text-muted-foreground">8 mensalidades</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Receitas por Categoria</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { categoria: "Mensalidades", valor: 18600 },
-                { categoria: "Locação do Prédio", valor: 4500 },
-                { categoria: "Eventos", valor: 1400 },
-              ].map((item, i) => (
-                <div key={i} className="flex justify-between items-center">
-                  <span className="text-sm">{item.categoria}</span>
-                  <span className="font-medium">R$ {item.valor.toLocaleString()}</span>
+        <div ref={reportRef} className="space-y-6">
+          {/* KPIs */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Receita Mensal</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  R$ {(receitaMensal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <p className="text-xs text-muted-foreground">Mês atual</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Despesas por Categoria</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { categoria: "Salários", valor: 8500 },
-                { categoria: "Manutenção", valor: 2300 },
-                { categoria: "Utilities", valor: 1500 },
-              ].map((item, i) => (
-                <div key={i} className="flex justify-between items-center">
-                  <span className="text-sm">{item.categoria}</span>
-                  <span className="font-medium">R$ {item.valor.toLocaleString()}</span>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Despesas</CardTitle>
+                <TrendingDown className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  R$ {(despesas?.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <p className="text-xs text-muted-foreground">Fixas + Variáveis</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${lucroLiquido >= 0 ? "text-success" : "text-destructive"}`}>
+                  R$ {lucroLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </div>
+                <p className="text-xs text-muted-foreground">Margem de {margemLucro}%</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Inadimplência</CardTitle>
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  R$ {(inadimplencia?.valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </div>
+                <p className="text-xs text-muted-foreground">{inadimplencia?.quantidade || 0} mensalidades</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráficos */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Receita dos Últimos 6 Meses</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingMeses ? (
+                  <div className="flex items-center justify-center h-[300px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={receitaMeses}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="mes" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value: number) => [
+                          `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+                          "Receita"
+                        ]}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="receita" stroke="#8884d8" name="Receita" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Receita por Atividade</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {receitaPorAtividade && receitaPorAtividade.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={receitaPorAtividade}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry) => `${entry.nome}: R$ ${entry.valor.toFixed(0)}`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="valor"
+                      >
+                        {receitaPorAtividade.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => [
+                          `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+                          "Receita"
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    Sem dados de atividades
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Detalhamento */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Receitas por Categoria</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Mensalidades</span>
+                  <span className="font-medium">
+                    R$ {(receitaMensal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Despesas por Categoria</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {despesas && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Salários</span>
+                      <span className="font-medium">
+                        R$ {despesas.salarios.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Custos do Prédio</span>
+                      <span className="font-medium">
+                        R$ {despesas.custos.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </DashboardLayout>
