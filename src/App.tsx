@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
+import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Atividades from "./pages/Atividades";
@@ -50,11 +51,12 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
+      <Route path="/" element={<Index />} />
+      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
       <Route path="/mfa-setup" element={<MfaSetup />} />
       <Route path="/mfa-verify" element={<MfaVerify />} />
       
-      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/atividades" element={<ProtectedRoute><Atividades /></ProtectedRoute>} />
       <Route path="/alunos" element={<ProtectedRoute><Alunos /></ProtectedRoute>} />
       <Route path="/professores" element={<ProtectedRoute><Professores /></ProtectedRoute>} />

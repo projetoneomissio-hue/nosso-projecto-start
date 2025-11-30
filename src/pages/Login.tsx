@@ -138,7 +138,7 @@ const Login = () => {
       }
     }
 
-    navigate("/");
+    navigate("/dashboard");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
