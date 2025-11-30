@@ -24,6 +24,7 @@ import Convites from "./pages/direcao/Convites";
 import Matriculas from "./pages/direcao/Matriculas";
 
 // Coordenação
+import TurmasCoordenacao from "./pages/coordenacao/Turmas";
 import MatriculasPendentes from "./pages/coordenacao/MatriculasPendentes";
 import Inadimplentes from "./pages/coordenacao/Inadimplentes";
 import Relatorios from "./pages/coordenacao/Relatorios";
@@ -67,6 +68,7 @@ const AppRoutes = () => {
       <Route path="/direcao/matriculas" element={<ProtectedRoute allowedRoles={["direcao"]}><Matriculas /></ProtectedRoute>} />
 
       {/* Coordenação */}
+      <Route path="/coordenacao/turmas" element={<ProtectedRoute allowedRoles={["coordenacao"]}><TurmasCoordenacao /></ProtectedRoute>} />
       <Route path="/coordenacao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["coordenacao"]}><MatriculasPendentes /></ProtectedRoute>} />
       <Route path="/coordenacao/inadimplentes" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Inadimplentes /></ProtectedRoute>} />
       <Route path="/coordenacao/relatorios" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Relatorios /></ProtectedRoute>} />
@@ -79,10 +81,10 @@ const AppRoutes = () => {
       <Route path="/professor/comissoes" element={<ProtectedRoute allowedRoles={["professor"]}><Comissoes /></ProtectedRoute>} />
 
       {/* Responsáveis */}
-      <Route path="/responsavel/atividades" element={<ProtectedRoute allowedRoles={["responsavel"]}><AtividadesMatriculadas /></ProtectedRoute>} />
+      <Route path="/responsavel/nova-matricula" element={<ProtectedRoute allowedRoles={["responsavel"]}><NovaMatricula /></ProtectedRoute>} />
+      <Route path="/responsavel/atividades-matriculadas" element={<ProtectedRoute allowedRoles={["responsavel"]}><AtividadesMatriculadas /></ProtectedRoute>} />
       <Route path="/responsavel/pagamentos" element={<ProtectedRoute allowedRoles={["responsavel"]}><Pagamentos /></ProtectedRoute>} />
-      <Route path="/responsavel/relatorios" element={<ProtectedRoute allowedRoles={["responsavel"]}><RelatoriosAluno /></ProtectedRoute>} />
-      <Route path="/responsavel/matricula" element={<ProtectedRoute allowedRoles={["responsavel"]}><NovaMatricula /></ProtectedRoute>} />
+      <Route path="/responsavel/relatorios-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><RelatoriosAluno /></ProtectedRoute>} />
       <Route path="/responsavel/anamnese" element={<ProtectedRoute allowedRoles={["responsavel"]}><Anamnese /></ProtectedRoute>} />
 
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
