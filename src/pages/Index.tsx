@@ -14,6 +14,10 @@ import volleyballImage from "@/assets/volleyball-activity.jpg";
 import balletImage from "@/assets/ballet-activity.jpg";
 import therapyImage from "@/assets/therapy-counseling.jpg";
 import drawingImage from "@/assets/drawing-activity.jpg";
+import englishImage from "@/assets/english-activity.jpg";
+import cordasAmorImage from "@/assets/cordas-amor-activity.jpg";
+import womenCounselingImage from "@/assets/women-counseling-activity.jpg";
+import menCounselingImage from "@/assets/men-counseling-activity.jpg";
 import testimonialMaria from "@/assets/testimonial-maria.jpg";
 import testimonialLucas from "@/assets/testimonial-lucas.jpg";
 import testimonialCarlos from "@/assets/testimonial-carlos.jpg";
@@ -21,81 +25,132 @@ import testimonialCarlos from "@/assets/testimonial-carlos.jpg";
 const Index = () => {
   const activities = [
     {
-      title: "Reforço Escolar",
-      description: "Apoio educacional para crianças de 1 a 9 anos, focado em alfabetização e desenvolvimento acadêmico.",
-      price: "R$ 40,00",
-      frequency: "1x por semana",
-      schedule: "Segunda a Quinta-feira",
-      targetAudience: "Crianças de 1 a 9 anos - Apenas alunos de escola pública",
-      image: educationImage,
-      icon: BookOpen,
-      gradient: "from-blue-500 to-cyan-500"
-    },
-    {
-      title: "Jiu-Jitsu",
-      description: "Artes marciais para desenvolvimento de disciplina, respeito e condicionamento físico.",
-      price: "R$ 90,00 (Adulto) / R$ 50,00 (Infantil)",
-      frequency: "2x por semana",
-      schedule: "Terça e Quinta-feira",
-      targetAudience: "Crianças a partir de 4 anos e adultos acima de 11 anos",
-      image: jiujitsuImage,
-      icon: Trophy,
-      gradient: "from-orange-500 to-red-500"
-    },
-    {
-      title: "Aulas de Música",
-      description: "Teclado e Violão para despertar o talento musical e expressão artística.",
-      price: "R$ 90,00",
-      frequency: "1x por semana",
-      schedule: "Sábados (horários variados)",
-      targetAudience: "Crianças alfabetizadas e adultos",
-      image: musicImage,
-      icon: Music,
-      gradient: "from-purple-500 to-pink-500"
-    },
-    {
       title: "Aulas de Desenho",
-      description: "Expressão artística e desenvolvimento da criatividade através do desenho.",
-      price: "R$ 60,00",
+      description: "Técnicas de desenho incluindo animes, cartoons, realismo, anatomia humana, sombras, perspectivas e expressões.",
+      price: "R$ 60,00/mês",
       frequency: "1x por semana",
-      schedule: "Sábados",
-      targetAudience: "Crianças e adolescentes",
+      schedule: "Quartas-feiras, 19:00-20:00",
+      targetAudience: "7-12 anos",
+      note: "Criança deve trazer caderno, lápis, borracha, lápis de cor, giz e outros materiais conforme o professor pedir.",
       image: drawingImage,
       icon: Palette,
       gradient: "from-indigo-500 to-purple-500"
     },
     {
-      title: "Pilates Solo",
-      description: "Exercícios de baixo impacto para fortalecimento, flexibilidade e bem-estar.",
-      price: "R$ 90,00",
+      title: "Aulas de Inglês",
+      description: "Aulas de inglês utilizando material cristão, ensinando a língua de forma divertida e interativa.",
+      price: "R$ 60,00/mês",
+      frequency: "1x por semana",
+      schedule: "Basic (7-12 anos): Sábados 9:00-11:00 | Basic 1 e 2: Segundas (fila de espera)",
+      targetAudience: "Crianças e adolescentes de 7-15 anos",
+      note: "Material didático semestral: R$ 100,00",
+      image: englishImage,
+      icon: BookOpen,
+      gradient: "from-blue-500 to-cyan-500"
+    },
+    {
+      title: "Aulas de Música",
+      description: "Violão e Teclado - Currículo básico de formação musical para crianças e adultos.",
+      price: "R$ 100,00/mês + R$ 25,00/apostila semestral",
+      frequency: "1x por semana",
+      schedule: "Sábados: 9:45 (violão/teclado iniciantes) | 11:00 (teclado iniciantes)",
+      targetAudience: "Crianças e adultos",
+      note: "Necessário ter instrumentos.",
+      image: musicImage,
+      icon: Music,
+      gradient: "from-purple-500 to-pink-500"
+    },
+    {
+      title: "Ballet Infantil",
+      description: "Técnica clássica e método Vaganova para desenvolvimento da expressão corporal e postura.",
+      price: "R$ 60,00/mês",
+      frequency: "1x por semana",
+      schedule: "4-6 anos: Sábados 10:15-11:15 | 7-10 anos: Sábados 9:00-10:00",
+      targetAudience: "Crianças de 4-10 anos",
+      image: balletImage,
+      icon: Sparkles,
+      gradient: "from-pink-500 to-rose-500"
+    },
+    {
+      title: "Cordas de Amor",
+      description: "Encontro mensal para crianças neurodivergentes e roda de conversa para pais.",
+      price: "Gratuito",
+      frequency: "Mensal",
+      schedule: "Sábados 17:00-18:30",
+      targetAudience: "Crianças neurodivergentes e famílias",
+      note: "Agenda enviada após a inscrição.",
+      image: cordasAmorImage,
+      icon: Heart,
+      gradient: "from-rose-500 to-pink-500"
+    },
+    {
+      title: "Escuta Terapêutica Cristã",
+      description: "Acompanhamento terapêutico para mulheres, proporcionando reflexão e autoconhecimento.",
+      price: "R$ 70,00/mês",
+      frequency: "4 sessões de 1h",
+      schedule: "Terças, Quartas e Sábados (horário a consultar)",
+      targetAudience: "Mulheres",
+      note: "Sessões presenciais, previamente agendadas.",
+      image: womenCounselingImage,
+      icon: Heart,
+      gradient: "from-purple-500 to-violet-500"
+    },
+    {
+      title: "Jiu-Jitsu",
+      description: "Artes marciais ensinando técnica e disciplina para todas as idades.",
+      price: "R$ 70,00/mês (Infantil) | R$ 100,00/mês (Adulto)",
       frequency: "2x por semana",
-      schedule: "Terça e Quinta-feira",
-      targetAudience: "Exclusivo para mulheres",
+      schedule: "Infantil (4-14 anos): 3ª e 5ª | Adulto (14+ anos): 2ª e 4ª (19:30-21:00)",
+      targetAudience: "Crianças a partir de 4 anos e adultos",
+      note: "Infantil: 4-6 anos (18:15-19:00) | 7-9 anos (19:00-20:00) | 10-14 anos (20:00-21:00)",
+      image: jiujitsuImage,
+      icon: Trophy,
+      gradient: "from-orange-500 to-red-500"
+    },
+    {
+      title: "Pilates Solo",
+      description: "Exercícios para melhorar postura, equilíbrio e coordenação.",
+      price: "R$ 100,00/mês",
+      frequency: "2x por semana",
+      schedule: "Terça e Quinta-feira, 13:30-14:30",
+      targetAudience: "Adultos",
       image: pilatesImage,
       icon: Activity,
       gradient: "from-green-500 to-emerald-500"
     },
     {
+      title: "Reforço Escolar",
+      description: "Apoio educacional para melhorar o desempenho acadêmico das crianças.",
+      price: "R$ 50,00/mês",
+      frequency: "Várias opções",
+      schedule: "Terças: 17:30, 18:30, 19:30 | Quintas: 17:30, 18:30 | Sextas: 9:00, 10:00",
+      targetAudience: "6º ao 1º ano",
+      image: educationImage,
+      icon: BookOpen,
+      gradient: "from-blue-500 to-cyan-500"
+    },
+    {
       title: "Vôlei",
-      description: "Esporte coletivo desenvolvendo trabalho em equipe, coordenação motora e saúde.",
-      price: "R$ 50,00",
-      frequency: "Sábados",
-      schedule: "Horários variados por categoria",
-      targetAudience: "Crianças de 8 a 14 anos e adultos (turmas mistas)",
+      description: "Esporte coletivo ensinando técnica e promovendo atividade física.",
+      price: "R$ 60,00/mês",
+      frequency: "1x por semana",
+      schedule: "Infantil (8-14 anos): Sábados 9:45-10:45 | Adulto (turma mista): Sábados 8:30-9:30",
+      targetAudience: "Crianças a partir de 8 anos e adultos",
       image: volleyballImage,
       icon: Users,
       gradient: "from-yellow-500 to-orange-500"
     },
     {
-      title: "Ballet Infantil",
-      description: "Dança clássica para desenvolvimento da expressão corporal, postura e graciosidade.",
-      price: "R$ 60,00",
-      frequency: "Sábados",
-      schedule: "Horários por faixa etária",
-      targetAudience: "Crianças de 4 a 10 anos",
-      image: balletImage,
-      icon: Sparkles,
-      gradient: "from-pink-500 to-rose-500"
+      title: "Aconselhamento para Homens",
+      description: "Espaço de encorajamento ao crescimento emocional e espiritual baseado em valores cristãos.",
+      price: "Gratuito",
+      frequency: "4 sessões de 1h",
+      schedule: "Conforme agenda",
+      targetAudience: "Público masculino",
+      note: "Sessões presenciais, previamente agendadas.",
+      image: menCounselingImage,
+      icon: Heart,
+      gradient: "from-slate-500 to-gray-500"
     }
   ];
 
@@ -153,13 +208,18 @@ const Index = () => {
                 Centro Social Comunitário
               </Badge>
               <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-                Transformando Vidas Através da
-                <span className="text-primary"> Educação e Esporte</span>
+                Atividades 2026
+                <span className="text-primary"> - Inscreva-se!</span>
               </h1>
               <p className="text-lg text-muted-foreground">
-                O Centro Social Neo Missio oferece atividades esportivas, educacionais e terapêuticas 
-                para crianças, jovens e adultos. Promovendo desenvolvimento integral, saúde e inclusão social.
+                Confira nossas atividades e se inscreva! Algumas atividades estarão em lista de espera. 
+                Após a inscrição, nos chame no WhatsApp para darmos continuidade na sua matrícula.
               </p>
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mt-4">
+                <p className="text-sm font-semibold">
+                  Taxa de matrícula: <span className="text-primary text-lg">R$ 25,00</span>
+                </p>
+              </div>
               <div className="flex flex-wrap gap-4">
                 <a href="#atividades">
                   <Button size="lg" className="gap-2">
@@ -186,7 +246,7 @@ const Index = () => {
                 <div className="flex items-center gap-3">
                   <Heart className="h-8 w-8" />
                   <div>
-                    <p className="text-2xl font-bold">7+</p>
+                    <p className="text-2xl font-bold">11</p>
                     <p className="text-sm">Atividades Disponíveis</p>
                   </div>
                 </div>
@@ -295,10 +355,15 @@ const Index = () => {
                         <span className="font-medium text-right text-xs">{activity.schedule}</span>
                       </div>
                     </div>
-                    <div className="pt-2 border-t border-border">
+                    <div className="pt-2 border-t border-border space-y-1">
                       <p className="text-xs text-muted-foreground">
                         <span className="font-medium text-foreground">Público:</span> {activity.targetAudience}
                       </p>
+                      {activity.note && (
+                        <p className="text-xs text-muted-foreground italic">
+                          {activity.note}
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -312,16 +377,28 @@ const Index = () => {
                 <h3 className="text-2xl font-bold mb-4">
                   Informações para Inscrição
                 </h3>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-muted-foreground mb-4">
                   Para se inscrever nas atividades, acesse o formulário de matrícula através do link abaixo. 
                   As vagas são limitadas e preenchidas por ordem de chegada.
                 </p>
-                <Button asChild size="lg" className="gap-2">
-                  <a href="https://forms.gle/oKs6ari7ChgxobAQ9" target="_blank" rel="noopener noreferrer">
-                    Realizar Inscrição
-                    <ArrowRight className="h-5 w-5" />
-                  </a>
-                </Button>
+                <p className="text-sm text-muted-foreground mb-6">
+                  <span className="font-semibold">Observação:</span> Algumas atividades estarão em lista de espera. 
+                  Após a inscrição, nos chame no WhatsApp para darmos continuidade na sua matrícula.
+                </p>
+                <div className="flex flex-col gap-4">
+                  <Button asChild size="lg" className="gap-2">
+                    <a href="https://forms.gle/oKs6ari7ChgxobAQ9" target="_blank" rel="noopener noreferrer">
+                      Realizar Inscrição
+                      <ArrowRight className="h-5 w-5" />
+                    </a>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="gap-2">
+                    <a href="https://wa.me/5541984406992" target="_blank" rel="noopener noreferrer">
+                      Contato WhatsApp
+                      <ArrowRight className="h-5 w-5" />
+                    </a>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -484,9 +561,11 @@ const Index = () => {
             </div>
             <div>
               <h3 className="font-semibold mb-4">Contato</h3>
-              <p className="text-sm text-muted-foreground">
-                Entre em contato conosco para mais informações sobre as atividades e matrículas.
-              </p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>Rua Camilo Castelo Branco, 523</li>
+                <li>Vila Lindóia</li>
+                <li>WhatsApp: (41) 98440-6992</li>
+              </ul>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
