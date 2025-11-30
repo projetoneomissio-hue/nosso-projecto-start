@@ -14,6 +14,8 @@ import Professores from "./pages/Professores";
 import Financeiro from "./pages/Financeiro";
 import Predio from "./pages/Predio";
 import Configuracoes from "./pages/Configuracoes";
+import MfaSetup from "./pages/MfaSetup";
+import MfaVerify from "./pages/MfaVerify";
 import NotFound from "./pages/NotFound";
 
 // Direção
@@ -48,6 +50,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
+      <Route path="/mfa-setup" element={<MfaSetup />} />
+      <Route path="/mfa-verify" element={<MfaVerify />} />
       
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/atividades" element={<ProtectedRoute><Atividades /></ProtectedRoute>} />

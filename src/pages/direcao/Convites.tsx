@@ -74,13 +74,33 @@ export default function Convites() {
         .single();
 
       if (error) throw error;
+
+      // Send invitation email via edge function
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
+          body: {
+            to: validation.data.email,
+            inviteToken: token,
+            role: validation.data.role,
+          },
+        });
+
+        if (emailError) {
+          console.error('Error sending invitation email:', emailError);
+          // Don't fail the invitation creation if email fails
+        }
+      } catch (emailError) {
+        console.error('Error invoking email function:', emailError);
+        // Continue even if email fails
+      }
+
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
       toast({
-        title: "Convite criado!",
-        description: `Convite enviado para ${data.email}`,
+        title: "Convite criado e enviado!",
+        description: `Email enviado para ${data.email} com o token de convite.`,
       });
       setOpen(false);
       setEmail("");
