@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Heart, Users, Trophy, Music, BookOpen, Activity, Sparkles } from "lucide-react";
+import { ArrowRight, Heart, Users, Trophy, Music, BookOpen, Activity, Sparkles, Quote, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import logoNeoMissio from "@/assets/logo-neo-missio.png";
 import heroImage from "@/assets/hero-neo-missio.jpg";
 import jiujitsuImage from "@/assets/jiujitsu-activity.jpg";
 import musicImage from "@/assets/music-activity.jpg";
@@ -12,6 +13,10 @@ import pilatesImage from "@/assets/pilates-activity.jpg";
 import volleyballImage from "@/assets/volleyball-activity.jpg";
 import balletImage from "@/assets/ballet-activity.jpg";
 import therapyImage from "@/assets/therapy-counseling.jpg";
+import drawingImage from "@/assets/drawing-activity.jpg";
+import testimonialMaria from "@/assets/testimonial-maria.jpg";
+import testimonialLucas from "@/assets/testimonial-lucas.jpg";
+import testimonialCarlos from "@/assets/testimonial-carlos.jpg";
 
 const Index = () => {
   const activities = [
@@ -49,6 +54,17 @@ const Index = () => {
       gradient: "from-purple-500 to-pink-500"
     },
     {
+      title: "Aulas de Desenho",
+      description: "Expressão artística e desenvolvimento da criatividade através do desenho.",
+      price: "R$ 60,00",
+      frequency: "1x por semana",
+      schedule: "Sábados",
+      targetAudience: "Crianças e adolescentes",
+      image: drawingImage,
+      icon: Palette,
+      gradient: "from-indigo-500 to-purple-500"
+    },
+    {
       title: "Pilates Solo",
       description: "Exercícios de baixo impacto para fortalecimento, flexibilidade e bem-estar.",
       price: "R$ 90,00",
@@ -83,15 +99,39 @@ const Index = () => {
     }
   ];
 
+  const testimonials = [
+    {
+      name: "Maria Silva",
+      role: "Mãe da Júlia",
+      photo: testimonialMaria,
+      feedback: "O Neo Missio transformou a vida da minha filha. Ela melhorou muito na escola com o reforço escolar e adora as aulas de ballet. Agradeço imensamente todo o trabalho da equipe!"
+    },
+    {
+      name: "Lucas Ferreira",
+      role: "Aluno de Jiu-Jitsu",
+      photo: testimonialLucas,
+      feedback: "Comecei no Jiu-Jitsu há 2 anos e minha vida mudou completamente. Aprendi disciplina, respeito e fiz grandes amigos. O projeto social é incrível!"
+    },
+    {
+      name: "Carlos Roberto",
+      role: "Pai do Pedro",
+      photo: testimonialCarlos,
+      feedback: "Meu filho participa do vôlei e das aulas de desenho. Ver ele feliz e desenvolvendo suas habilidades não tem preço. O Neo Missio é uma bênção para nossa comunidade!"
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="fixed top-0 w-full bg-background/95 backdrop-blur-sm border-b border-border z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-primary">Neo Missio</h1>
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <img src={logoNeoMissio} alt="Neo Missio" className="h-12 w-auto" />
           <div className="flex gap-4 items-center">
             <a href="#atividades" className="text-sm font-medium hover:text-primary transition-colors">
               Atividades
+            </a>
+            <a href="#depoimentos" className="text-sm font-medium hover:text-primary transition-colors">
+              Depoimentos
             </a>
             <a href="#terapia" className="text-sm font-medium hover:text-primary transition-colors">
               Aconselhamento
@@ -288,8 +328,49 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section id="depoimentos" className="py-20 bg-muted/30 scroll-mt-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge variant="outline" className="w-fit mx-auto mb-4">Depoimentos</Badge>
+            <h2 className="text-4xl font-bold text-foreground mb-4">O Que Dizem Sobre Nós</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Depoimentos de alunos, responsáveis e famílias que fazem parte da nossa comunidade
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="relative overflow-hidden border-2 hover:border-primary transition-all duration-300 hover:shadow-xl">
+                <CardHeader className="text-center pb-4">
+                  <div className="mx-auto mb-4 relative">
+                    <div className="w-24 h-24 rounded-full overflow-hidden mx-auto border-4 border-primary">
+                      <img 
+                        src={testimonial.photo} 
+                        alt={testimonial.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <Quote className="absolute -top-2 -right-2 h-8 w-8 text-primary/20" />
+                  </div>
+                  <CardTitle className="text-xl">{testimonial.name}</CardTitle>
+                  <CardDescription className="text-sm font-medium text-primary">
+                    {testimonial.role}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-center italic leading-relaxed">
+                    "{testimonial.feedback}"
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Therapy Section */}
-      <section id="terapia" className="py-20 bg-muted/30 scroll-mt-20">
+      <section id="terapia" className="py-20 scroll-mt-20">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
@@ -355,69 +436,61 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4">
-          <Card className="bg-gradient-to-r from-primary to-primary/80 border-none text-primary-foreground overflow-hidden relative">
-            <div className="absolute inset-0 bg-grid-white/10" />
-            <CardContent className="p-12 text-center relative z-10">
-              <h2 className="text-4xl font-bold mb-4">
-                Faça Parte da Nossa Comunidade
-              </h2>
-              <p className="text-lg mb-8 text-primary-foreground/90 max-w-2xl mx-auto">
-                Junte-se a centenas de pessoas que já transformaram suas vidas através das 
-                atividades e serviços do Centro Social Neo Missio.
-              </p>
-              <div className="flex flex-wrap gap-4 justify-center">
-                <Button asChild size="lg" variant="secondary" className="gap-2">
-                  <a href="https://forms.gle/oKs6ari7ChgxobAQ9" target="_blank" rel="noopener noreferrer">
-                    Inscrever-se Agora
-                    <ArrowRight className="h-5 w-5" />
-                  </a>
+          <div className="text-center max-w-3xl mx-auto">
+            <h2 className="text-4xl font-bold mb-4">
+              Faça Parte da Nossa Comunidade
+            </h2>
+            <p className="text-lg mb-8 opacity-90">
+              Junte-se a centenas de pessoas que já transformaram suas vidas através das 
+              atividades e serviços do Centro Social Neo Missio.
+            </p>
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Button asChild size="lg" variant="secondary" className="gap-2">
+                <a href="https://forms.gle/oKs6ari7ChgxobAQ9" target="_blank" rel="noopener noreferrer">
+                  Inscrever-se Agora
+                  <ArrowRight className="h-5 w-5" />
+                </a>
+              </Button>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="gap-2 bg-primary-foreground/10 hover:bg-primary-foreground/20 border-primary-foreground text-primary-foreground">
+                  Acessar Sistema
                 </Button>
-                <Link to="/login">
-                  <Button size="lg" variant="outline" className="gap-2 bg-background/10 hover:bg-background/20 border-primary-foreground/20 text-primary-foreground">
-                    Acessar Sistema
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-border bg-muted/30">
+      <footer className="bg-muted/30 py-12">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-bold text-lg mb-4">Centro Social Neo Missio</h3>
+              <img src={logoNeoMissio} alt="Neo Missio" className="h-12 w-auto mb-4" />
               <p className="text-sm text-muted-foreground">
-                Transformando vidas através da educação, esporte e desenvolvimento pessoal.
+                Transformando vidas através da educação, esporte e cultura desde 2020.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Links Rápidos</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#atividades" className="hover:text-primary transition-colors">Atividades</a></li>
-                <li><a href="#terapia" className="hover:text-primary transition-colors">Aconselhamento</a></li>
-                <li><Link to="/login" className="hover:text-primary transition-colors">Acessar Sistema</Link></li>
+              <h3 className="font-semibold mb-4">Links Rápidos</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#atividades" className="text-muted-foreground hover:text-primary transition-colors">Atividades</a></li>
+                <li><a href="#depoimentos" className="text-muted-foreground hover:text-primary transition-colors">Depoimentos</a></li>
+                <li><a href="#terapia" className="text-muted-foreground hover:text-primary transition-colors">Aconselhamento</a></li>
+                <li><Link to="/login" className="text-muted-foreground hover:text-primary transition-colors">Sistema</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Inscreva-se</h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Acesse o formulário de inscrição para participar de nossas atividades.
+              <h3 className="font-semibold mb-4">Contato</h3>
+              <p className="text-sm text-muted-foreground">
+                Entre em contato conosco para mais informações sobre as atividades e matrículas.
               </p>
-              <Button asChild variant="outline" size="sm" className="gap-2">
-                <a href="https://forms.gle/oKs6ari7ChgxobAQ9" target="_blank" rel="noopener noreferrer">
-                  Formulário de Inscrição
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </Button>
             </div>
           </div>
-          <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Centro Social Neo Missio. Todos os direitos reservados.</p>
+          <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} Neo Missio. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>
