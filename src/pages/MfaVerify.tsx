@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield } from "lucide-react";
+import { Loader2, Shield, Key } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function MfaVerify() {
   const [verificationCode, setVerificationCode] = useState<string>("");
+  const [recoveryCode, setRecoveryCode] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -27,7 +29,6 @@ export default function MfaVerify() {
 
     setIsVerifying(true);
     try {
-      // Get the challenge ID from location state
       const factorId = location.state?.factorId;
       const challengeId = location.state?.challengeId;
       
@@ -48,8 +49,7 @@ export default function MfaVerify() {
         description: "Você será redirecionado em instantes.",
       });
 
-      // Redirect to dashboard after successful verification
-      setTimeout(() => navigate("/dashboard"), 1000);
+      setTimeout(() => navigate("/"), 1000);
     } catch (error: any) {
       console.error("Error verifying MFA:", error);
       toast({
@@ -62,9 +62,61 @@ export default function MfaVerify() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && verificationCode.length === 6) {
-      verifyMfaCode();
+  const verifyRecoveryCode = async () => {
+    if (!recoveryCode || recoveryCode.length < 6) {
+      toast({
+        title: "Código inválido",
+        description: "Por favor, insira um código de recuperação válido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      // Valida código de recuperação
+      const { data: isValid, error } = await supabase.rpc("validate_recovery_code", {
+        _user_id: user.id,
+        _code: recoveryCode.toUpperCase(),
+      });
+
+      if (error) throw error;
+
+      if (isValid) {
+        toast({
+          title: "Código de recuperação aceito!",
+          description: "Você será redirecionado. Considere reconfigurar o MFA.",
+        });
+
+        setTimeout(() => navigate("/"), 1000);
+      } else {
+        toast({
+          title: "Código inválido",
+          description: "Este código de recuperação é inválido ou já foi usado.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error verifying recovery code:", error);
+      toast({
+        title: "Erro na verificação",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent, callback: () => void) => {
+    if (e.key === "Enter") {
+      callback();
     }
   };
 
@@ -77,39 +129,82 @@ export default function MfaVerify() {
             <CardTitle className="text-2xl">Verificação MFA</CardTitle>
           </div>
           <CardDescription>
-            Insira o código do seu aplicativo autenticador
+            Insira o código do seu aplicativo autenticador ou use um código de recuperação
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="verification-code">Código de verificação</Label>
-            <Input
-              id="verification-code"
-              type="text"
-              placeholder="000000"
-              maxLength={6}
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-              onKeyPress={handleKeyPress}
-              disabled={isVerifying}
-              autoFocus
-              className="text-center text-2xl tracking-widest"
-            />
-            <p className="text-sm text-muted-foreground">
-              Insira o código de 6 dígitos do seu aplicativo autenticador
-            </p>
-          </div>
+        <CardContent>
+          <Tabs defaultValue="authenticator" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="authenticator">
+                <Shield className="h-4 w-4 mr-2" />
+                Autenticador
+              </TabsTrigger>
+              <TabsTrigger value="recovery">
+                <Key className="h-4 w-4 mr-2" />
+                Recuperação
+              </TabsTrigger>
+            </TabsList>
 
-          <Button
-            onClick={verifyMfaCode}
-            disabled={isVerifying || verificationCode.length !== 6}
-            className="w-full"
-          >
-            {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Verificar
-          </Button>
+            <TabsContent value="authenticator" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="verification-code">Código de verificação</Label>
+                <Input
+                  id="verification-code"
+                  type="text"
+                  placeholder="000000"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+                  onKeyPress={(e) => handleKeyPress(e, verifyMfaCode)}
+                  disabled={isVerifying}
+                  autoFocus
+                  className="text-center text-2xl tracking-widest"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Insira o código de 6 dígitos do seu aplicativo autenticador
+                </p>
+              </div>
 
-          <div className="text-center">
+              <Button
+                onClick={verifyMfaCode}
+                disabled={isVerifying || verificationCode.length !== 6}
+                className="w-full"
+              >
+                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verificar
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="recovery" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="recovery-code">Código de recuperação</Label>
+                <Input
+                  id="recovery-code"
+                  type="text"
+                  placeholder="ABCD1234"
+                  value={recoveryCode}
+                  onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => handleKeyPress(e, verifyRecoveryCode)}
+                  disabled={isVerifying}
+                  className="text-center text-xl tracking-wider uppercase"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Insira um dos códigos de recuperação salvos durante a configuração do MFA
+                </p>
+              </div>
+
+              <Button
+                onClick={verifyRecoveryCode}
+                disabled={isVerifying || recoveryCode.length < 6}
+                className="w-full"
+              >
+                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verificar Código de Recuperação
+              </Button>
+            </TabsContent>
+          </Tabs>
+
+          <div className="text-center mt-4">
             <Button
               variant="link"
               onClick={() => navigate("/login")}

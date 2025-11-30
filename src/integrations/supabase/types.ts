@@ -383,6 +383,30 @@ export type Database = {
           },
         ]
       }
+      mfa_recovery_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       observacoes: {
         Row: {
           aluno_id: string
@@ -757,6 +781,10 @@ export type Database = {
       validate_invitation_token: {
         Args: { _email: string; _token: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      validate_recovery_code: {
+        Args: { _code: string; _user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
