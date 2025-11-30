@@ -82,9 +82,63 @@ const Login = () => {
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      navigate("/");
+      return;
     }
+
+    // Check if user needs to verify MFA
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Check if user has MFA enabled
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      
+      if (factors && factors.totp && factors.totp.length > 0) {
+        // User has MFA enabled, create challenge and redirect
+        const factor = factors.totp[0];
+        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+          factorId: factor.id
+        });
+
+        if (challengeError) {
+          toast({
+            title: "Erro MFA",
+            description: challengeError.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        navigate("/mfa-verify", { 
+          state: { 
+            factorId: factor.id,
+            challengeId: challengeData.id 
+          } 
+        });
+        return;
+      }
+
+      // Check if user is admin and doesn't have MFA set up
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const isAdmin = roles?.some(r => 
+        ['direcao', 'coordenacao', 'professor'].includes(r.role)
+      );
+
+      if (isAdmin) {
+        // Admin without MFA - redirect to setup
+        toast({
+          title: "Configuração MFA Necessária",
+          description: "Como administrador, você precisa configurar a autenticação de dois fatores.",
+        });
+        navigate("/mfa-setup");
+        return;
+      }
+    }
+
+    navigate("/");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
