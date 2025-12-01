@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import Usuarios from "./pages/direcao/Usuarios";
 import Convites from "./pages/direcao/Convites";
 import Matriculas from "./pages/direcao/Matriculas";
+import Coordenadores from "./pages/direcao/Coordenadores";
 
 // Coordenação
 import TurmasCoordenacao from "./pages/coordenacao/Turmas";
@@ -45,6 +46,7 @@ import RelatoriosAluno from "./pages/responsavel/RelatoriosAluno";
 import NovaMatricula from "./pages/responsavel/NovaMatricula";
 import Anamnese from "./pages/responsavel/Anamnese";
 import CadastrarAluno from "./pages/responsavel/CadastrarAluno";
+import RegistrarPagamento from "./pages/responsavel/RegistrarPagamento";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +70,7 @@ const AppRoutes = () => {
 
       {/* Direção */}
       <Route path="/direcao/usuarios" element={<ProtectedRoute allowedRoles={["direcao"]}><Usuarios /></ProtectedRoute>} />
+      <Route path="/direcao/coordenadores" element={<ProtectedRoute allowedRoles={["direcao"]}><Coordenadores /></ProtectedRoute>} />
       <Route path="/convites" element={<ProtectedRoute allowedRoles={["direcao"]}><Convites /></ProtectedRoute>} />
       <Route path="/direcao/matriculas" element={<ProtectedRoute allowedRoles={["direcao"]}><Matriculas /></ProtectedRoute>} />
 
@@ -89,6 +92,7 @@ const AppRoutes = () => {
       <Route path="/responsavel/nova-matricula" element={<ProtectedRoute allowedRoles={["responsavel"]}><NovaMatricula /></ProtectedRoute>} />
       <Route path="/responsavel/atividades-matriculadas" element={<ProtectedRoute allowedRoles={["responsavel"]}><AtividadesMatriculadas /></ProtectedRoute>} />
       <Route path="/responsavel/pagamentos" element={<ProtectedRoute allowedRoles={["responsavel"]}><Pagamentos /></ProtectedRoute>} />
+      <Route path="/responsavel/registrar-pagamento" element={<ProtectedRoute allowedRoles={["responsavel"]}><RegistrarPagamento /></ProtectedRoute>} />
       <Route path="/responsavel/relatorios-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><RelatoriosAluno /></ProtectedRoute>} />
       <Route path="/responsavel/anamnese" element={<ProtectedRoute allowedRoles={["responsavel"]}><Anamnese /></ProtectedRoute>} />
       <Route path="/responsavel/cadastrar-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><CadastrarAluno /></ProtectedRoute>} />
