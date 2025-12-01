@@ -58,15 +58,37 @@ const MatriculasPendentes = () => {
     },
   });
 
-  // Aprovar matrícula
+  // Aprovar matrícula e gerar pagamentos
   const aprovarMutation = useMutation({
-    mutationFn: async (matriculaId: string) => {
-      const { error } = await supabase
+    mutationFn: async ({ matriculaId, valorMensal }: { matriculaId: string; valorMensal: number }) => {
+      // 1. Atualizar status da matrícula
+      const { error: matriculaError } = await supabase
         .from("matriculas")
         .update({ status: "ativa" })
         .eq("id", matriculaId);
 
-      if (error) throw error;
+      if (matriculaError) throw matriculaError;
+
+      // 2. Gerar pagamentos mensais (próximos 12 meses)
+      const hoje = new Date();
+      const pagamentos = [];
+
+      for (let i = 0; i < 12; i++) {
+        const vencimento = new Date(hoje.getFullYear(), hoje.getMonth() + i + 1, 5);
+        
+        pagamentos.push({
+          matricula_id: matriculaId,
+          valor: valorMensal,
+          data_vencimento: vencimento.toISOString().split("T")[0],
+          status: "pendente",
+        });
+      }
+
+      const { error: pagamentosError } = await supabase
+        .from("pagamentos")
+        .insert(pagamentos);
+
+      if (pagamentosError) throw pagamentosError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matriculas-pendentes"] });
@@ -130,7 +152,11 @@ const MatriculasPendentes = () => {
       return;
     }
 
-    aprovarMutation.mutate(matricula.id);
+    const valorMensal = parseFloat(matricula.turma.atividade.valor_mensal.toString());
+    aprovarMutation.mutate({ 
+      matriculaId: matricula.id,
+      valorMensal 
+    });
   };
 
   const handleRejeitar = (matricula: any) => {

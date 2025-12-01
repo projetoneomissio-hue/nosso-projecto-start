@@ -22,6 +22,7 @@ import {
   AlertCircle,
   BarChart,
   Mail,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -40,6 +41,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Alunos", href: "/alunos", icon: Users },
         { name: "Atividades", href: "/atividades", icon: Dumbbell },
         { name: "Professores", href: "/professores", icon: GraduationCap },
+        { name: "Coordenadores", href: "/direcao/coordenadores", icon: UserCog },
         { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
         { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
         { name: "Convites", href: "/convites", icon: Mail },
@@ -74,6 +76,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Nova Matrícula", href: "/responsavel/nova-matricula", icon: FileText },
         { name: "Atividades Matriculadas", href: "/responsavel/atividades-matriculadas", icon: Dumbbell },
         { name: "Pagamentos", href: "/responsavel/pagamentos", icon: DollarSign },
+        { name: "Registrar Pagamento", href: "/responsavel/registrar-pagamento", icon: CheckCircle2 },
         { name: "Relatórios do Aluno", href: "/responsavel/relatorios-aluno", icon: BarChart },
         { name: "Anamnese", href: "/responsavel/anamnese", icon: FileText },
       ];
