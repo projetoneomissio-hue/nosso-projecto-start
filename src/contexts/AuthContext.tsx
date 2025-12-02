@@ -15,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   login: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signup: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: Error | null }>;
+  signup: (email: string, password: string, name: string, role: UserRole, inviteToken?: string) => Promise<{ error: Error | null }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   loading: boolean;
@@ -108,34 +108,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, password: string, name: string, role: UserRole) => {
+  const signup = async (email: string, password: string, name: string, role: UserRole, inviteToken?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
             nome_completo: name,
+            // Passamos o token de convite nos metadados para o Trigger do banco processar
+            invite_token: inviteToken || null,
           },
         },
       });
 
       if (error) throw error;
       
-      // Insert role into user_roles table
-      if (data.user) {
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: data.user.id,
-            role: role,
-          });
-
-        if (roleError) throw roleError;
-      }
+      // NOTA: Removemos a inserção manual em user_roles aqui.
+      // A trigger handle_new_user no banco de dados agora trata disso automaticamente.
+      // Isso evita o erro "permission denied" para usuários anônimos/não confirmados.
 
       return { error: null };
     } catch (error) {
