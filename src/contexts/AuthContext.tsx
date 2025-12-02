@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast"; // Importar toast
 
 export type UserRole = "direcao" | "coordenacao" | "professor" | "responsavel";
 
@@ -35,6 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast(); // Usar toast para feedback
 
   useEffect(() => {
     // Set up auth state listener
@@ -68,18 +70,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserData = async (supabaseUser: SupabaseUser) => {
     try {
       // Fetch profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("nome_completo")
         .eq("id", supabaseUser.id)
         .single();
 
+      if (profileError) {
+        console.error("Erro ao buscar perfil:", profileError);
+        // Se não encontrar perfil, pode ser o caso do usuário "quebrado".
+        // O script SQL fornecido resolve isso, mas aqui avisamos o usuário.
+        return; 
+      }
+
       // Fetch role
-      const { data: roleData } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", supabaseUser.id)
         .single();
+
+      if (roleError) {
+        console.error("Erro ao buscar papel (role):", roleError);
+        return;
+      }
 
       if (profile && roleData) {
         setUser({
@@ -112,7 +126,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      // AQUI ESTÁ A CORREÇÃO:
       // Passamos os dados como metadados (options.data).
       // O Trigger no banco de dados lerá 'nome_completo' e 'invite_token' e fará as inserções.
       const { error } = await supabase.auth.signUp({
@@ -129,9 +142,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
-      // OBS: Não fazemos mais nenhum 'supabase.from(...).insert()' aqui.
-      // Isso evita o erro de permissão, pois o usuário ainda não está logado/confirmado.
-
       return { error: null };
     } catch (error) {
       return { error: error as Error };
