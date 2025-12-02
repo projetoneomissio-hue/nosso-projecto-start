@@ -112,6 +112,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
+      // AQUI ESTÁ A CORREÇÃO:
+      // Passamos os dados como metadados (options.data).
+      // O Trigger no banco de dados lerá 'nome_completo' e 'invite_token' e fará as inserções.
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -119,7 +122,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           emailRedirectTo: redirectUrl,
           data: {
             nome_completo: name,
-            // Passamos o token de convite nos metadados para o Trigger do banco processar
             invite_token: inviteToken || null,
           },
         },
@@ -127,9 +129,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
-      // NOTA: Removemos a inserção manual em user_roles aqui.
-      // A trigger handle_new_user no banco de dados agora trata disso automaticamente.
-      // Isso evita o erro "permission denied" para usuários anônimos/não confirmados.
+      // OBS: Não fazemos mais nenhum 'supabase.from(...).insert()' aqui.
+      // Isso evita o erro de permissão, pois o usuário ainda não está logado/confirmado.
 
       return { error: null };
     } catch (error) {
