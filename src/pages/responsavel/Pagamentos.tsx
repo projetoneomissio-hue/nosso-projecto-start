@@ -2,12 +2,13 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, DollarSign, AlertCircle } from "lucide-react";
+import { Download, Loader2, DollarSign, AlertCircle, CreditCard } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Link } from "react-router-dom";
 
 const Pagamentos = () => {
   const { user } = useAuth();
@@ -102,11 +103,21 @@ const Pagamentos = () => {
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Pagamentos</h1>
-          <p className="text-muted-foreground mt-1">
-            Histórico e mensalidades dos seus alunos
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Pagamentos</h1>
+            <p className="text-muted-foreground mt-1">
+              Histórico e mensalidades dos seus alunos
+            </p>
+          </div>
+          {totalPendente > 0 && (
+            <Button asChild>
+              <Link to="/responsavel/registrar-pagamento">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Registrar Pagamento
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* Resumo */}

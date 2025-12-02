@@ -76,7 +76,7 @@ const AppRoutes = () => {
 
       {/* Coordenação */}
       <Route path="/coordenacao/turmas" element={<ProtectedRoute allowedRoles={["coordenacao"]}><TurmasCoordenacao /></ProtectedRoute>} />
-      <Route path="/coordenacao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["coordenacao"]}><MatriculasPendentes /></ProtectedRoute>} />
+      <Route path="/coordenacao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><MatriculasPendentes /></ProtectedRoute>} />
       <Route path="/coordenacao/inadimplentes" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Inadimplentes /></ProtectedRoute>} />
       <Route path="/coordenacao/relatorios" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Relatorios /></ProtectedRoute>} />
       <Route path="/coordenacao/notificacoes" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><GerenciarNotificacoes /></ProtectedRoute>} />
