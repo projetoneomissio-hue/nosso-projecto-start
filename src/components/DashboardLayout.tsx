@@ -43,6 +43,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Professores", href: "/professores", icon: GraduationCap },
         { name: "Coordenadores", href: "/direcao/coordenadores", icon: UserCog },
         { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
+        { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: ClipboardList },
         { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
         { name: "Convites", href: "/convites", icon: Mail },
         { name: "Notificações", href: "/coordenacao/notificacoes", icon: AlertCircle },
@@ -73,6 +74,7 @@ const getNavigationByRole = (role: string) => {
     case "responsavel":
       return [
         { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Cadastrar Aluno", href: "/responsavel/cadastrar-aluno", icon: UserCircle },
         { name: "Nova Matrícula", href: "/responsavel/nova-matricula", icon: FileText },
         { name: "Atividades Matriculadas", href: "/responsavel/atividades-matriculadas", icon: Dumbbell },
         { name: "Pagamentos", href: "/responsavel/pagamentos", icon: DollarSign },
