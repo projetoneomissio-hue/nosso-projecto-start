@@ -47,6 +47,7 @@ import NovaMatricula from "./pages/responsavel/NovaMatricula";
 import Anamnese from "./pages/responsavel/Anamnese";
 import CadastrarAluno from "./pages/responsavel/CadastrarAluno";
 import RegistrarPagamento from "./pages/responsavel/RegistrarPagamento";
+import DashboardResponsavel from "./pages/responsavel/DashboardResponsavel";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,7 @@ const AppRoutes = () => {
       <Route path="/professor/comissoes" element={<ProtectedRoute allowedRoles={["professor"]}><Comissoes /></ProtectedRoute>} />
 
       {/* Responsáveis */}
+      <Route path="/responsavel/dashboard" element={<ProtectedRoute allowedRoles={["responsavel"]}><DashboardResponsavel /></ProtectedRoute>} />
       <Route path="/responsavel/nova-matricula" element={<ProtectedRoute allowedRoles={["responsavel"]}><NovaMatricula /></ProtectedRoute>} />
       <Route path="/responsavel/atividades-matriculadas" element={<ProtectedRoute allowedRoles={["responsavel"]}><AtividadesMatriculadas /></ProtectedRoute>} />
       <Route path="/responsavel/pagamentos" element={<ProtectedRoute allowedRoles={["responsavel"]}><Pagamentos /></ProtectedRoute>} />
