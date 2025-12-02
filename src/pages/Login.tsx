@@ -35,14 +35,12 @@ const loginSchema = z.object({
   password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }).max(100, { message: "Senha muito longa" }),
 });
 
-// Public signup schema - ONLY allows 'responsavel' role
 const signupSchema = z.object({
   name: z.string().trim().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }).max(100, { message: "Nome muito longo" }),
   email: z.string().trim().email({ message: "Email inválido" }).max(255, { message: "Email muito longo" }),
   password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }).max(100, { message: "Senha muito longa" }),
 });
 
-// Invitation-based signup schema for admin roles
 const inviteSignupSchema = z.object({
   name: z.string().trim().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }).max(100, { message: "Nome muito longo" }),
   email: z.string().trim().email({ message: "Email inválido" }).max(255, { message: "Email muito longo" }),
@@ -85,15 +83,12 @@ const Login = () => {
       return;
     }
 
-    // Check if user needs to verify MFA
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
-      // Check if user has MFA enabled
       const { data: factors } = await supabase.auth.mfa.listFactors();
       
       if (factors && factors.totp && factors.totp.length > 0) {
-        // User has MFA enabled, create challenge and redirect
         const factor = factors.totp[0];
         const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
           factorId: factor.id
@@ -117,7 +112,6 @@ const Login = () => {
         return;
       }
 
-      // Check if user is admin and doesn't have MFA set up
       const { data: roles } = await supabase
         .from('user_roles')
         .select('role')
@@ -128,7 +122,6 @@ const Login = () => {
       );
 
       if (isAdmin) {
-        // Admin without MFA - redirect to setup
         toast({
           title: "Configuração MFA Necessária",
           description: "Como administrador, você precisa configurar a autenticação de dois fatores.",
@@ -144,7 +137,6 @@ const Login = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate based on whether user has an invitation
     if (hasInvite) {
       const validation = inviteSignupSchema.safeParse({ name, email, password, inviteToken });
       
@@ -158,7 +150,6 @@ const Login = () => {
       }
 
       try {
-        // Validate invitation token first
         const { data: invitation, error: inviteError } = await supabase
           .from("invitations")
           .select("role, email")
@@ -185,12 +176,12 @@ const Login = () => {
           return;
         }
 
-        // Create account with invited role
         const { error } = await signup(
           validation.data.email,
           validation.data.password,
           validation.data.name,
-          invitation.role
+          invitation.role,
+          validation.data.inviteToken
         );
 
         if (error) {
@@ -218,7 +209,6 @@ const Login = () => {
         });
       }
     } else {
-      // Public signup - only allows 'responsavel' role
       const validation = signupSchema.safeParse({ name, email, password });
       
       if (!validation.success) {
@@ -234,7 +224,7 @@ const Login = () => {
         validation.data.email, 
         validation.data.password, 
         validation.data.name, 
-        "responsavel" // SECURITY: Public signup restricted to 'responsavel' role only
+        "responsavel"
       );
       
       if (error) {
