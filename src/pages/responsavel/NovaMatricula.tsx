@@ -3,16 +3,15 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Info } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { z } from "zod";
+import { Link } from "react-router-dom";
 
 const matriculaSchema = z.object({
   aluno_id: z.string().uuid("Selecione um aluno"),
@@ -167,12 +166,22 @@ const NovaMatricula = () => {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : alunos && alunos.length === 0 ? (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Você precisa cadastrar um aluno antes de solicitar uma matrícula.
-            </AlertDescription>
-          </Alert>
+          <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <Info className="h-12 w-12 text-primary" />
+                <div>
+                  <h3 className="text-lg font-semibold">Cadastre um aluno primeiro</h3>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Para solicitar uma matrícula, você precisa primeiro cadastrar um aluno (filho/dependente).
+                  </p>
+                </div>
+                <Button asChild>
+                  <Link to="/responsavel/cadastrar-aluno">Cadastrar Aluno</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardHeader>

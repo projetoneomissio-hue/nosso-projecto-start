@@ -73,7 +73,7 @@ const getNavigationByRole = (role: string) => {
       ];
     case "responsavel":
       return [
-        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Dashboard", href: "/responsavel/dashboard", icon: LayoutDashboard },
         { name: "Cadastrar Aluno", href: "/responsavel/cadastrar-aluno", icon: UserCircle },
         { name: "Nova Matrícula", href: "/responsavel/nova-matricula", icon: FileText },
         { name: "Atividades Matriculadas", href: "/responsavel/atividades-matriculadas", icon: Dumbbell },

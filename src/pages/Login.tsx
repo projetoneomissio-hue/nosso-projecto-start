@@ -202,7 +202,7 @@ const Login = () => {
         } else {
           toast({
             title: "Conta criada!",
-            description: "Você já pode fazer login",
+            description: "Faça login para acessar o sistema.",
           });
           setHasInvite(false);
           setInviteToken("");
@@ -245,8 +245,8 @@ const Login = () => {
         });
       } else {
         toast({
-          title: "Conta criada!",
-          description: "Você já pode fazer login como Responsável",
+          title: "Conta criada com sucesso!",
+          description: "Faça login para cadastrar seus alunos e solicitar matrículas.",
         });
         setEmail("");
         setPassword("");

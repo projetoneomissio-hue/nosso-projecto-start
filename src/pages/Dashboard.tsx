@@ -5,9 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 const Dashboard = () => {
   const { user } = useAuth();
+
+  // Redireciona responsáveis para seu dashboard específico
+  if (user?.role === "responsavel") {
+    return <Navigate to="/responsavel/dashboard" replace />;
+  }
 
   // Fetch total de alunos
   const { data: totalAlunos } = useQuery({

@@ -42,10 +42,11 @@ const CadastrarAluno = () => {
     onSuccess: () => {
       toast({
         title: "Aluno cadastrado!",
-        description: "O aluno foi cadastrado com sucesso.",
+        description: "Agora você pode solicitar matrículas para este aluno.",
       });
       queryClient.invalidateQueries({ queryKey: ["alunos"] });
-      navigate("/dashboard");
+      queryClient.invalidateQueries({ queryKey: ["dashboard-alunos"] });
+      navigate("/responsavel/nova-matricula");
     },
     onError: (error) => {
       toast({
@@ -77,7 +78,7 @@ const CadastrarAluno = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Cadastrar Novo Aluno</h1>
           <p className="text-muted-foreground mt-1">
-            Adicione um novo aluno ao sistema
+            Adicione um novo aluno ao sistema para solicitar matrículas
           </p>
         </div>
 
