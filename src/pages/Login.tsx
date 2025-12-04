@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
@@ -54,6 +54,7 @@ const Login = () => {
   const [name, setName] = useState("");
   const [inviteToken, setInviteToken] = useState("");
   const [hasInvite, setHasInvite] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { login, signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -72,82 +73,97 @@ const Login = () => {
       return;
     }
     
-    const { error } = await login(validation.data.email, validation.data.password);
+    setIsLoading(true);
     
-    if (error) {
-      toast({
-        title: "Erro ao fazer login",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      const { data: factors } = await supabase.auth.mfa.listFactors();
+    try {
+      const { error } = await login(validation.data.email, validation.data.password);
       
-      if (factors && factors.totp && factors.totp.length > 0) {
-        const factor = factors.totp[0];
-        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-          factorId: factor.id
+      if (error) {
+        toast({
+          title: "Erro ao fazer login",
+          description: error.message,
+          variant: "destructive",
         });
+        setIsLoading(false);
+        return;
+      }
 
-        if (challengeError) {
-          toast({
-            title: "Erro MFA",
-            description: challengeError.message,
-            variant: "destructive",
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        
+        if (factors && factors.totp && factors.totp.length > 0) {
+          const factor = factors.totp[0];
+          const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+            factorId: factor.id
+          });
+
+          if (challengeError) {
+            toast({
+              title: "Erro MFA",
+              description: challengeError.message,
+              variant: "destructive",
+            });
+            return;
+          }
+
+          navigate("/mfa-verify", { 
+            state: { 
+              factorId: factor.id,
+              challengeId: challengeData.id 
+            } 
           });
           return;
         }
 
-        navigate("/mfa-verify", { 
-          state: { 
-            factorId: factor.id,
-            challengeId: challengeData.id 
-          } 
-        });
-        return;
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+
+        const isAdmin = roles?.some(r => 
+          ['direcao', 'coordenacao', 'professor'].includes(r.role)
+        );
+
+        if (isAdmin) {
+          toast({
+            title: "Configuração MFA Necessária",
+            description: "Como administrador, você precisa configurar a autenticação de dois fatores.",
+          });
+          navigate("/mfa-setup");
+          return;
+        }
       }
 
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-
-      const isAdmin = roles?.some(r => 
-        ['direcao', 'coordenacao', 'professor'].includes(r.role)
-      );
-
-      if (isAdmin) {
-        toast({
-          title: "Configuração MFA Necessária",
-          description: "Como administrador, você precisa configurar a autenticação de dois fatores.",
-        });
-        navigate("/mfa-setup");
-        return;
-      }
+      navigate("/dashboard");
+    } catch (error) {
+      toast({
+        title: "Erro inesperado",
+        description: "Ocorreu um erro ao processar o login. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    navigate("/dashboard");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    if (hasInvite) {
-      const validation = inviteSignupSchema.safeParse({ name, email, password, inviteToken });
-      
-      if (!validation.success) {
-        toast({
-          title: "Erro de validação",
-          description: validation.error.errors[0].message,
-          variant: "destructive",
-        });
-        return;
-      }
+    try {
+      if (hasInvite) {
+        const validation = inviteSignupSchema.safeParse({ name, email, password, inviteToken });
+        
+        if (!validation.success) {
+          toast({
+            title: "Erro de validação",
+            description: validation.error.errors[0].message,
+            variant: "destructive",
+          });
+          return;
+        }
 
       try {
         const { data: invitation, error: inviteError } = await supabase
@@ -201,47 +217,56 @@ const Login = () => {
           setPassword("");
           setName("");
         }
-      } catch (error) {
-        toast({
-          title: "Erro ao validar convite",
-          description: "Não foi possível validar o convite. Tente novamente.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      const validation = signupSchema.safeParse({ name, email, password });
-      
-      if (!validation.success) {
-        toast({
-          title: "Erro de validação",
-          description: validation.error.errors[0].message,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const { error } = await signup(
-        validation.data.email, 
-        validation.data.password, 
-        validation.data.name, 
-        "responsavel"
-      );
-      
-      if (error) {
-        toast({
-          title: "Erro ao criar conta",
-          description: error.message,
-          variant: "destructive",
-        });
+        } catch (inviteError) {
+          toast({
+            title: "Erro ao validar convite",
+            description: "Não foi possível validar o convite. Tente novamente.",
+            variant: "destructive",
+          });
+        }
       } else {
-        toast({
-          title: "Conta criada com sucesso!",
-          description: "Faça login para cadastrar seus alunos e solicitar matrículas.",
-        });
-        setEmail("");
-        setPassword("");
-        setName("");
+        const validation = signupSchema.safeParse({ name, email, password });
+        
+        if (!validation.success) {
+          toast({
+            title: "Erro de validação",
+            description: validation.error.errors[0].message,
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        const { error } = await signup(
+          validation.data.email, 
+          validation.data.password, 
+          validation.data.name, 
+          "responsavel"
+        );
+        
+        if (error) {
+          toast({
+            title: "Erro ao criar conta",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Conta criada com sucesso!",
+            description: "Faça login para cadastrar seus alunos e solicitar matrículas.",
+          });
+          setEmail("");
+          setPassword("");
+          setName("");
+        }
       }
+    } catch (error) {
+      toast({
+        title: "Erro inesperado",
+        description: "Ocorreu um erro. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -283,8 +308,8 @@ const Login = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  Entrar
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
                 </Button>
               </form>
             </TabsContent>
@@ -369,8 +394,8 @@ const Login = () => {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full">
-                  {hasInvite ? "Criar Conta com Convite" : "Criar Conta"}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (hasInvite ? "Criar Conta com Convite" : "Criar Conta")}
                 </Button>
                 <Button
                   type="button"
