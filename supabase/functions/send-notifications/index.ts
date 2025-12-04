@@ -13,15 +13,6 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Verify JWT token from Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing Authorization header' }),
-        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -29,22 +20,40 @@ const handler = async (req: Request): Promise<Response> => {
     const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD");
 
     if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      console.error("Missing Supabase credentials");
       throw new Error("Supabase credentials not configured");
     }
 
     if (!gmailEmail || !gmailPassword) {
+      console.error("Missing Gmail credentials");
       throw new Error("Gmail credentials not configured");
     }
 
-    // Verify user authentication
+    // Get Authorization header
+    const authHeader = req.headers.get('Authorization');
+    console.log("Auth header present:", !!authHeader);
+    
+    if (!authHeader) {
+      console.error("Missing Authorization header");
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Create client to verify user
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    
+    console.log("Auth result:", { userId: user?.id, error: authError?.message });
+    
     if (authError || !user) {
+      console.error("Auth failed:", authError?.message || "No user");
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message }),
         { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
