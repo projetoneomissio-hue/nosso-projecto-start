@@ -56,16 +56,17 @@ const GerenciarNotificacoes = () => {
   // Enviar notificações automáticas
   const enviarNotificacoesMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Não autenticado");
+      const { data, error } = await supabase.functions.invoke("send-notifications");
 
-      const { data, error } = await supabase.functions.invoke("send-notifications", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
+      if (error) {
+        console.error("Error invoking function:", error);
+        throw new Error(error.message || "Erro ao processar notificações");
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
       return data;
     },
     onSuccess: (data) => {
