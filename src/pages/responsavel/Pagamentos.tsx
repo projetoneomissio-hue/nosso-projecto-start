@@ -19,16 +19,9 @@ const Pagamentos = () => {
   const queryClient = useQueryClient();
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  // Handle success/cancel from Stripe
+  // Handle cancel from Stripe (success redirects to dedicated page)
   useEffect(() => {
-    if (searchParams.get("success") === "true") {
-      toast({
-        title: "Pagamento processado!",
-        description: "Seu pagamento foi enviado para processamento. Pode levar alguns minutos para ser confirmado.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["pagamentos-responsavel"] });
-      setSearchParams({});
-    } else if (searchParams.get("canceled") === "true") {
+    if (searchParams.get("canceled") === "true") {
       toast({
         title: "Pagamento cancelado",
         description: "O pagamento foi cancelado. Você pode tentar novamente.",
@@ -36,7 +29,7 @@ const Pagamentos = () => {
       });
       setSearchParams({});
     }
-  }, [searchParams, toast, queryClient, setSearchParams]);
+  }, [searchParams, toast, setSearchParams]);
 
   // Mutation para pagar online
   const pagarOnlineMutation = useMutation({

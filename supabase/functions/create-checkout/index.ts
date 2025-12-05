@@ -114,7 +114,7 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      success_url: `${origin}/responsavel/pagamentos?success=true&payment_id=${pagamentoId}`,
+      success_url: `${origin}/responsavel/pagamento-sucesso?payment_id=${pagamentoId}`,
       cancel_url: `${origin}/responsavel/pagamentos?canceled=true`,
       metadata: {
         pagamento_id: pagamentoId,

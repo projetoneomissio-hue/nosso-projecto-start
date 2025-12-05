@@ -49,6 +49,7 @@ import Anamnese from "./pages/responsavel/Anamnese";
 import CadastrarAluno from "./pages/responsavel/CadastrarAluno";
 import RegistrarPagamento from "./pages/responsavel/RegistrarPagamento";
 import DashboardResponsavel from "./pages/responsavel/DashboardResponsavel";
+import PagamentoSucesso from "./pages/responsavel/PagamentoSucesso";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +101,7 @@ const AppRoutes = () => {
       <Route path="/responsavel/relatorios-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><RelatoriosAluno /></ProtectedRoute>} />
       <Route path="/responsavel/anamnese" element={<ProtectedRoute allowedRoles={["responsavel"]}><Anamnese /></ProtectedRoute>} />
       <Route path="/responsavel/cadastrar-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><CadastrarAluno /></ProtectedRoute>} />
+      <Route path="/responsavel/pagamento-sucesso" element={<ProtectedRoute allowedRoles={["responsavel"]}><PagamentoSucesso /></ProtectedRoute>} />
 
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
