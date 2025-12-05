@@ -2,16 +2,71 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, DollarSign, AlertCircle, CreditCard } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Download, Loader2, DollarSign, AlertCircle, CreditCard, Wallet } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 
 const Pagamentos = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  // Handle success/cancel from Stripe
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      toast({
+        title: "Pagamento processado!",
+        description: "Seu pagamento foi enviado para processamento. Pode levar alguns minutos para ser confirmado.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["pagamentos-responsavel"] });
+      setSearchParams({});
+    } else if (searchParams.get("canceled") === "true") {
+      toast({
+        title: "Pagamento cancelado",
+        description: "O pagamento foi cancelado. Você pode tentar novamente.",
+        variant: "destructive",
+      });
+      setSearchParams({});
+    }
+  }, [searchParams, toast, queryClient, setSearchParams]);
+
+  // Mutation para pagar online
+  const pagarOnlineMutation = useMutation({
+    mutationFn: async (pagamentoId: string) => {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { pagamentoId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao processar pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+      setPayingId(null);
+    },
+  });
+
+  const handlePagarOnline = (pagamentoId: string) => {
+    setPayingId(pagamentoId);
+    pagarOnlineMutation.mutate(pagamentoId);
+  };
 
   // Fetch pagamentos do responsável
   const { data: pagamentos, isLoading } = useQuery({
@@ -211,7 +266,7 @@ const Pagamentos = () => {
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
                           <div className="text-right">
                             <p className="text-lg font-bold">
                               R${" "}
@@ -220,11 +275,27 @@ const Pagamentos = () => {
                               })}
                             </p>
                           </div>
-                          {pagamento.status === "pago" && (
-                            <Button variant="outline" size="icon" title="Baixar comprovante">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex gap-2">
+                            {(pagamento.status === "pendente" || pagamento.status === "atrasado") && (
+                              <Button 
+                                onClick={() => handlePagarOnline(pagamento.id)}
+                                disabled={payingId === pagamento.id}
+                                size="sm"
+                              >
+                                {payingId === pagamento.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                ) : (
+                                  <Wallet className="h-4 w-4 mr-1" />
+                                )}
+                                Pagar Online
+                              </Button>
+                            )}
+                            {pagamento.status === "pago" && (
+                              <Button variant="outline" size="icon" title="Baixar comprovante">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>

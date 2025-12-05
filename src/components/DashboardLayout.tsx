@@ -23,6 +23,7 @@ import {
   BarChart,
   Mail,
   CheckCircle2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -47,6 +48,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
         { name: "Convites", href: "/convites", icon: Mail },
         { name: "Notificações", href: "/coordenacao/notificacoes", icon: AlertCircle },
+        { name: "Link Pagamento", href: "/coordenacao/gerar-link-pagamento", icon: LinkIcon },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },
         { name: "Prédio", href: "/predio", icon: Building2 },
       ];
@@ -58,6 +60,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Alunos", href: "/alunos", icon: Users },
         { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: FileText },
         { name: "Inadimplentes", href: "/coordenacao/inadimplentes", icon: AlertCircle },
+        { name: "Link Pagamento", href: "/coordenacao/gerar-link-pagamento", icon: LinkIcon },
         { name: "Notificações", href: "/coordenacao/notificacoes", icon: Mail },
         { name: "Relatórios", href: "/coordenacao/relatorios", icon: BarChart },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },
