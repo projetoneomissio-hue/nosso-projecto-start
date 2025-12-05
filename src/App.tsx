@@ -31,6 +31,7 @@ import MatriculasPendentes from "./pages/coordenacao/MatriculasPendentes";
 import Inadimplentes from "./pages/coordenacao/Inadimplentes";
 import Relatorios from "./pages/coordenacao/Relatorios";
 import GerenciarNotificacoes from "./pages/coordenacao/GerenciarNotificacoes";
+import GerarLinkPagamento from "./pages/coordenacao/GerarLinkPagamento";
 
 // Professores
 import Turmas from "./pages/professor/Turmas";
@@ -81,6 +82,7 @@ const AppRoutes = () => {
       <Route path="/coordenacao/inadimplentes" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Inadimplentes /></ProtectedRoute>} />
       <Route path="/coordenacao/relatorios" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Relatorios /></ProtectedRoute>} />
       <Route path="/coordenacao/notificacoes" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><GerenciarNotificacoes /></ProtectedRoute>} />
+      <Route path="/coordenacao/gerar-link-pagamento" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><GerarLinkPagamento /></ProtectedRoute>} />
 
       {/* Professores */}
       <Route path="/professor/turmas" element={<ProtectedRoute allowedRoles={["professor"]}><Turmas /></ProtectedRoute>} />
