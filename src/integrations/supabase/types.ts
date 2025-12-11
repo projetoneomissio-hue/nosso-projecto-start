@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           data_nascimento: string
           endereco: string | null
+          foto_url: string | null
           id: string
           nome_completo: string
           responsavel_id: string
@@ -31,6 +32,7 @@ export type Database = {
           created_at?: string
           data_nascimento: string
           endereco?: string | null
+          foto_url?: string | null
           id?: string
           nome_completo: string
           responsavel_id: string
@@ -42,6 +44,7 @@ export type Database = {
           created_at?: string
           data_nascimento?: string
           endereco?: string | null
+          foto_url?: string | null
           id?: string
           nome_completo?: string
           responsavel_id?: string

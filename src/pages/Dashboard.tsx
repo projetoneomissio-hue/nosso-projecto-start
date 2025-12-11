@@ -2,13 +2,18 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { DashboardCard } from "@/components/DashboardCard";
 import { Users, GraduationCap, DollarSign, TrendingUp, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+
+
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
+
 
   // Redireciona responsáveis para seu dashboard específico
   if (user?.role === "responsavel") {
@@ -143,7 +148,84 @@ const Dashboard = () => {
         vencidos: vencidos || 0,
         vencemEmBreve: vencemEmBreve || 0,
         emDia: emDia || 0,
-      };
+      } as { vencidos: number; vencemEmBreve: number; emDia: number };
+    },
+  });
+
+  // Fetch solicitações de matrícula (pendentes e sem pagamento)
+  const { data: solicitacoesPendentes, refetch: refetchSolicitacoes } = useQuery({
+    queryKey: ["dashboard-solicitacoes-pendentes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("matriculas")
+        .select(`
+          id,
+          data_inicio,
+          alunos!inner(nome_completo),
+          turmas!inner(
+            nome,
+            atividades!inner(nome, valor_mensal)
+          ),
+          pagamentos(count)
+        `)
+        .eq("status", "pendente")
+        .order("data_inicio", { ascending: false });
+
+      if (error) throw error;
+
+      // Filter localmente para garantir que nao tem pagamento (embora pudesse ser via query complexa)
+      // Mantemos apenas matriculas que NAO tem pagamentos registrados
+      return data.filter((m) => m.pagamentos[0]?.count === 0);
+    },
+  });
+
+  const aprovarMatriculaMutation = useMutation({
+    mutationFn: async (matricula: any) => {
+      const valor = matricula.turmas?.atividades?.valor_mensal || 0;
+      const vencimento = new Date();
+      vencimento.setDate(vencimento.getDate() + 3); // +3 dias
+
+      const { error } = await supabase.from("pagamentos").insert({
+        matricula_id: matricula.id,
+        valor: valor,
+        data_vencimento: vencimento.toISOString().split("T")[0],
+        status: "pendente",
+        metodo_pagamento: "boleto", // Default, user can change later
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação Aprovada",
+        description: "A cobrança foi gerada e o responsável será notificado.",
+      });
+      refetchSolicitacoes();
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao aprovar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const recusarMatriculaMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("matriculas")
+        .update({ status: "cancelada" })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação Recusada",
+        description: "A matrícula foi cancelada.",
+      });
+      refetchSolicitacoes();
     },
   });
 
@@ -156,6 +238,63 @@ const Dashboard = () => {
             Bem-vindo ao sistema de gestão Zafen
           </p>
         </div>
+
+        {/* Solicitações de Matrícula (Admission Funnel) */}
+        {solicitacoesPendentes && solicitacoesPendentes.length > 0 && (
+          <Card className="border-l-4 border-l-primary shadow-sm bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Solicitações de Vaga Pendentes
+                <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  {solicitacoesPendentes.length}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {solicitacoesPendentes.map((solicitacao: any) => (
+                  <div
+                    key={solicitacao.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-background border rounded-lg gap-4 shadow-sm"
+                  >
+                    <div>
+                      <h3 className="font-semibold text-lg">{solicitacao.alunos?.nome_completo}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {solicitacao.turmas?.atividades?.nome} - {solicitacao.turmas?.nome}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Solicitado em: {new Date(solicitacao.data_inicio).toLocaleDateString("pt-BR")} |
+                        Valor: R$ {solicitacao.turmas?.atividades?.valor_mensal?.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        className="flex-1 sm:flex-none border-destructive text-destructive hover:bg-destructive/10"
+                        onClick={() => recusarMatriculaMutation.mutate(solicitacao.id)}
+                        disabled={recusarMatriculaMutation.isPending}
+                      >
+                        Recusar
+                      </Button>
+                      <Button
+                        className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => aprovarMatriculaMutation.mutate(solicitacao)}
+                        disabled={aprovarMatriculaMutation.isPending}
+                      >
+                        {aprovarMatriculaMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Aprovar e Cobrar"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
