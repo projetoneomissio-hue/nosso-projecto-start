@@ -73,6 +73,9 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        soft: "0 10px 40px -10px rgba(79, 70, 229, 0.15)", // Indigo shadow (tinted)
+      },
       keyframes: {
         "accordion-down": {
           from: {

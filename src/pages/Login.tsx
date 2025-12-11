@@ -61,9 +61,9 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validation = loginSchema.safeParse({ email, password });
-    
+
     if (!validation.success) {
       toast({
         title: "Erro de validação",
@@ -72,12 +72,12 @@ const Login = () => {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const { error } = await login(validation.data.email, validation.data.password);
-      
+
       if (error) {
         toast({
           title: "Erro ao fazer login",
@@ -89,10 +89,10 @@ const Login = () => {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
         const { data: factors } = await supabase.auth.mfa.listFactors();
-        
+
         if (factors && factors.totp && factors.totp.length > 0) {
           const factor = factors.totp[0];
           const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
@@ -108,11 +108,11 @@ const Login = () => {
             return;
           }
 
-          navigate("/mfa-verify", { 
-            state: { 
+          navigate("/mfa-verify", {
+            state: {
               factorId: factor.id,
-              challengeId: challengeData.id 
-            } 
+              challengeId: challengeData.id
+            }
           });
           return;
         }
@@ -122,7 +122,7 @@ const Login = () => {
           .select('role')
           .eq('user_id', user.id);
 
-        const isAdmin = roles?.some(r => 
+        const isAdmin = roles?.some(r =>
           ['direcao', 'coordenacao', 'professor'].includes(r.role)
         );
 
@@ -151,11 +151,11 @@ const Login = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       if (hasInvite) {
         const validation = inviteSignupSchema.safeParse({ name, email, password, inviteToken });
-        
+
         if (!validation.success) {
           toast({
             title: "Erro de validação",
@@ -165,58 +165,58 @@ const Login = () => {
           return;
         }
 
-      try {
-        const { data: invitation, error: inviteError } = await supabase
-          .from("invitations")
-          .select("role, email")
-          .eq("token", validation.data.inviteToken)
-          .is("used_at", null)
-          .gt("expires_at", new Date().toISOString())
-          .single();
+        try {
+          const { data: invitation, error: inviteError } = await supabase
+            .from("invitations")
+            .select("role, email")
+            .eq("token", validation.data.inviteToken)
+            .is("used_at", null)
+            .gt("expires_at", new Date().toISOString())
+            .single();
 
-        if (inviteError || !invitation) {
-          toast({
-            title: "Convite inválido",
-            description: "O token de convite é inválido ou expirou",
-            variant: "destructive",
-          });
-          return;
-        }
+          if (inviteError || !invitation) {
+            toast({
+              title: "Convite inválido",
+              description: "O token de convite é inválido ou expirou",
+              variant: "destructive",
+            });
+            return;
+          }
 
-        if (invitation.email.toLowerCase() !== validation.data.email.toLowerCase()) {
-          toast({
-            title: "Email incorreto",
-            description: "Este convite foi enviado para outro email",
-            variant: "destructive",
-          });
-          return;
-        }
+          if (invitation.email.toLowerCase() !== validation.data.email.toLowerCase()) {
+            toast({
+              title: "Email incorreto",
+              description: "Este convite foi enviado para outro email",
+              variant: "destructive",
+            });
+            return;
+          }
 
-        const { error } = await signup(
-          validation.data.email,
-          validation.data.password,
-          validation.data.name,
-          invitation.role,
-          validation.data.inviteToken
-        );
+          const { error } = await signup(
+            validation.data.email,
+            validation.data.password,
+            validation.data.name,
+            invitation.role,
+            validation.data.inviteToken
+          );
 
-        if (error) {
-          toast({
-            title: "Erro ao criar conta",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Conta criada!",
-            description: "Faça login para acessar o sistema.",
-          });
-          setHasInvite(false);
-          setInviteToken("");
-          setEmail("");
-          setPassword("");
-          setName("");
-        }
+          if (error) {
+            toast({
+              title: "Erro ao criar conta",
+              description: error.message,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Conta criada!",
+              description: "Faça login para acessar o sistema.",
+            });
+            setHasInvite(false);
+            setInviteToken("");
+            setEmail("");
+            setPassword("");
+            setName("");
+          }
         } catch (inviteError) {
           toast({
             title: "Erro ao validar convite",
@@ -226,7 +226,7 @@ const Login = () => {
         }
       } else {
         const validation = signupSchema.safeParse({ name, email, password });
-        
+
         if (!validation.success) {
           toast({
             title: "Erro de validação",
@@ -235,14 +235,14 @@ const Login = () => {
           });
           return;
         }
-        
+
         const { error } = await signup(
-          validation.data.email, 
-          validation.data.password, 
-          validation.data.name, 
+          validation.data.email,
+          validation.data.password,
+          validation.data.name,
           "responsavel"
         );
-        
+
         if (error) {
           toast({
             title: "Erro ao criar conta",
@@ -274,7 +274,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Neo Missio</CardTitle>
+          <CardTitle className="text-2xl">Zafen</CardTitle>
           <CardDescription>Sistema de Gestão</CardDescription>
         </CardHeader>
         <CardContent>
@@ -283,7 +283,7 @@ const Login = () => {
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Cadastro</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
@@ -388,7 +388,7 @@ const Login = () => {
                       <p className="text-sm font-semibold">Cadastro como Responsável</p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Cadastros públicos são criados automaticamente como Responsável. 
+                      Cadastros públicos são criados automaticamente como Responsável.
                       Para acesso administrativo, solicite um convite à direção.
                     </p>
                   </div>

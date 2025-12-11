@@ -105,7 +105,7 @@ const Sidebar = () => {
   return (
     <div className="flex h-full flex-col gap-y-5 bg-sidebar border-r border-sidebar-border">
       <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-sidebar-border">
-        <h1 className="text-xl font-bold text-sidebar-foreground">Neo Missio</h1>
+        <h1 className="text-xl font-bold text-sidebar-foreground">Zafen</h1>
       </div>
       {user && (
         <div className="px-6 -mt-2">

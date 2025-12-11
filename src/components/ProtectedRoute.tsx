@@ -64,5 +64,5 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>;
+  return <div className="humanized-theme contents">{children}</div>;
 };

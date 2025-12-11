@@ -74,10 +74,10 @@ const Dashboard = () => {
         .eq("ativa", true);
 
       if (error) throw error;
-      
+
       const capacidadeTotal = turmas?.reduce((acc, t) => acc + t.capacidade_maxima, 0) || 0;
       const alunosMatriculados = turmas?.reduce((acc, t) => acc + (t.matriculas?.[0]?.count || 0), 0) || 0;
-      
+
       return capacidadeTotal > 0 ? Math.round((alunosMatriculados / capacidadeTotal) * 100) : 0;
     },
   });
@@ -98,13 +98,13 @@ const Dashboard = () => {
         .limit(4);
 
       if (error) throw error;
-      
+
       const result = data?.map((ativ) => ({
         nome: ativ.nome,
         alunos: ativ.turmas?.reduce((acc, t) => acc + (t.matriculas?.[0]?.count || 0), 0) || 0,
       }))
-      .sort((a, b) => b.alunos - a.alunos)
-      .slice(0, 4);
+        .sort((a, b) => b.alunos - a.alunos)
+        .slice(0, 4);
 
       return result || [];
     },
@@ -153,7 +153,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Bem-vindo ao sistema de gestão Neo Missio
+            Bem-vindo ao sistema de gestão Zafen
           </p>
         </div>
 

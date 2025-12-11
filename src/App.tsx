@@ -7,6 +7,9 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Index from "./pages/Index";
+import Planos from "./pages/Planos";
+import Checkout from "./pages/Checkout";
+import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Atividades from "./pages/Atividades";
@@ -53,7 +56,7 @@ import PagamentoSucesso from "./pages/responsavel/PagamentoSucesso";
 
 const queryClient = new QueryClient();
 
-const AppRoutes = () => {
+export const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
 
   return (
@@ -62,7 +65,10 @@ const AppRoutes = () => {
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
       <Route path="/mfa-setup" element={<MfaSetup />} />
       <Route path="/mfa-verify" element={<MfaVerify />} />
-      
+      <Route path="/planos" element={<Planos />} />
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/onboarding" element={<Onboarding />} />
+
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/atividades" element={<ProtectedRoute><Atividades /></ProtectedRoute>} />
       <Route path="/alunos" element={<ProtectedRoute><Alunos /></ProtectedRoute>} />

@@ -8,6 +8,11 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* --- TEMA PADRÃO (GLOBAL / HOME / LOGIN) --- */
+    /* Primary: Red (Tom Vermelho Original para Home) */
+    --primary: 0 100% 40%;
+    --primary-foreground: 0 0% 100%;
+
     --background: 0 0% 100%;
     --foreground: 0 0% 10%;
 
@@ -16,9 +21,6 @@ All colors MUST be HSL.
 
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-
-    --primary: 0 100% 40%;
-    --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 10%;
@@ -36,8 +38,10 @@ All colors MUST be HSL.
     --input: 0 0% 91%;
     --ring: 0 100% 40%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
+    /* Padrão mais quadrado na home */
 
+    /* Sidebar Default */
     --sidebar-background: 0 100% 40%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 100% 50%;
@@ -47,6 +51,7 @@ All colors MUST be HSL.
     --sidebar-border: 0 100% 35%;
     --sidebar-ring: 0 100% 50%;
 
+    /* Charts Default */
     --chart-1: 0 100% 40%;
     --chart-2: 153 60% 53%;
     --chart-3: 28 85% 60%;
@@ -58,49 +63,79 @@ All colors MUST be HSL.
     --info: 0 100% 40%;
   }
 
+  /* --- TEMA HUMANIZED SAAS (DASHBOARD - ICE BLUE) --- */
+  .humanized-theme {
+    /* Background: Ice Blue (Azul Gelo Suave) */
+    --background: 224 71% 97%;
+    /* Foreground: Indigo-950 (Texto Escuro Profundo) */
+    --foreground: 226 45% 15%;
+
+    /* Card: White (Puro) */
+    --card: 0 0% 100%;
+    --card-foreground: 226 45% 15%;
+
+    /* Primary: Indigo-600 (Vibrante) */
+    --primary: 226 70% 55.5%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary: White (para elementos de destaque sutil) */
+    --secondary: 0 0% 100%;
+    --secondary-foreground: 226 70% 55.5%;
+
+    /* Muted: Indigo-50 */
+    --muted: 224 71% 96%;
+    --muted-foreground: 226 20% 50%;
+
+    /* Accent: White com leve tint */
+    --accent: 0 0% 100%;
+    --accent-foreground: 226 70% 55.5%;
+
+    /* Border: Indigo-100 (Muito sutil) */
+    --border: 226 71% 94%;
+    --input: 226 71% 94%;
+    --ring: 226 70% 55.5%;
+
+    /* Radius: 1.5rem (24px - Super Arredondado/Friendly) */
+    --radius: 1.5rem;
+
+    /* Sidebar Humanized (Light/Clean) */
+    --sidebar-background: 0 0% 100%;
+    /* Branco para contraste clean */
+    --sidebar-foreground: 226 45% 30%;
+    /* Cinza-Azulado para texto */
+    --sidebar-primary: 226 70% 55.5%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 71% 97%;
+    /* Ice Blue no Hover */
+    --sidebar-accent-foreground: 226 70% 55.5%;
+    --sidebar-border: 0 0% 100%;
+    /* Borda Branca (Invisível) */
+    --sidebar-ring: 226 70% 55.5%;
+  }
+
   .dark {
+    /* Dark Mode Default */
     --background: 0 0% 10%;
     --foreground: 0 0% 98%;
-
+    /* ... (rest of dark mode logic can stay generic or customized later) */
     --card: 0 0% 10%;
     --card-foreground: 0 0% 98%;
-
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 98%;
-
     --primary: 0 100% 45%;
     --primary-foreground: 0 0% 98%;
-
     --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
-
     --muted: 0 0% 18%;
     --muted-foreground: 0 0% 65%;
-
     --accent: 0 100% 20%;
     --accent-foreground: 0 0% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 0 0% 18%;
     --input: 0 0% 18%;
     --ring: 0 100% 45%;
-
-    --sidebar-background: 0 100% 35%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 100% 45%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 100% 25%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 100% 30%;
-    --sidebar-ring: 0 100% 45%;
-
-    --chart-1: 0 100% 45%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --radius: 0.5rem;
   }
 }
 
