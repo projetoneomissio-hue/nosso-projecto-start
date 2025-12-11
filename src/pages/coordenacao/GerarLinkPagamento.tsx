@@ -47,7 +47,7 @@ const GerarLinkPagamento = () => {
   // Mutation para gerar link de pagamento
   const gerarLinkMutation = useMutation({
     mutationFn: async (pagamentoId: string) => {
-      const { data, error } = await supabase.functions.invoke("create-payment-link", {
+      const { data, error } = await supabase.functions.invoke("generate-link-v2", {
         body: { pagamentoId },
       });
       if (error) throw error;
