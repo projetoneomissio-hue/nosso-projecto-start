@@ -60,7 +60,7 @@ export default function Convites() {
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
 
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       const { data, error } = await supabase
         .from("invitations")
         .insert({
@@ -82,6 +82,7 @@ export default function Convites() {
             to: validation.data.email,
             inviteToken: token,
             role: validation.data.role,
+            origin: window.location.origin,
           },
         });
 
@@ -258,7 +259,7 @@ export default function Convites() {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Criado em {format(new Date(invitation.created_at), "dd/MM/yyyy")} • 
+                        Criado em {format(new Date(invitation.created_at), "dd/MM/yyyy")} •
                         Expira em {format(new Date(invitation.expires_at), "dd/MM/yyyy")}
                       </p>
                       {!invitation.used_at && (

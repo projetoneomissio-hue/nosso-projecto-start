@@ -298,7 +298,7 @@ const Financeiro = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="mes" />
                       <YAxis />
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value: number) => [
                           `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
                           "Receita"
@@ -391,9 +391,97 @@ const Financeiro = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Recent Payments Table */}
+          <Card className="col-span-full">
+            <CardHeader>
+              <CardTitle>Últimos Pagamentos Recebidos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RecentPaymentsTable />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </DashboardLayout>
+  );
+};
+
+// Component for Recent Payments Table to keep main component clean
+const RecentPaymentsTable = () => {
+  const { data: ultimosPagamentos, isLoading } = useQuery({
+    queryKey: ["financeiro-ultimos-pagamentos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select(`
+          id,
+          valor,
+          data_pagamento,
+          status,
+          matricula:matriculas(
+            aluno:alunos(nome_completo),
+            turma:turmas(
+              atividade:atividades(nome)
+            )
+          )
+        `)
+        .eq("status", "pago")
+        .order("data_pagamento", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!ultimosPagamentos?.length) {
+    return <p className="text-sm text-muted-foreground text-center py-4">Nenhum pagamento recente encontrado.</p>;
+  }
+
+  return (
+    <div className="relative w-full overflow-auto">
+      <table className="w-full caption-bottom text-sm text-left">
+        <thead className="[&_tr]:border-b">
+          <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Aluno</th>
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Atividade</th>
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Data</th>
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Valor</th>
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody className="[&_tr:last-child]:border-0">
+          {ultimosPagamentos.map((pagamento: any) => (
+            <tr key={pagamento.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+              <td className="p-4 align-middle font-medium">{pagamento.matricula?.aluno?.nome_completo || "Desconhecido"}</td>
+              <td className="p-4 align-middle">{pagamento.matricula?.turma?.atividade?.nome || "-"}</td>
+              <td className="p-4 align-middle">
+                {pagamento.data_pagamento
+                  ? new Date(pagamento.data_pagamento).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+                  : "-"}
+              </td>
+              <td className="p-4 align-middle text-right font-medium text-green-600">
+                R$ {parseFloat(pagamento.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </td>
+              <td className="p-4 align-middle text-center">
+                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-green-100 text-green-800 hover:bg-green-200">
+                  Pago
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 

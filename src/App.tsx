@@ -26,7 +26,9 @@ import NotFound from "./pages/NotFound";
 import Usuarios from "./pages/direcao/Usuarios";
 import Convites from "./pages/direcao/Convites";
 import Matriculas from "./pages/direcao/Matriculas";
+import Matriculas from "./pages/direcao/Matriculas";
 import Coordenadores from "./pages/direcao/Coordenadores";
+import Comunicados from "./pages/direcao/Comunicados";
 
 // Coordenação
 import TurmasCoordenacao from "./pages/coordenacao/Turmas";
@@ -82,6 +84,7 @@ export const AppRoutes = () => {
       <Route path="/direcao/coordenadores" element={<ProtectedRoute allowedRoles={["direcao"]}><Coordenadores /></ProtectedRoute>} />
       <Route path="/convites" element={<ProtectedRoute allowedRoles={["direcao"]}><Convites /></ProtectedRoute>} />
       <Route path="/direcao/matriculas" element={<ProtectedRoute allowedRoles={["direcao"]}><Matriculas /></ProtectedRoute>} />
+      <Route path="/direcao/comunicados" element={<ProtectedRoute allowedRoles={["direcao"]}><Comunicados /></ProtectedRoute>} />
 
       {/* Coordenação */}
       <Route path="/coordenacao/turmas" element={<ProtectedRoute allowedRoles={["coordenacao"]}><TurmasCoordenacao /></ProtectedRoute>} />

@@ -70,7 +70,7 @@ export type Database = {
           id: string
           medicamentos: string | null
           observacoes: string | null
-          tipo_sanguineo: string | null
+          plano_saude: string | null
           updated_at: string
         }
         Insert: {
@@ -84,7 +84,7 @@ export type Database = {
           id?: string
           medicamentos?: string | null
           observacoes?: string | null
-          tipo_sanguineo?: string | null
+          plano_saude?: string | null
           updated_at?: string
         }
         Update: {
@@ -98,30 +98,22 @@ export type Database = {
           id?: string
           medicamentos?: string | null
           observacoes?: string | null
-          tipo_sanguineo?: string | null
+          plano_saude?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "anamneses_aluno_id_fkey"
             columns: ["aluno_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "alunos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anamneses_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: true
-            referencedRelation: "alunos_secure"
             referencedColumns: ["id"]
           },
         ]
       }
       atividades: {
         Row: {
-          ativa: boolean
-          capacidade_maxima: number | null
+          ativa: boolean | null
           created_at: string
           descricao: string | null
           id: string
@@ -130,8 +122,7 @@ export type Database = {
           valor_mensal: number
         }
         Insert: {
-          ativa?: boolean
-          capacidade_maxima?: number | null
+          ativa?: boolean | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -140,8 +131,7 @@ export type Database = {
           valor_mensal: number
         }
         Update: {
-          ativa?: boolean
-          capacidade_maxima?: number | null
+          ativa?: boolean | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -151,24 +141,54 @@ export type Database = {
         }
         Relationships: []
       }
+      comunicados: {
+        Row: {
+          conteudo: string
+          created_at: string | null
+          criado_por: string | null
+          destinatario_id: string | null
+          id: string
+          tipo: string
+          titulo: string
+          urgente: boolean | null
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string | null
+          criado_por?: string | null
+          destinatario_id?: string | null
+          id?: string
+          tipo: string
+          titulo: string
+          urgente?: boolean | null
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string | null
+          criado_por?: string | null
+          destinatario_id?: string | null
+          id?: string
+          tipo?: string
+          titulo?: string
+          urgente?: boolean | null
+        }
+        Relationships: []
+      }
       coordenador_atividades: {
         Row: {
           atividade_id: string
           coordenador_id: string
           created_at: string
-          id: string
         }
         Insert: {
           atividade_id: string
           coordenador_id: string
           created_at?: string
-          id?: string
         }
         Update: {
           atividade_id?: string
           coordenador_id?: string
           created_at?: string
-          id?: string
         }
         Relationships: [
           {
@@ -190,27 +210,30 @@ export type Database = {
       custos_predio: {
         Row: {
           created_at: string
-          data_competencia: string
+          data: string
+          descricao: string
           id: string
-          item: string
+          recorrente: boolean | null
           tipo: string
           updated_at: string
           valor: number
         }
         Insert: {
           created_at?: string
-          data_competencia: string
+          data: string
+          descricao: string
           id?: string
-          item: string
+          recorrente?: boolean | null
           tipo: string
           updated_at?: string
           valor: number
         }
         Update: {
           created_at?: string
-          data_competencia?: string
+          data?: string
+          descricao?: string
           id?: string
-          item?: string
+          recorrente?: boolean | null
           tipo?: string
           updated_at?: string
           valor?: number
@@ -219,27 +242,27 @@ export type Database = {
       }
       funcionarios: {
         Row: {
-          ativo: boolean
+          cargo: string
           created_at: string
-          funcao: string
+          data_admissao: string
           id: string
           nome: string
           salario: number
           updated_at: string
         }
         Insert: {
-          ativo?: boolean
+          cargo: string
           created_at?: string
-          funcao: string
+          data_admissao: string
           id?: string
           nome: string
           salario: number
           updated_at?: string
         }
         Update: {
-          ativo?: boolean
+          cargo?: string
           created_at?: string
-          funcao?: string
+          data_admissao?: string
           id?: string
           nome?: string
           salario?: number
@@ -250,35 +273,32 @@ export type Database = {
       invitations: {
         Row: {
           created_at: string
-          created_by: string | null
+          created_by: string
           email: string
           expires_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           token: string
-          updated_at: string
           used_at: string | null
         }
         Insert: {
           created_at?: string
-          created_by?: string | null
+          created_by: string
           email: string
           expires_at: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           token: string
-          updated_at?: string
           used_at?: string | null
         }
         Update: {
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           email?: string
           expires_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           token?: string
-          updated_at?: string
           used_at?: string | null
         }
         Relationships: []
@@ -333,7 +353,7 @@ export type Database = {
           data_inicio: string
           id: string
           observacoes: string | null
-          status: Database["public"]["Enums"]["status_matricula"]
+          status: Database["public"]["Enums"]["status_matricula"] | null
           turma_id: string
           updated_at: string
         }
@@ -341,10 +361,10 @@ export type Database = {
           aluno_id: string
           created_at?: string
           data_fim?: string | null
-          data_inicio: string
+          data_inicio?: string
           id?: string
           observacoes?: string | null
-          status?: Database["public"]["Enums"]["status_matricula"]
+          status?: Database["public"]["Enums"]["status_matricula"] | null
           turma_id: string
           updated_at?: string
         }
@@ -355,7 +375,7 @@ export type Database = {
           data_inicio?: string
           id?: string
           observacoes?: string | null
-          status?: Database["public"]["Enums"]["status_matricula"]
+          status?: Database["public"]["Enums"]["status_matricula"] | null
           turma_id?: string
           updated_at?: string
         }
@@ -365,13 +385,6 @@ export type Database = {
             columns: ["aluno_id"]
             isOneToOne: false
             referencedRelation: "alunos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matriculas_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos_secure"
             referencedColumns: ["id"]
           },
           {
@@ -407,81 +420,16 @@ export type Database = {
         }
         Relationships: []
       }
-      observacoes: {
-        Row: {
-          aluno_id: string
-          created_at: string
-          data: string
-          id: string
-          observacao: string
-          professor_id: string
-          tipo: string
-          turma_id: string
-          updated_at: string
-        }
-        Insert: {
-          aluno_id: string
-          created_at?: string
-          data?: string
-          id?: string
-          observacao: string
-          professor_id: string
-          tipo: string
-          turma_id: string
-          updated_at?: string
-        }
-        Update: {
-          aluno_id?: string
-          created_at?: string
-          data?: string
-          id?: string
-          observacao?: string
-          professor_id?: string
-          tipo?: string
-          turma_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "observacoes_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "observacoes_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos_secure"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "observacoes_professor_id_fkey"
-            columns: ["professor_id"]
-            isOneToOne: false
-            referencedRelation: "professores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "observacoes_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pagamentos: {
         Row: {
           created_at: string
           data_pagamento: string | null
           data_vencimento: string
-          forma_pagamento: string | null
           id: string
           matricula_id: string
+          metodo_pagamento: string | null
           observacoes: string | null
-          status: Database["public"]["Enums"]["status_pagamento"]
+          status: Database["public"]["Enums"]["status_pagamento"] | null
           updated_at: string
           valor: number
         }
@@ -489,11 +437,11 @@ export type Database = {
           created_at?: string
           data_pagamento?: string | null
           data_vencimento: string
-          forma_pagamento?: string | null
           id?: string
           matricula_id: string
+          metodo_pagamento?: string | null
           observacoes?: string | null
-          status?: Database["public"]["Enums"]["status_pagamento"]
+          status?: Database["public"]["Enums"]["status_pagamento"] | null
           updated_at?: string
           valor: number
         }
@@ -501,11 +449,11 @@ export type Database = {
           created_at?: string
           data_pagamento?: string | null
           data_vencimento?: string
-          forma_pagamento?: string | null
           id?: string
           matricula_id?: string
+          metodo_pagamento?: string | null
           observacoes?: string | null
-          status?: Database["public"]["Enums"]["status_pagamento"]
+          status?: Database["public"]["Enums"]["status_pagamento"] | null
           updated_at?: string
           valor?: number
         }
@@ -519,66 +467,58 @@ export type Database = {
           },
         ]
       }
-      presencas: {
+      profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
-          data: string
+          email: string | null
           id: string
-          matricula_id: string
-          observacao: string | null
-          presente: boolean
+          nome_completo: string | null
+          telefone: string | null
+          updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
-          data: string
-          id?: string
-          matricula_id: string
-          observacao?: string | null
-          presente: boolean
+          email?: string | null
+          id: string
+          nome_completo?: string | null
+          telefone?: string | null
+          updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
-          data?: string
+          email?: string | null
           id?: string
-          matricula_id?: string
-          observacao?: string | null
-          presente?: boolean
+          nome_completo?: string | null
+          telefone?: string | null
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "presencas_matricula_id_fkey"
-            columns: ["matricula_id"]
-            isOneToOne: false
-            referencedRelation: "matriculas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       professores: {
         Row: {
-          ativo: boolean
+          cpf: string | null
           created_at: string
           especialidade: string | null
           id: string
-          percentual_comissao: number
           updated_at: string
           user_id: string
         }
         Insert: {
-          ativo?: boolean
+          cpf?: string | null
           created_at?: string
           especialidade?: string | null
           id?: string
-          percentual_comissao?: number
           updated_at?: string
           user_id: string
         }
         Update: {
-          ativo?: boolean
+          cpf?: string | null
           created_at?: string
           especialidade?: string | null
           id?: string
-          percentual_comissao?: number
           updated_at?: string
           user_id?: string
         }
@@ -592,41 +532,11 @@ export type Database = {
           },
         ]
       }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          email: string
-          id: string
-          nome_completo: string
-          telefone: string | null
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          email: string
-          id: string
-          nome_completo: string
-          telefone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string
-          id?: string
-          nome_completo?: string
-          telefone?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       turmas: {
         Row: {
-          ativa: boolean
+          ativa: boolean | null
           atividade_id: string
-          capacidade_maxima: number
+          capacidade: number
           created_at: string
           dias_semana: string[]
           horario: string
@@ -636,9 +546,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          ativa?: boolean
+          ativa?: boolean | null
           atividade_id: string
-          capacidade_maxima: number
+          capacidade: number
           created_at?: string
           dias_semana: string[]
           horario: string
@@ -648,9 +558,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          ativa?: boolean
+          ativa?: boolean | null
           atividade_id?: string
-          capacidade_maxima?: number
+          capacidade?: number
           created_at?: string
           dias_semana?: string[]
           horario?: string
@@ -704,87 +614,34 @@ export type Database = {
       }
     }
     Views: {
-      alunos_secure: {
-        Row: {
-          cpf: string | null
-          created_at: string | null
-          data_nascimento: string | null
-          endereco: string | null
-          id: string | null
-          nome_completo: string | null
-          responsavel_id: string | null
-          telefone: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          cpf?: never
-          created_at?: string | null
-          data_nascimento?: string | null
-          endereco?: string | null
-          id?: string | null
-          nome_completo?: string | null
-          responsavel_id?: string | null
-          telefone?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          cpf?: never
-          created_at?: string | null
-          data_nascimento?: string | null
-          endereco?: string | null
-          id?: string | null
-          nome_completo?: string | null
-          responsavel_id?: string | null
-          telefone?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "alunos_responsavel_id_fkey"
-            columns: ["responsavel_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
-      get_aluno_cpf: {
-        Args: { aluno_id: string; cpf_value: string }
-        Returns: string
-      }
-      has_role: {
+      check_user_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
+          user_id: string
+          required_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }
-      is_coordenador_atividade: {
-        Args: { _atividade_id: string; _user_id: string }
-        Returns: boolean
+      cleanup_expired_invitations: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
-      is_coordenador_turma: {
-        Args: { _turma_id: string; _user_id: string }
-        Returns: boolean
+      create_new_user: {
+        Args: {
+          email: string
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          password_hash: string
+        }
+        Returns: string
       }
-      is_professor_turma: {
-        Args: { _turma_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_responsavel_aluno: {
-        Args: { _aluno_id: string; _user_id: string }
-        Returns: boolean
-      }
-      mask_cpf: { Args: { cpf_value: string }; Returns: string }
-      validate_invitation_token: {
-        Args: { _email: string; _token: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      validate_recovery_code: {
-        Args: { _code: string; _user_id: string }
-        Returns: boolean
+      dissolve_family_group: {
+        Args: {
+          group_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
@@ -798,129 +655,97 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  PublicTableNameOrOptions extends
+  | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+  | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+  ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])
+  : never = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+  ? R
+  : never
+  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
+    Database["public"]["Views"])
+  ? (Database["public"]["Tables"] &
+    Database["public"]["Views"])[PublicTableNameOrOptions] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  PublicTableNameOrOptions extends
+  | keyof Database["public"]["Tables"]
+  | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+  ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+    Insert: infer I
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+  ? I
+  : never
+  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
+  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  PublicTableNameOrOptions extends
+  | keyof Database["public"]["Tables"]
+  | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+  ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+    Update: infer U
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+  ? U
+  : never
+  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
+  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  PublicEnumNameOrOptions extends
+  | keyof Database["public"]["Enums"]
+  | { schema: keyof Database },
+  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  : never = never,
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
+  ? Database["public"]["Enums"][PublicEnumNameOrOptions]
+  : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof Database["public"]["CompositeTypes"]
+  | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      app_role: ["direcao", "coordenacao", "professor", "responsavel"],
-      status_matricula: ["pendente", "ativa", "cancelada", "concluida"],
-      status_pagamento: ["pendente", "pago", "atrasado", "cancelado"],
-    },
-  },
-} as const
+  ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+  : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof Database["public"]["CompositeTypes"]
+  ? Database["public"]["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never

@@ -24,6 +24,7 @@ import {
   Mail,
   CheckCircle2,
   Link as LinkIcon,
+  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -47,6 +48,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: ClipboardList },
         { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
         { name: "Convites", href: "/convites", icon: Mail },
+        { name: "Comunicados", href: "/direcao/comunicados", icon: Megaphone },
         { name: "Notificações", href: "/coordenacao/notificacoes", icon: AlertCircle },
         { name: "Link Pagamento", href: "/coordenacao/gerar-link-pagamento", icon: LinkIcon },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },

@@ -6,17 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Users, 
-  FileText, 
-  DollarSign, 
-  Calendar, 
-  Loader2, 
-  UserPlus, 
+import {
+  Users,
+  FileText,
+  DollarSign,
+  Calendar,
+  Loader2,
+  UserPlus,
   ClipboardList,
   AlertCircle,
   CheckCircle2,
-  Clock
+  CheckCircle2,
+  Clock,
+  Megaphone
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, isBefore, addDays } from "date-fns";
@@ -165,6 +167,9 @@ const DashboardResponsavel = () => {
           />
         </div>
 
+        {/* Mural de Avisos */}
+        <MuralAvisos />
+
         {/* Ações Rápidas */}
         {totalAlunos === 0 && (
           <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
@@ -279,7 +284,7 @@ const DashboardResponsavel = () => {
                 {pagamentos.map((pag) => {
                   const vencido = isBefore(new Date(pag.data_vencimento), new Date());
                   const proximo = isVencidoOuProximo(pag.data_vencimento);
-                  
+
                   return (
                     <div key={pag.id} className={`flex items-center justify-between p-4 rounded-lg ${vencido ? 'bg-destructive/10 border border-destructive/20' : proximo ? 'bg-warning/10 border border-warning/20' : 'bg-muted/50'}`}>
                       <div className="flex items-center gap-3">
@@ -329,6 +334,47 @@ const DashboardResponsavel = () => {
         </Card>
       </div>
     </DashboardLayout>
+  );
+};
+
+const MuralAvisos = () => {
+  const { data: comunicados } = useQuery({
+    queryKey: ["comunicados-responsavel"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("comunicados")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (!comunicados?.length) return null;
+
+  return (
+    <Card className="border-l-4 border-l-blue-500 bg-blue-50/50">
+      <CardHeader className="flex flex-row items-center gap-3 pb-2">
+        <Megaphone className="h-5 w-5 text-blue-600" />
+        <CardTitle className="text-lg text-blue-900">Mural de Avisos</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {comunicados.map((aviso: any) => (
+          <div key={aviso.id} className="p-3 bg-white rounded-md shadow-sm border space-y-1">
+            <div className="flex justify-between items-start">
+              <h4 className="font-semibold text-foreground flex items-center gap-2">
+                {aviso.urgente && <span className="text-red-500 flex items-center gap-1 text-xs border border-red-200 bg-red-50 px-2 py-0.5 rounded-full">URGENTE</span>}
+                {aviso.titulo}
+              </h4>
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(aviso.created_at), "dd/MM HH:mm", { locale: ptBR })}
+              </span>
+            </div>
+            <p className="text-sm text-foreground/80">{aviso.conteudo}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 };
 
