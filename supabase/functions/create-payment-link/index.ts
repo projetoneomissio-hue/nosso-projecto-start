@@ -113,7 +113,7 @@ serve(async (req) => {
     // Create Payment Link
     const paymentLink = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
-      payment_method_types: ["card", "pix"],
+      payment_method_types: ["card"], // PIX removed temporarily - needs activation in Stripe Dashboard
       metadata: {
         pagamento_id: pagamentoId,
         aluno_nome: aluno.nome_completo,
@@ -122,7 +122,7 @@ serve(async (req) => {
       after_completion: {
         type: "redirect",
         redirect: {
-          url: `${req.headers.get("origin") || "https://localhost:3000"}/payment-success?payment_id=${pagamentoId}`,
+          url: `${req.headers.get("origin") || "https://localhost:3000"}/responsavel/pagamento-sucesso?payment_id=${pagamentoId}`,
         },
       },
       payment_intent_data: {
