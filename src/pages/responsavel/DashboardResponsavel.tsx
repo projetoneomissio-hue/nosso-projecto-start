@@ -382,4 +382,78 @@ const MuralAvisos = () => {
   );
 };
 
+const FrequenciaCard = () => {
+  const { user } = useAuth();
+  
+  const { data: frequencias } = useQuery({
+    queryKey: ["dashboard-frequencia", user?.id],
+    queryFn: async () => {
+       if (!user) return [];
+       // Get children IDs first
+       const { data: alunos } = await supabase.from("alunos").select("id").eq("responsavel_id", user.id);
+       if (!alunos?.length) return [];
+       
+       const alunoIds = alunos.map(a => a.id);
+       
+       // Get recent attendance for these children
+       const { data, error } = await supabase
+         .from("frequencia")
+         .select(`
+           data,
+           presente,
+           matricula:matriculas!inner(
+             aluno:alunos!inner(nome_completo),
+             turma:turmas!inner(
+                nome,
+                atividade:atividades(nome)
+             )
+           )
+         `)
+         .in("matriculas.aluno_id", alunoIds)
+         .order("data", { ascending: false })
+         .limit(5);
+
+       if (error) throw error;
+       return data;
+    },
+    enabled: !!user
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+           <ClipboardList className="h-5 w-5" />
+           Últimas Frequências
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+         {frequencias && frequencias.length > 0 ? (
+            frequencias.map((f: any, idx) => (
+               <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div>
+                     <p className="font-medium">{f.matricula.aluno.nome_completo}</p>
+                     <p className="text-xs text-muted-foreground">
+                        {f.matricula.turma.atividade.nome} - {format(new Date(f.data), "dd/MM/yyyy")}
+                     </p>
+                  </div>
+                  <div>
+                     {f.presente ? (
+                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Presente</Badge>
+                     ) : (
+                        <Badge variant="destructive">Falta</Badge>
+                     )}
+                  </div>
+               </div>
+            ))
+         ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">
+               Nenhum registro recente.
+            </p>
+         )}
+      </CardContent>
+    </Card>
+  );
+};
+
 export default DashboardResponsavel;

@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   public: {
     Tables: {
       alunos: {
@@ -73,7 +68,8 @@ export type Database = {
           id: string
           medicamentos: string | null
           observacoes: string | null
-          plano_saude: string | null
+          restricoes_alimentares: string | null
+          tipo_sanguineo: string | null
           updated_at: string
         }
         Insert: {
@@ -87,7 +83,8 @@ export type Database = {
           id?: string
           medicamentos?: string | null
           observacoes?: string | null
-          plano_saude?: string | null
+          restricoes_alimentares?: string | null
+          tipo_sanguineo?: string | null
           updated_at?: string
         }
         Update: {
@@ -101,14 +98,15 @@ export type Database = {
           id?: string
           medicamentos?: string | null
           observacoes?: string | null
-          plano_saude?: string | null
+          restricoes_alimentares?: string | null
+          tipo_sanguineo?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "anamneses_aluno_id_fkey"
             columns: ["aluno_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "alunos"
             referencedColumns: ["id"]
           },
@@ -147,202 +145,138 @@ export type Database = {
       comunicados: {
         Row: {
           conteudo: string
-          created_at: string | null
-          criado_por: string | null
-          destinatario_id: string | null
+          created_at: string
+          criado_info: Json | null
+          data_expiracao: string | null
+          destinatario_tipo: string
           id: string
-          tipo: string
+          importante: boolean | null
+          status: string | null
           titulo: string
-          urgente: boolean | null
+          updated_at: string
         }
         Insert: {
           conteudo: string
-          created_at?: string | null
-          criado_por?: string | null
-          destinatario_id?: string | null
+          created_at?: string
+          criado_info?: Json | null
+          data_expiracao?: string | null
+          destinatario_tipo: string
           id?: string
-          tipo: string
+          importante?: boolean | null
+          status?: string | null
           titulo: string
-          urgente?: boolean | null
+          updated_at?: string
         }
         Update: {
           conteudo?: string
-          created_at?: string | null
-          criado_por?: string | null
-          destinatario_id?: string | null
+          created_at?: string
+          criado_info?: Json | null
+          data_expiracao?: string | null
+          destinatario_tipo?: string
           id?: string
-          tipo?: string
+          importante?: boolean | null
+          status?: string | null
           titulo?: string
-          urgente?: boolean | null
+          updated_at?: string
         }
         Relationships: []
       }
-      coordenador_atividades: {
-        Row: {
-          atividade_id: string
-          coordenador_id: string
-          created_at: string
-        }
-        Insert: {
-          atividade_id: string
-          coordenador_id: string
-          created_at?: string
-        }
-        Update: {
-          atividade_id?: string
-          coordenador_id?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "coordenador_atividades_atividade_id_fkey"
-            columns: ["atividade_id"]
-            isOneToOne: false
-            referencedRelation: "atividades"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "coordenador_atividades_coordenador_id_fkey"
-            columns: ["coordenador_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       custos_predio: {
         Row: {
+          categoria: string
           created_at: string
           data: string
           descricao: string
           id: string
-          recorrente: boolean | null
-          tipo: string
-          updated_at: string
           valor: number
         }
         Insert: {
+          categoria: string
           created_at?: string
-          data: string
+          data?: string
           descricao: string
           id?: string
-          recorrente?: boolean | null
-          tipo: string
-          updated_at?: string
           valor: number
         }
         Update: {
+          categoria?: string
           created_at?: string
           data?: string
           descricao?: string
           id?: string
-          recorrente?: boolean | null
-          tipo?: string
-          updated_at?: string
           valor?: number
         }
         Relationships: []
       }
-      funcionarios: {
+      frequencia: {
         Row: {
-          cargo: string
-          created_at: string
-          data_admissao: string
+          created_at: string | null
+          data: string
           id: string
-          nome: string
-          salario: number
-          updated_at: string
+          matricula_id: string
+          observacoes: string | null
+          presente: boolean
+          updated_at: string | null
         }
         Insert: {
-          cargo: string
-          created_at?: string
-          data_admissao: string
+          created_at?: string | null
+          data?: string
           id?: string
-          nome: string
-          salario: number
-          updated_at?: string
+          matricula_id: string
+          observacoes?: string | null
+          presente?: boolean
+          updated_at?: string | null
         }
         Update: {
-          cargo?: string
-          created_at?: string
-          data_admissao?: string
+          created_at?: string | null
+          data?: string
           id?: string
-          nome?: string
-          salario?: number
-          updated_at?: string
+          matricula_id?: string
+          observacoes?: string | null
+          presente?: boolean
+          updated_at?: string | null
         }
-        Relationships: []
-      }
-      invitations: {
-        Row: {
-          created_at: string
-          created_by: string
-          email: string
-          expires_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          token: string
-          used_at: string | null
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          email: string
-          expires_at: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          token: string
-          used_at?: string | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          token?: string
-          used_at?: string | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "frequencia_matricula_id_fkey"
+            columns: ["matricula_id"]
+            isOneToOne: false
+            referencedRelation: "matriculas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       locacoes: {
         Row: {
+          cliente_nome: string
           created_at: string
-          data: string
-          evento: string
-          horario_fim: string
-          horario_inicio: string
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
           id: string
-          observacoes: string | null
-          responsavel_nome: string
-          responsavel_telefone: string | null
+          status: string | null
           updated_at: string
           valor: number
         }
         Insert: {
+          cliente_nome: string
           created_at?: string
-          data: string
-          evento: string
-          horario_fim: string
-          horario_inicio: string
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
           id?: string
-          observacoes?: string | null
-          responsavel_nome: string
-          responsavel_telefone?: string | null
+          status?: string | null
           updated_at?: string
           valor: number
         }
         Update: {
+          cliente_nome?: string
           created_at?: string
-          data?: string
-          evento?: string
-          horario_fim?: string
-          horario_inicio?: string
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
           id?: string
-          observacoes?: string | null
-          responsavel_nome?: string
-          responsavel_telefone?: string | null
+          status?: string | null
           updated_at?: string
           valor?: number
         }
@@ -502,34 +436,46 @@ export type Database = {
       }
       professores: {
         Row: {
-          cpf: string | null
+          cpf: string
           created_at: string
-          especialidade: string | null
+          data_nascimento: string
+          endereco: string | null
+          especialidade: string[] | null
           id: string
+          nome_completo: string
+          telefone: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          cpf?: string | null
+          cpf: string
           created_at?: string
-          especialidade?: string | null
+          data_nascimento: string
+          endereco?: string | null
+          especialidade?: string[] | null
           id?: string
+          nome_completo: string
+          telefone: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          cpf?: string | null
+          cpf?: string
           created_at?: string
-          especialidade?: string | null
+          data_nascimento?: string
+          endereco?: string | null
+          especialidade?: string[] | null
           id?: string
+          nome_completo?: string
+          telefone?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "professores_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -658,9 +604,11 @@ export type Database = {
   }
 }
 
+type PublicSchema = Database[Extract<keyof Database, "public">]
+
 export type Tables<
   PublicTableNameOrOptions extends
-  | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+  | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
   | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
   ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
@@ -673,10 +621,10 @@ export type Tables<
     }
   ? R
   : never
-  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
-    Database["public"]["Views"])
-  ? (Database["public"]["Tables"] &
-    Database["public"]["Views"])[PublicTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+    PublicSchema["Views"])
+  ? (PublicSchema["Tables"] &
+    PublicSchema["Views"])[PublicTableNameOrOptions] extends {
       Row: infer R
     }
   ? R
@@ -685,7 +633,7 @@ export type Tables<
 
 export type TablesInsert<
   PublicTableNameOrOptions extends
-  | keyof Database["public"]["Tables"]
+  | keyof PublicSchema["Tables"]
   | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
   ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
@@ -696,8 +644,8 @@ export type TablesInsert<
   }
   ? I
   : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
     Insert: infer I
   }
   ? I
@@ -706,7 +654,7 @@ export type TablesInsert<
 
 export type TablesUpdate<
   PublicTableNameOrOptions extends
-  | keyof Database["public"]["Tables"]
+  | keyof PublicSchema["Tables"]
   | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
   ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
@@ -717,8 +665,8 @@ export type TablesUpdate<
   }
   ? U
   : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
     Update: infer U
   }
   ? U
@@ -727,20 +675,20 @@ export type TablesUpdate<
 
 export type Enums<
   PublicEnumNameOrOptions extends
-  | keyof Database["public"]["Enums"]
+  | keyof PublicSchema["Enums"]
   | { schema: keyof Database },
   EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
   ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
   : never = never,
 > = PublicEnumNameOrOptions extends { schema: keyof Database }
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
-  ? Database["public"]["Enums"][PublicEnumNameOrOptions]
+  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+  ? PublicSchema["Enums"][PublicEnumNameOrOptions]
   : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-  | keyof Database["public"]["CompositeTypes"]
+  | keyof PublicSchema["CompositeTypes"]
   | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -749,6 +697,6 @@ export type CompositeTypes<
   : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof Database["public"]["CompositeTypes"]
-  ? Database["public"]["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
+  ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
   : never

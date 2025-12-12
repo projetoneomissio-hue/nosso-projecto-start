@@ -40,6 +40,7 @@ import GerarLinkPagamento from "./pages/coordenacao/GerarLinkPagamento";
 
 // Professores
 import Turmas from "./pages/professor/Turmas";
+import Chamada from "./pages/professor/Chamada";
 import AlunosProfessor from "./pages/professor/Alunos";
 import Presenca from "./pages/professor/Presenca";
 import Observacoes from "./pages/professor/Observacoes";
@@ -96,6 +97,7 @@ export const AppRoutes = () => {
 
       {/* Professores */}
       <Route path="/professor/turmas" element={<ProtectedRoute allowedRoles={["professor"]}><Turmas /></ProtectedRoute>} />
+      <Route path="/professor/chamada" element={<ProtectedRoute allowedRoles={["professor"]}><Chamada /></ProtectedRoute>} />
       <Route path="/professor/alunos" element={<ProtectedRoute allowedRoles={["professor"]}><AlunosProfessor /></ProtectedRoute>} />
       <Route path="/professor/presenca" element={<ProtectedRoute allowedRoles={["professor"]}><Presenca /></ProtectedRoute>} />
       <Route path="/professor/observacoes" element={<ProtectedRoute allowedRoles={["professor"]}><Observacoes /></ProtectedRoute>} />

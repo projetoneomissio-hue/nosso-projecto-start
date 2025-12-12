@@ -71,6 +71,7 @@ const getNavigationByRole = (role: string) => {
       return [
         { name: "Dashboard", href: "/", icon: LayoutDashboard },
         { name: "Minhas Turmas", href: "/professor/turmas", icon: Users },
+        { name: "Chamada / Frequência", href: "/professor/chamada", icon: ClipboardList },
         { name: "Meus Alunos", href: "/professor/alunos", icon: Users },
         { name: "Presença", href: "/professor/presenca", icon: Calendar },
         { name: "Observações", href: "/professor/observacoes", icon: FileText },
