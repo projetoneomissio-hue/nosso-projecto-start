@@ -26,7 +26,7 @@ import NotFound from "./pages/NotFound";
 import Usuarios from "./pages/direcao/Usuarios";
 import Convites from "./pages/direcao/Convites";
 import Matriculas from "./pages/direcao/Matriculas";
-import Matriculas from "./pages/direcao/Matriculas";
+
 import Coordenadores from "./pages/direcao/Coordenadores";
 import Comunicados from "./pages/direcao/Comunicados";
 
