@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, Mail, Trash2 } from "lucide-react";
+import { Copy, Mail, Trash2, Link as LinkIcon, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { z } from "zod";
 
@@ -76,6 +76,9 @@ export default function Convites() {
       if (error) throw error;
 
       // Send invitation email via edge function
+      let emailSent = false;
+      let emailErrorMsg = "";
+
       try {
         const { error: emailError } = await supabase.functions.invoke('send-invitation-email', {
           body: {
@@ -88,21 +91,34 @@ export default function Convites() {
 
         if (emailError) {
           console.error('Error sending invitation email:', emailError);
-          // Don't fail the invitation creation if email fails
+          emailErrorMsg = emailError.message || "Unknown error";
+        } else {
+          emailSent = true;
         }
-      } catch (emailError) {
+      } catch (emailError: any) {
         console.error('Error invoking email function:', emailError);
-        // Continue even if email fails
+        emailErrorMsg = emailError.message || "Network error";
       }
 
-      return data;
+      return { ...data, emailSent, emailErrorMsg };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
-      toast({
-        title: "Convite criado e enviado!",
-        description: `Email enviado para ${data.email} com o token de convite.`,
-      });
+
+      if (data.emailSent) {
+        toast({
+          title: "Convite criado e enviado!",
+          description: `Email enviado para ${data.email}.`,
+        });
+      } else {
+        toast({
+          title: "Convite criado, mas o email falhou",
+          description: `O convite foi salvo, mas o email não pôde ser enviado. Use o botão 'Copiar Link' para enviar manualmente. Erro: ${data.emailErrorMsg}`,
+          variant: "destructive",
+          duration: 10000,
+        });
+      }
+
       setOpen(false);
       setEmail("");
       setRole("coordenacao");
@@ -152,6 +168,15 @@ export default function Convites() {
     toast({
       title: "Token copiado!",
       description: "Token copiado para a área de transferência",
+    });
+  };
+
+  const copyLink = (token: string) => {
+    const link = `${window.location.origin}/login?token=${token}`;
+    navigator.clipboard.writeText(link);
+    toast({
+      title: "Link copiado!",
+      description: "Link de convite copiado para a área de transferência",
     });
   };
 
@@ -271,8 +296,18 @@ export default function Convites() {
                             size="sm"
                             variant="ghost"
                             onClick={() => copyToken(invitation.token)}
+                            title="Copiar Token"
                           >
                             <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => copyLink(invitation.token)}
+                          >
+                            <LinkIcon className="h-3 w-3 mr-1" />
+                            Copiar Link
                           </Button>
                         </div>
                       )}
