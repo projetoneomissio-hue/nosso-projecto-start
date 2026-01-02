@@ -108,15 +108,17 @@ serve(async (req) => {
         const emailsToSend = [];
         const paymentsToUpdate = [];
 
-        for (const p of richPayments) {
+        for (const p of richPayments as any[]) {
             const dueDate = p.data_vencimento;
             const lastNotice = p.ultimo_aviso_data;
-            const studentName = p.matriculas.alunos.nome_completo;
-            const activityName = p.matriculas.turmas.atividades.nome;
-            const responsavelId = p.matriculas.alunos.responsavel_id;
+            const matriculaData = p.matriculas as any;
+            const studentName = matriculaData?.alunos?.nome_completo || "Aluno";
+            const activityName = matriculaData?.turmas?.atividades?.nome || "Atividade";
+            const responsavelId = matriculaData?.alunos?.responsavel_id;
+
+            if (!responsavelId) continue;
 
             // Fetch email for responsavel
-            // Optimization: Could batch this, but for MVP loop is okay or use a separate query per user
             const { data: profile } = await supabase.from("profiles").select("email, nome_completo").eq("id", responsavelId).single();
 
             if (!profile?.email) continue;
@@ -190,8 +192,9 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true, processed: results }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return new Response(JSON.stringify({ error: errorMessage }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 400,
         });
