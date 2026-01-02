@@ -151,6 +151,100 @@ export type Database = {
         }
         Relationships: []
       }
+      comunicado_envios: {
+        Row: {
+          canal: string
+          comunicado_id: string
+          created_at: string
+          enviado_em: string | null
+          erro_mensagem: string | null
+          id: string
+          responsavel_id: string
+          status: string
+        }
+        Insert: {
+          canal: string
+          comunicado_id: string
+          created_at?: string
+          enviado_em?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          responsavel_id: string
+          status?: string
+        }
+        Update: {
+          canal?: string
+          comunicado_id?: string
+          created_at?: string
+          enviado_em?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          responsavel_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comunicado_envios_comunicado_id_fkey"
+            columns: ["comunicado_id"]
+            isOneToOne: false
+            referencedRelation: "comunicados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comunicados: {
+        Row: {
+          canal: string[]
+          created_at: string
+          created_by: string
+          destinatario_id: string | null
+          enviado_em: string | null
+          id: string
+          mensagem: string
+          status: string
+          tipo: string
+          titulo: string
+          turma_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          canal?: string[]
+          created_at?: string
+          created_by: string
+          destinatario_id?: string | null
+          enviado_em?: string | null
+          id?: string
+          mensagem: string
+          status?: string
+          tipo?: string
+          titulo: string
+          turma_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canal?: string[]
+          created_at?: string
+          created_by?: string
+          destinatario_id?: string | null
+          enviado_em?: string | null
+          id?: string
+          mensagem?: string
+          status?: string
+          tipo?: string
+          titulo?: string
+          turma_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comunicados_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coordenador_atividades: {
         Row: {
           atividade_id: string
