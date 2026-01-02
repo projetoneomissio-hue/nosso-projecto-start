@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,24 +13,21 @@ export function NovaDespesaDialog() {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
-        descricao: "",
+        item: "",
         valor: "",
-        data: new Date().toISOString().split("T")[0],
-        tipo: "Manutenção",
-        recorrente: false,
+        data_competencia: new Date().toISOString().split("T")[0],
+        tipo: "fixo",
     });
 
     const saveMutation = useMutation({
         mutationFn: async () => {
             const { error } = await supabase.from("custos_predio").insert({
-                descricao: formData.descricao,
+                item: formData.item,
                 valor: parseFloat(formData.valor),
-                data: formData.data,
+                data_competencia: formData.data_competencia,
                 tipo: formData.tipo,
-                recorrente: formData.recorrente,
             });
 
             if (error) throw error;
@@ -42,14 +38,12 @@ export function NovaDespesaDialog() {
                 description: "O custo foi adicionado ao sistema.",
             });
             queryClient.invalidateQueries({ queryKey: ["custos-predio"] });
-            queryClient.invalidateQueries({ queryKey: ["financeiro-stats"] }); // Assuming this key exists or will be added
             setOpen(false);
             setFormData({
-                descricao: "",
+                item: "",
                 valor: "",
-                data: new Date().toISOString().split("T")[0],
-                tipo: "Manutenção",
-                recorrente: false,
+                data_competencia: new Date().toISOString().split("T")[0],
+                tipo: "fixo",
             });
         },
         onError: (error) => {
@@ -63,7 +57,7 @@ export function NovaDespesaDialog() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.descricao || !formData.valor) {
+        if (!formData.item || !formData.valor) {
             toast({ title: "Preencha todos os campos", variant: "destructive" });
             return;
         }
@@ -83,17 +77,16 @@ export function NovaDespesaDialog() {
                     <DialogTitle>Registrar Despesa / Custo</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
-
                     <div className="space-y-2">
-                        <Label htmlFor="descricao">Descrição</Label>
+                        <Label htmlFor="item">Descrição</Label>
                         <div className="relative">
                             <FileText className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                id="descricao"
+                                id="item"
                                 placeholder="Ex: Conta de Luz, Reparo Ar-condicionado"
                                 className="pl-9"
-                                value={formData.descricao}
-                                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                                value={formData.item}
+                                onChange={(e) => setFormData({ ...formData, item: e.target.value })}
                             />
                         </div>
                     </div>
@@ -116,22 +109,22 @@ export function NovaDespesaDialog() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="data">Data</Label>
+                            <Label htmlFor="data_competencia">Data</Label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    id="data"
+                                    id="data_competencia"
                                     type="date"
                                     className="pl-9"
-                                    value={formData.data}
-                                    onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                                    value={formData.data_competencia}
+                                    onChange={(e) => setFormData({ ...formData, data_competencia: e.target.value })}
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="tipo">Categoria</Label>
+                        <Label htmlFor="tipo">Tipo</Label>
                         <Select
                             value={formData.tipo}
                             onValueChange={(val) => setFormData({ ...formData, tipo: val })}
@@ -140,28 +133,10 @@ export function NovaDespesaDialog() {
                                 <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Manutenção">Manutenção</SelectItem>
-                                <SelectItem value="Energia">Energia Elétrica</SelectItem>
-                                <SelectItem value="Água">Água / Esgoto</SelectItem>
-                                <SelectItem value="Internet">Internet / Telefone</SelectItem>
-                                <SelectItem value="Aluguel">Aluguel / Condomínio</SelectItem>
-                                <SelectItem value="Salários">Salários / Encargos</SelectItem>
-                                <SelectItem value="Outros">Outros</SelectItem>
+                                <SelectItem value="fixo">Fixo</SelectItem>
+                                <SelectItem value="variavel">Variável</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
-
-                    <div className="flex items-center justify-between border p-3 rounded-lg">
-                        <div className="space-y-0.5">
-                            <Label className="text-base">Despesa Recorrente?</Label>
-                            <p className="text-sm text-muted-foreground">
-                                Repetir mensalmente (Apenas informativo por enquanto)
-                            </p>
-                        </div>
-                        <Switch
-                            checked={formData.recorrente}
-                            onCheckedChange={(checked) => setFormData({ ...formData, recorrente: checked })}
-                        />
                     </div>
 
                     <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
