@@ -53,45 +53,45 @@ const Chamada = () => {
     const { data: studentsData, isLoading: loadingStudents } = useQuery({
         queryKey: ["chamada-students", selectedTurmaId, date],
         queryFn: async () => {
-            if (!selectedTurmaId) return { students: [], existingAttendance: [] };
+            if (!selectedTurmaId) return { matriculas: [] };
 
             // Get Students
             const { data: matriculas, error: matError } = await supabase
                 .from("matriculas")
                 .select(`
-          id,
-          aluno_id,
-          alunos(id, nome_completo, foto_url)
-        `)
+                    id,
+                    aluno_id,
+                    alunos(id, nome_completo)
+                `)
                 .eq("turma_id", selectedTurmaId)
                 .eq("status", "ativa");
 
             if (matError) throw matError;
 
-            // Get Existing Attendance
-            const { data: frequencia, error: freqError } = await supabase
-                .from("frequencia")
+            // Get Existing Attendance using presencas table
+            const { data: presencas, error: presError } = await supabase
+                .from("presencas")
                 .select("*")
-                .in("matricula_id", matriculas.map(m => m.id))
+                .in("matricula_id", matriculas?.map(m => m.id) || [])
                 .eq("data", date);
 
-            if (freqError) throw freqError;
+            if (presError) throw presError;
 
             // Initialize state from DB or Default to True (Present)
             const initialAttendance: Record<string, boolean> = {};
             const initialObs: Record<string, string> = {};
 
-            matriculas.forEach(m => {
-                const record = frequencia?.find(f => f.matricula_id === m.id);
+            matriculas?.forEach(m => {
+                const record = presencas?.find(p => p.matricula_id === m.id);
                 // If record exists, use it. If not, default to TRUE (Assuming presence)
                 initialAttendance[m.id] = record ? record.presente : true;
-                initialObs[m.id] = record?.observacoes || "";
+                initialObs[m.id] = record?.observacao || "";
             });
 
             setAttendance(initialAttendance);
             setObservations(initialObs);
 
-            return { matriculas };
+            return { matriculas: matriculas || [] };
         },
         enabled: !!selectedTurmaId && !!date,
     });
@@ -105,28 +105,19 @@ const Chamada = () => {
                 matricula_id: m.id,
                 data: date,
                 presente: attendance[m.id] ?? true,
-                observacoes: observations[m.id] || null
-                // On conflict, update "presente" and "observacoes"
+                observacao: observations[m.id] || null
             }));
-
-            // Supabase Upsert needs a constraint or index match. 
-            // We don't have a unique constraint on (matricula_id, data) yet? 
-            // Wait, we should probably check if we can UPSERT by ID if we fetched them, 
-            // OR we rely on a unique index. Let's Fetch existing IDs first to be safe or delete/insert?
-            // Best practice: Add UNIQUE(matricula_id, data) constraint. 
-            // Since I didn't add the constraint in migration, I will delete existing for this day/class and re-insert.
-            // It's a bit heavier but safe given current schema state without unique constraint.
 
             const matriculaIds = studentsData.matriculas.map(m => m.id);
 
             // Delete existing
-            await supabase.from("frequencia")
+            await supabase.from("presencas")
                 .delete()
                 .in("matricula_id", matriculaIds)
                 .eq("data", date);
 
             // Insert new
-            const { error } = await supabase.from("frequencia").insert(upsertData);
+            const { error } = await supabase.from("presencas").insert(upsertData);
             if (error) throw error;
         },
         onSuccess: () => {
@@ -152,48 +143,50 @@ const Chamada = () => {
         }));
     };
 
+    const updateObservation = (matriculaId: string, obs: string) => {
+        setObservations(prev => ({
+            ...prev,
+            [matriculaId]: obs
+        }));
+    };
+
     return (
         <DashboardLayout>
-            <div className="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
-                <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-foreground">Diário de Classe</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Registre a frequência dos alunos
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button onClick={() => saveMutation.mutate()} disabled={!selectedTurmaId || saveMutation.isPending}>
-                            {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            <Save className="mr-2 h-4 w-4" />
-                            Salvar Chamada
-                        </Button>
-                    </div>
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Chamada</h1>
+                    <p className="text-muted-foreground">
+                        Registre a presença dos alunos nas suas turmas
+                    </p>
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Dados da Aula</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <Calendar className="h-5 w-5" />
+                            Selecionar Turma e Data
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1 space-y-2">
-                            <Label>Selecione a Turma</Label>
-                            <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {turmas?.map((t) => (
-                                        <SelectItem key={t.id} value={t.id}>
-                                            {t.atividades?.nome} - {t.nome} ({t.dias_semana?.join(", ")})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex-1 space-y-2">
-                            <Label>Data da Aula</Label>
-                            <div className="relative">
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Turma</Label>
+                                <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione uma turma" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {loadingTurmas && <SelectItem value="loading" disabled>Carregando...</SelectItem>}
+                                        {turmas?.map((t: any) => (
+                                            <SelectItem key={t.id} value={t.id}>
+                                                {t.nome} - {t.atividades?.nome}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Data</Label>
                                 <Input
                                     type="date"
                                     value={date}
@@ -206,26 +199,37 @@ const Chamada = () => {
 
                 {selectedTurmaId && (
                     <Card>
-                        <CardContent className="p-0">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>Lista de Alunos</CardTitle>
+                            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                                {saveMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Save className="mr-2 h-4 w-4" />
+                                )}
+                                Salvar Chamada
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
                             {loadingStudents ? (
-                                <div className="p-8 flex justify-center">
+                                <div className="flex justify-center py-8">
                                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                 </div>
                             ) : studentsData?.matriculas?.length === 0 ? (
-                                <div className="p-8 text-center text-muted-foreground">
-                                    Nenhum aluno ativo nesta turma.
-                                </div>
+                                <p className="text-center text-muted-foreground py-8">
+                                    Nenhum aluno matriculado nesta turma.
+                                </p>
                             ) : (
-                                <div className="divide-y divide-border">
-                                    {studentsData?.matriculas?.map((m) => (
-                                        <div key={m.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                <div className="space-y-4">
+                                    {studentsData?.matriculas?.map((m: any) => (
+                                        <div key={m.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors rounded-lg border">
                                             <div className="flex items-center gap-4">
                                                 <div
                                                     className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold
-                            ${attendance[m.id] ? "bg-green-500" : "bg-red-500"}
-                          `}
+                                                        ${attendance[m.id] ? "bg-green-500" : "bg-red-500"}
+                                                    `}
                                                 >
-                                                    {m.alunos?.nome_completo.charAt(0)}
+                                                    {m.alunos?.nome_completo?.charAt(0) || "?"}
                                                 </div>
                                                 <div>
                                                     <p className="font-medium">{m.alunos?.nome_completo}</p>
@@ -242,9 +246,14 @@ const Chamada = () => {
                                                         id={`pres-${m.id}`}
                                                         checked={attendance[m.id]}
                                                         onCheckedChange={() => togglePresence(m.id)}
-                                                        className="h-6 w-6"
                                                     />
                                                 </div>
+                                                <Input
+                                                    placeholder="Observação"
+                                                    className="w-40"
+                                                    value={observations[m.id] || ""}
+                                                    onChange={(e) => updateObservation(m.id, e.target.value)}
+                                                />
                                             </div>
                                         </div>
                                     ))}

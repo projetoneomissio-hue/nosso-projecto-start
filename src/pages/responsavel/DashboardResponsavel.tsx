@@ -17,7 +17,6 @@ import {
   ClipboardList,
   AlertCircle,
   CheckCircle2,
-  CheckCircle2,
   Clock,
   Megaphone
 } from "lucide-react";
@@ -35,7 +34,7 @@ const DashboardResponsavel = () => {
       if (!user) return [];
       const { data, error } = await supabase
         .from("alunos")
-        .select("id, nome_completo, data_nascimento, foto_url")
+        .select("id, nome_completo, data_nascimento")
         .eq("responsavel_id", user.id);
       if (error) throw error;
       return data || [];
@@ -212,7 +211,6 @@ const DashboardResponsavel = () => {
                   <div key={aluno.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={aluno.foto_url || ""} />
                         <AvatarFallback className="bg-primary/10">
                           <Users className="h-5 w-5 text-primary" />
                         </AvatarFallback>
@@ -342,51 +340,15 @@ const DashboardResponsavel = () => {
 };
 
 const MuralAvisos = () => {
-  const { data: comunicados } = useQuery({
-    queryKey: ["comunicados-responsavel"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("comunicados")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  if (!comunicados?.length) return null;
-
-  return (
-    <Card className="border-l-4 border-l-blue-500 bg-blue-50/50">
-      <CardHeader className="flex flex-row items-center gap-3 pb-2">
-        <Megaphone className="h-5 w-5 text-blue-600" />
-        <CardTitle className="text-lg text-blue-900">Mural de Avisos</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {comunicados.map((aviso: any) => (
-          <div key={aviso.id} className="p-3 bg-white rounded-md shadow-sm border space-y-1">
-            <div className="flex justify-between items-start">
-              <h4 className="font-semibold text-foreground flex items-center gap-2">
-                {aviso.urgente && <span className="text-red-500 flex items-center gap-1 text-xs border border-red-200 bg-red-50 px-2 py-0.5 rounded-full">URGENTE</span>}
-                {aviso.titulo}
-              </h4>
-              <span className="text-xs text-muted-foreground">
-                {format(new Date(aviso.created_at), "dd/MM HH:mm", { locale: ptBR })}
-              </span>
-            </div>
-            <p className="text-sm text-foreground/80">{aviso.conteudo}</p>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
+  // Comunicados table doesn't exist yet - show placeholder
+  return null;
 };
 
 const FrequenciaCard = () => {
   const { user } = useAuth();
   
-  const { data: frequencias } = useQuery({
-    queryKey: ["dashboard-frequencia", user?.id],
+  const { data: presencas } = useQuery({
+    queryKey: ["dashboard-presencas", user?.id],
     queryFn: async () => {
        if (!user) return [];
        // Get children IDs first
@@ -395,26 +357,31 @@ const FrequenciaCard = () => {
        
        const alunoIds = alunos.map(a => a.id);
        
-       // Get recent attendance for these children
+       // Get matriculas for these children
+       const { data: matriculas } = await supabase
+         .from("matriculas")
+         .select("id, aluno_id")
+         .in("aluno_id", alunoIds);
+       
+       if (!matriculas?.length) return [];
+       
+       const matriculaIds = matriculas.map(m => m.id);
+       
+       // Get recent attendance for these matriculas using presencas table
        const { data, error } = await supabase
-         .from("frequencia")
+         .from("presencas")
          .select(`
            data,
            presente,
-           matricula:matriculas!inner(
-             aluno:alunos!inner(nome_completo),
-             turma:turmas!inner(
-                nome,
-                atividade:atividades(nome)
-             )
-           )
+           observacao,
+           matricula_id
          `)
-         .in("matriculas.aluno_id", alunoIds)
+         .in("matricula_id", matriculaIds)
          .order("data", { ascending: false })
          .limit(5);
 
        if (error) throw error;
-       return data;
+       return data || [];
     },
     enabled: !!user
   });
@@ -424,21 +391,20 @@ const FrequenciaCard = () => {
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
            <ClipboardList className="h-5 w-5" />
-           Últimas Frequências
+           Últimas Presenças
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-         {frequencias && frequencias.length > 0 ? (
-            frequencias.map((f: any, idx) => (
+         {presencas && presencas.length > 0 ? (
+            presencas.map((p, idx) => (
                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div>
-                     <p className="font-medium">{f.matricula.aluno.nome_completo}</p>
-                     <p className="text-xs text-muted-foreground">
-                        {f.matricula.turma.atividade.nome} - {format(new Date(f.data), "dd/MM/yyyy")}
+                     <p className="text-sm text-muted-foreground">
+                        {format(new Date(p.data), "dd/MM/yyyy", { locale: ptBR })}
                      </p>
                   </div>
                   <div>
-                     {f.presente ? (
+                     {p.presente ? (
                         <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Presente</Badge>
                      ) : (
                         <Badge variant="destructive">Falta</Badge>

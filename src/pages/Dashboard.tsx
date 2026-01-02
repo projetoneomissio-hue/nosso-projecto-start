@@ -7,13 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-
-
+import { Navigate } from "react-router-dom";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-
 
   // Redireciona responsáveis para seu dashboard específico
   if (user?.role === "responsavel") {
