@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Megaphone, Send, Plus, Mail, MessageCircle, Users, User, Loader2 } from "lucide-react";
+import { Megaphone, Send, Plus, Mail, MessageCircle, Users, User, Loader2, Calendar, Clock } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +27,10 @@ const Comunicados = () => {
   const [tipo, setTipo] = useState("geral");
   const [turmaId, setTurmaId] = useState<string>("");
   const [canais, setCanais] = useState<string[]>(["email"]);
+  const [agendarEnvio, setAgendarEnvio] = useState(false);
+  const [dataAgendamento, setDataAgendamento] = useState("");
+  const [horaAgendamento, setHoraAgendamento] = useState("");
+  const [recorrencia, setRecorrencia] = useState<string>("");
 
   const { data: comunicados = [], isLoading } = useQuery({
     queryKey: ["comunicados"],
@@ -58,6 +62,11 @@ const Comunicados = () => {
 
   const criarComunicado = useMutation({
     mutationFn: async () => {
+      let agendadoPara: string | null = null;
+      if (agendarEnvio && dataAgendamento && horaAgendamento) {
+        agendadoPara = new Date(`${dataAgendamento}T${horaAgendamento}`).toISOString();
+      }
+
       const { data, error } = await supabase
         .from("comunicados")
         .insert({
@@ -67,6 +76,8 @@ const Comunicados = () => {
           turma_id: tipo === "turma" ? turmaId : null,
           canal: canais,
           created_by: user?.id,
+          agendado_para: agendadoPara,
+          recorrencia: agendarEnvio && recorrencia ? recorrencia : null,
         })
         .select()
         .single();
@@ -111,6 +122,10 @@ const Comunicados = () => {
     setTipo("geral");
     setTurmaId("");
     setCanais(["email"]);
+    setAgendarEnvio(false);
+    setDataAgendamento("");
+    setHoraAgendamento("");
+    setRecorrencia("");
   };
 
   const toggleCanal = (canal: string) => {
@@ -121,7 +136,15 @@ const Comunicados = () => {
     );
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, agendadoPara?: string | null) => {
+    if (agendadoPara && status === "rascunho") {
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Clock className="h-3 w-3 mr-1" />
+          Agendado
+        </Badge>
+      );
+    }
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       rascunho: "secondary",
       enviado: "default",
@@ -133,6 +156,15 @@ const Comunicados = () => {
       parcial: "Parcial",
     };
     return <Badge variant={variants[status] || "secondary"}>{labels[status] || status}</Badge>;
+  };
+
+  const getRecorrenciaLabel = (rec: string | null) => {
+    const labels: Record<string, string> = {
+      diario: "Diário",
+      semanal: "Semanal",
+      mensal: "Mensal",
+    };
+    return rec ? labels[rec] || rec : null;
   };
 
   const getTipoIcon = (comunicadoTipo: string) => {
@@ -236,6 +268,61 @@ const Comunicados = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Agendamento */}
+                <div className="border-t pt-4 mt-2">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Checkbox
+                      id="agendar"
+                      checked={agendarEnvio}
+                      onCheckedChange={(checked) => setAgendarEnvio(!!checked)}
+                    />
+                    <label htmlFor="agendar" className="flex items-center gap-1 text-sm font-medium">
+                      <Calendar className="h-4 w-4" /> Agendar envio
+                    </label>
+                  </div>
+
+                  {agendarEnvio && (
+                    <div className="space-y-3 pl-6">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="data-agendamento">Data</Label>
+                          <Input
+                            id="data-agendamento"
+                            type="date"
+                            value={dataAgendamento}
+                            onChange={(e) => setDataAgendamento(e.target.value)}
+                            min={format(new Date(), "yyyy-MM-dd")}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="hora-agendamento">Hora</Label>
+                          <Input
+                            id="hora-agendamento"
+                            type="time"
+                            value={horaAgendamento}
+                            onChange={(e) => setHoraAgendamento(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Recorrência (opcional)</Label>
+                        <Select value={recorrencia} onValueChange={setRecorrencia}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Envio único" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Envio único</SelectItem>
+                            <SelectItem value="diario">Diário</SelectItem>
+                            <SelectItem value="semanal">Semanal</SelectItem>
+                            <SelectItem value="mensal">Mensal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   onClick={() => criarComunicado.mutate()}
                   disabled={!titulo || !mensagem || canais.length === 0 || criarComunicado.isPending}
@@ -295,9 +382,25 @@ const Comunicados = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(comunicado.status)}</TableCell>
                       <TableCell>
-                        {format(new Date(comunicado.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        <div className="flex flex-col gap-1">
+                          {getStatusBadge(comunicado.status, comunicado.agendado_para)}
+                          {comunicado.recorrencia && (
+                            <span className="text-xs text-muted-foreground">
+                              {getRecorrenciaLabel(comunicado.recorrencia)}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{format(new Date(comunicado.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                          {comunicado.agendado_para && comunicado.status === "rascunho" && (
+                            <span className="text-xs text-blue-600">
+                              Envio: {format(new Date(comunicado.agendado_para), "dd/MM HH:mm", { locale: ptBR })}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         {comunicado.status === "rascunho" && (

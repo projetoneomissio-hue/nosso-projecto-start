@@ -340,8 +340,90 @@ const DashboardResponsavel = () => {
 };
 
 const MuralAvisos = () => {
-  // Comunicados table doesn't exist yet - show placeholder
-  return null;
+  const { user } = useAuth();
+
+  const { data: comunicados = [], isLoading } = useQuery({
+    queryKey: ["mural-comunicados", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("comunicados")
+        .select(`
+          id,
+          titulo,
+          mensagem,
+          tipo,
+          created_at,
+          turmas (nome)
+        `)
+        .eq("status", "enviado")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Megaphone className="h-5 w-5" />
+            Mural de Avisos
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (comunicados.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Megaphone className="h-5 w-5 text-primary" />
+          Mural de Avisos
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {comunicados.map((comunicado: any) => (
+          <div
+            key={comunicado.id}
+            className="p-4 rounded-lg bg-background border shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-semibold text-foreground truncate">
+                    {comunicado.titulo}
+                  </h4>
+                  {comunicado.tipo === "turma" && comunicado.turmas?.nome && (
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {comunicado.turmas.nome}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {comunicado.mensagem}
+                </p>
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {format(new Date(comunicado.created_at), "dd/MM", { locale: ptBR })}
+              </span>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
 };
 
 const FrequenciaCard = () => {
