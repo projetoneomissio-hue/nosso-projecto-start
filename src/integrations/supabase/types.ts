@@ -194,6 +194,7 @@ export type Database = {
       }
       comunicados: {
         Row: {
+          agendado_para: string | null
           canal: string[]
           created_at: string
           created_by: string
@@ -201,6 +202,7 @@ export type Database = {
           enviado_em: string | null
           id: string
           mensagem: string
+          recorrencia: string | null
           status: string
           tipo: string
           titulo: string
@@ -208,6 +210,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agendado_para?: string | null
           canal?: string[]
           created_at?: string
           created_by: string
@@ -215,6 +218,7 @@ export type Database = {
           enviado_em?: string | null
           id?: string
           mensagem: string
+          recorrencia?: string | null
           status?: string
           tipo?: string
           titulo: string
@@ -222,6 +226,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agendado_para?: string | null
           canal?: string[]
           created_at?: string
           created_by?: string
@@ -229,6 +234,7 @@ export type Database = {
           enviado_em?: string | null
           id?: string
           mensagem?: string
+          recorrencia?: string | null
           status?: string
           tipo?: string
           titulo?: string
