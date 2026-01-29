@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PendingUsersAlert } from "@/components/PendingUsersAlert";
 
 const Coordenadores = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,7 +58,7 @@ const Coordenadores = () => {
     },
   });
 
-  // Fetch usuários com role coordenacao
+  // Fetch usuários com role coordenacao (para dropdown e contagem de pendentes)
   const { data: coordenadores } = useQuery({
     queryKey: ["users-coordenacao"],
     queryFn: async () => {
@@ -69,8 +70,15 @@ const Coordenadores = () => {
       if (error) throw error;
       return data?.map((ur) => ur.profiles).filter(Boolean) || [];
     },
-    enabled: dialogOpen,
   });
+
+  // Coordenadores sem nenhuma atividade atribuída
+  const coordenadoresSemAtividade = coordenadores?.filter((coord: any) => {
+    const temAtividade = coordenadorAtividades?.some(
+      (ca: any) => ca.coordenador_id === coord.id
+    );
+    return !temAtividade;
+  }) || [];
 
   // Fetch atividades
   const { data: atividades } = useQuery({
@@ -210,6 +218,13 @@ const Coordenadores = () => {
             Atribuir Coordenador
           </Button>
         </div>
+
+        {/* Alerta de coordenadores sem atividade */}
+        <PendingUsersAlert 
+          count={coordenadoresSemAtividade.length} 
+          role="coordenacao" 
+          linkTo="/convites" 
+        />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
