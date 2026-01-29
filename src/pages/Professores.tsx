@@ -29,6 +29,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { PendingUsersAlert } from "@/components/PendingUsersAlert";
 
 const professorSchema = z.object({
   user_id: z.string().uuid("Selecione um usuário"),
@@ -77,7 +78,7 @@ const Professores = () => {
     },
   });
 
-  // Fetch users que não são professores ainda
+  // Fetch users que não são professores ainda (sempre ativo para mostrar alerta)
   const { data: availableUsers } = useQuery({
     queryKey: ["available-users-professor"],
     queryFn: async () => {
@@ -102,7 +103,6 @@ const Professores = () => {
         .map(ur => ur.profiles)
         .filter(Boolean) || [];
     },
-    enabled: dialogOpen && !editingProfessor,
   });
 
   // Create/Update mutation
@@ -261,6 +261,13 @@ const Professores = () => {
             Novo Professor
           </Button>
         </div>
+
+        {/* Alerta de professores pendentes */}
+        <PendingUsersAlert 
+          count={availableUsers?.length || 0} 
+          role="professor" 
+          linkTo="/convites" 
+        />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">

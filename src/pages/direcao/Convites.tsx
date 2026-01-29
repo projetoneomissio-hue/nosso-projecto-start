@@ -30,11 +30,11 @@ export default function Convites() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch invitations
+  // Fetch invitations com status de vinculação
   const { data: invitations, isLoading } = useQuery({
     queryKey: ["invitations"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: invitationsData, error } = await supabase
         .from("invitations")
         .select(`
           *,
@@ -43,7 +43,54 @@ export default function Convites() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+
+      // Para cada convite usado, verificar se o usuário foi vinculado
+      const invitationsWithStatus = await Promise.all(
+        (invitationsData || []).map(async (inv) => {
+          if (!inv.used_at) {
+            return { ...inv, vinculacao_status: "pendente" as const };
+          }
+
+          // Verificar vinculação baseado na role
+          if (inv.role === "professor") {
+            const { data: prof } = await supabase
+              .from("professores")
+              .select("id")
+              .eq("user_id", (await supabase.from("profiles").select("id").eq("email", inv.email).single()).data?.id || "")
+              .maybeSingle();
+            
+            return { 
+              ...inv, 
+              vinculacao_status: prof ? "vinculado" as const : "aguardando_vinculacao" as const 
+            };
+          } else if (inv.role === "coordenacao") {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("email", inv.email)
+              .maybeSingle();
+            
+            if (!profile) {
+              return { ...inv, vinculacao_status: "cadastrado" as const };
+            }
+
+            const { data: coord } = await supabase
+              .from("coordenador_atividades")
+              .select("id")
+              .eq("coordenador_id", profile.id)
+              .maybeSingle();
+            
+            return { 
+              ...inv, 
+              vinculacao_status: coord ? "vinculado" as const : "aguardando_vinculacao" as const 
+            };
+          }
+
+          return { ...inv, vinculacao_status: "cadastrado" as const };
+        })
+      );
+
+      return invitationsWithStatus;
     },
   });
 
@@ -277,9 +324,24 @@ export default function Convites() {
                         <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
                           {getRoleLabel(invitation.role)}
                         </span>
-                        {invitation.used_at && (
+                        {invitation.vinculacao_status === "pendente" && (
+                          <span className="text-xs px-2 py-1 bg-muted text-muted-foreground rounded">
+                            Aguardando cadastro
+                          </span>
+                        )}
+                        {invitation.vinculacao_status === "aguardando_vinculacao" && (
+                          <span className="text-xs px-2 py-1 bg-amber-500/10 text-amber-600 rounded">
+                            Aguardando vinculação
+                          </span>
+                        )}
+                        {invitation.vinculacao_status === "vinculado" && (
                           <span className="text-xs px-2 py-1 bg-green-500/10 text-green-600 rounded">
-                            Usado
+                            Vinculado ✓
+                          </span>
+                        )}
+                        {invitation.vinculacao_status === "cadastrado" && (
+                          <span className="text-xs px-2 py-1 bg-blue-500/10 text-blue-600 rounded">
+                            Cadastrado
                           </span>
                         )}
                       </div>
@@ -287,7 +349,7 @@ export default function Convites() {
                         Criado em {format(new Date(invitation.created_at), "dd/MM/yyyy")} •
                         Expira em {format(new Date(invitation.expires_at), "dd/MM/yyyy")}
                       </p>
-                      {!invitation.used_at && (
+                      {invitation.vinculacao_status === "pendente" && (
                         <div className="flex items-center gap-2 mt-2">
                           <code className="text-xs bg-muted px-2 py-1 rounded">
                             {invitation.token}
@@ -312,7 +374,7 @@ export default function Convites() {
                         </div>
                       )}
                     </div>
-                    {!invitation.used_at && (
+                    {invitation.vinculacao_status === "pendente" && (
                       <Button
                         size="sm"
                         variant="ghost"

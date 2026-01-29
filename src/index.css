@@ -60,6 +60,7 @@ All colors MUST be HSL.
 
     --success: 153 60% 53%;
     --warning: 43 96% 56%;
+    --warning-foreground: 43 96% 20%;
     --info: 0 100% 40%;
   }
 
