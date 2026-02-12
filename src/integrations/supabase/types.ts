@@ -854,6 +854,14 @@ export type Database = {
         Args: { aluno_id: string; cpf_value: string }
         Returns: string
       }
+      get_aluno_responsavel_id: {
+        Args: { p_aluno_id: string }
+        Returns: string
+      }
+      get_alunos_by_responsavel: {
+        Args: { p_responsavel_id: string }
+        Returns: string[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -867,6 +875,10 @@ export type Database = {
       }
       is_coordenador_turma: {
         Args: { _turma_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_professor_aluno: {
+        Args: { p_aluno_id: string; p_user_id: string }
         Returns: boolean
       }
       is_professor_turma: {
