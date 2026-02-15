@@ -1,6 +1,6 @@
 -- ============================================
 -- NEO MISSIO - SCRIPT COMPLETO DO BANCO DE DADOS
--- Gerado em: 2025-12-03
+-- Atualizado em: 2026-02-15
 -- Para importar no Supabase SQL Editor
 -- ============================================
 
@@ -210,6 +210,36 @@ CREATE TABLE public.locacoes (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+-- Comunicados
+CREATE TABLE public.comunicados (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  titulo TEXT NOT NULL,
+  mensagem TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'geral',
+  canal TEXT[] NOT NULL DEFAULT ARRAY['email'],
+  status TEXT NOT NULL DEFAULT 'rascunho',
+  turma_id UUID REFERENCES public.turmas(id),
+  destinatario_id UUID,
+  created_by UUID NOT NULL,
+  agendado_para TIMESTAMP WITH TIME ZONE,
+  enviado_em TIMESTAMP WITH TIME ZONE,
+  recorrencia TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Comunicado Envios
+CREATE TABLE public.comunicado_envios (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  comunicado_id UUID NOT NULL REFERENCES public.comunicados(id),
+  responsavel_id UUID NOT NULL,
+  canal TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pendente',
+  enviado_em TIMESTAMP WITH TIME ZONE,
+  erro_mensagem TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
 -- MFA Recovery Codes
 CREATE TABLE public.mfa_recovery_codes (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -327,6 +357,45 @@ AS $$
   );
 $$;
 
+-- Função helper: obter responsavel_id de um aluno (bypassa RLS)
+CREATE OR REPLACE FUNCTION public.get_aluno_responsavel_id(p_aluno_id UUID)
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT responsavel_id FROM public.alunos WHERE id = p_aluno_id;
+$$;
+
+-- Função helper: obter IDs dos alunos de um responsável (bypassa RLS)
+CREATE OR REPLACE FUNCTION public.get_alunos_by_responsavel(p_responsavel_id UUID)
+RETURNS SETOF UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT id FROM public.alunos WHERE responsavel_id = p_responsavel_id;
+$$;
+
+-- Função helper: verificar se professor tem aluno em suas turmas (bypassa RLS)
+CREATE OR REPLACE FUNCTION public.is_professor_aluno(p_user_id UUID, p_aluno_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.matriculas m
+    JOIN public.turmas t ON m.turma_id = t.id
+    JOIN public.professores p ON t.professor_id = p.id
+    WHERE m.aluno_id = p_aluno_id AND p.user_id = p_user_id
+  );
+$$;
+
 -- Função para mascarar CPF
 CREATE OR REPLACE FUNCTION public.mask_cpf(cpf_value TEXT)
 RETURNS TEXT
@@ -425,20 +494,58 @@ BEGIN
 END;
 $$;
 
--- Função para criar perfil de novo usuário
+-- Função para criar perfil de novo usuário (com suporte a convites)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  _role app_role;
+  _invite_token text;
 BEGIN
+  -- Criar profile
   INSERT INTO public.profiles (id, nome_completo, email)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'nome_completo', 'Novo Usuário'),
     NEW.email
   );
+  
+  -- Verificar se há token de convite
+  _invite_token := NEW.raw_user_meta_data->>'invite_token';
+  
+  IF _invite_token IS NOT NULL AND _invite_token != '' THEN
+    BEGIN
+      SELECT role INTO _role
+      FROM public.invitations
+      WHERE token = _invite_token
+        AND email = NEW.email
+        AND used_at IS NULL
+        AND expires_at > now();
+      
+      IF _role IS NOT NULL THEN
+        -- Marcar convite como usado
+        UPDATE public.invitations
+        SET used_at = now()
+        WHERE token = _invite_token AND email = NEW.email;
+        
+        -- Criar role do convite
+        INSERT INTO public.user_roles (user_id, role)
+        VALUES (NEW.id, _role);
+        
+        RETURN NEW;
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END IF;
+  
+  -- Criar role padrão (responsavel) para cadastros públicos
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (NEW.id, 'responsavel');
+  
   RETURN NEW;
 END;
 $$;
@@ -505,6 +612,10 @@ CREATE TRIGGER update_invitations_updated_at
   BEFORE UPDATE ON public.invitations
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+CREATE TRIGGER update_comunicados_updated_at
+  BEFORE UPDATE ON public.comunicados
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
 -- ============================================
 -- 6. HABILITAR RLS EM TODAS AS TABELAS
 -- ============================================
@@ -525,6 +636,8 @@ ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.custos_predio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.funcionarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.locacoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comunicados ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comunicado_envios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mfa_recovery_codes ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
@@ -574,6 +687,7 @@ WITH CHECK (
 
 -- ============================================
 -- 9. POLÍTICAS RLS - ALUNOS
+-- (Usa funções helper para evitar recursão infinita)
 -- ============================================
 
 CREATE POLICY "Responsáveis podem ver seus alunos"
@@ -592,12 +706,16 @@ CREATE POLICY "Direção pode gerenciar alunos"
 ON public.alunos FOR ALL
 USING (has_role(auth.uid(), 'direcao'));
 
-CREATE POLICY "Direção, coordenação e professores podem ver todos os alunos"
+CREATE POLICY "Direção e coordenação podem ver todos os alunos"
+ON public.alunos FOR SELECT
+USING (has_role(auth.uid(), 'direcao') OR has_role(auth.uid(), 'coordenacao'));
+
+-- IMPORTANTE: Usa is_professor_aluno() (SECURITY DEFINER) para evitar recursão
+CREATE POLICY "Professores podem ver alunos de suas turmas"
 ON public.alunos FOR SELECT
 USING (
-  has_role(auth.uid(), 'direcao') OR 
-  has_role(auth.uid(), 'coordenacao') OR 
-  has_role(auth.uid(), 'professor')
+  has_role(auth.uid(), 'professor'::app_role)
+  AND is_professor_aluno(auth.uid(), id)
 );
 
 -- ============================================
@@ -646,24 +764,19 @@ USING (has_role(auth.uid(), 'coordenacao') AND is_coordenador_turma(auth.uid(), 
 
 -- ============================================
 -- 12. POLÍTICAS RLS - MATRÍCULAS
+-- (Usa get_alunos_by_responsavel() para evitar recursão infinita)
 -- ============================================
 
 CREATE POLICY "Responsáveis podem ver matrículas de seus alunos"
 ON public.matriculas FOR SELECT
 USING (
-  EXISTS (
-    SELECT 1 FROM alunos 
-    WHERE alunos.id = matriculas.aluno_id AND alunos.responsavel_id = auth.uid()
-  )
+  aluno_id IN (SELECT get_alunos_by_responsavel(auth.uid()))
 );
 
 CREATE POLICY "Responsáveis podem criar matrículas para seus alunos"
 ON public.matriculas FOR INSERT
 WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM alunos 
-    WHERE alunos.id = matriculas.aluno_id AND alunos.responsavel_id = auth.uid()
-  )
+  aluno_id IN (SELECT get_alunos_by_responsavel(auth.uid()))
 );
 
 CREATE POLICY "Direção e coordenação podem gerenciar matrículas"
@@ -680,15 +793,16 @@ USING (is_professor_turma(auth.uid(), turma_id));
 
 -- ============================================
 -- 13. POLÍTICAS RLS - PAGAMENTOS
+-- (Usa get_alunos_by_responsavel() para evitar recursão infinita)
 -- ============================================
 
 CREATE POLICY "Responsáveis podem ver pagamentos de seus alunos"
 ON public.pagamentos FOR SELECT
 USING (
   EXISTS (
-    SELECT 1 FROM matriculas m
-    JOIN alunos a ON m.aluno_id = a.id
-    WHERE m.id = pagamentos.matricula_id AND a.responsavel_id = auth.uid()
+    SELECT 1 FROM public.matriculas m
+    WHERE m.id = pagamentos.matricula_id
+    AND m.aluno_id IN (SELECT get_alunos_by_responsavel(auth.uid()))
   )
 );
 
@@ -708,15 +822,16 @@ USING (
 
 -- ============================================
 -- 14. POLÍTICAS RLS - PRESENÇAS
+-- (Usa get_alunos_by_responsavel() para evitar recursão infinita)
 -- ============================================
 
 CREATE POLICY "Responsáveis podem ver presenças de seus alunos"
 ON public.presencas FOR SELECT
 USING (
   EXISTS (
-    SELECT 1 FROM matriculas m
-    JOIN alunos a ON m.aluno_id = a.id
-    WHERE m.id = presencas.matricula_id AND a.responsavel_id = auth.uid()
+    SELECT 1 FROM public.matriculas m
+    WHERE m.id = presencas.matricula_id
+    AND m.aluno_id IN (SELECT get_alunos_by_responsavel(auth.uid()))
   )
 );
 
@@ -865,7 +980,40 @@ ON public.locacoes FOR ALL
 USING (has_role(auth.uid(), 'direcao') OR has_role(auth.uid(), 'coordenacao'));
 
 -- ============================================
--- 23. POLÍTICAS RLS - MFA_RECOVERY_CODES
+-- 23. POLÍTICAS RLS - COMUNICADOS
+-- (Usa get_alunos_by_responsavel() para evitar recursão)
+-- ============================================
+
+CREATE POLICY "Direção e coordenação podem gerenciar comunicados"
+ON public.comunicados FOR ALL
+USING (has_role(auth.uid(), 'direcao') OR has_role(auth.uid(), 'coordenacao'));
+
+CREATE POLICY "Responsáveis podem ver comunicados destinados a eles"
+ON public.comunicados FOR SELECT
+USING (
+  has_role(auth.uid(), 'responsavel'::app_role)
+  AND (
+    tipo = 'geral'::text
+    OR destinatario_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.matriculas m
+      WHERE m.turma_id = comunicados.turma_id
+      AND m.aluno_id IN (SELECT get_alunos_by_responsavel(auth.uid()))
+      AND m.status = 'ativa'::status_matricula
+    )
+  )
+);
+
+-- ============================================
+-- 24. POLÍTICAS RLS - COMUNICADO_ENVIOS
+-- ============================================
+
+CREATE POLICY "Direção e coordenação podem ver envios"
+ON public.comunicado_envios FOR ALL
+USING (has_role(auth.uid(), 'direcao') OR has_role(auth.uid(), 'coordenacao'));
+
+-- ============================================
+-- 25. POLÍTICAS RLS - MFA_RECOVERY_CODES
 -- ============================================
 
 CREATE POLICY "Usuários podem ver seus próprios códigos de recuperação"
@@ -888,5 +1036,7 @@ WITH CHECK (auth.uid() = user_id);
 -- 1. Crie um projeto no supabase.com
 -- 2. Vá em SQL Editor
 -- 3. Cole este script e execute
--- 4. Configure as variáveis de ambiente no Lovable
+-- 4. Configure os secrets das Edge Functions
+-- 5. Deploy das Edge Functions via CLI
+-- 6. Configure as variáveis de ambiente no frontend
 -- ============================================
