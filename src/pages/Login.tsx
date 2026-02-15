@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/AuthContext";
 import { Users, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,11 +80,7 @@ const Login = () => {
       const { error } = await login(validation.data.email, validation.data.password);
 
       if (error) {
-        toast({
-          title: "Erro ao fazer login",
-          description: error.message,
-          variant: "destructive",
-        });
+        handleError(error, "Erro ao fazer login");
         setIsLoading(false);
         return;
       }
@@ -100,11 +97,7 @@ const Login = () => {
           });
 
           if (challengeError) {
-            toast({
-              title: "Erro MFA",
-              description: challengeError.message,
-              variant: "destructive",
-            });
+            handleError(challengeError, "Erro MFA");
             return;
           }
 
@@ -138,11 +131,7 @@ const Login = () => {
 
       navigate("/dashboard");
     } catch (error) {
-      toast({
-        title: "Erro inesperado",
-        description: "Ocorreu um erro ao processar o login. Tente novamente.",
-        variant: "destructive",
-      });
+      handleError(error, "Erro inesperado");
     } finally {
       setIsLoading(false);
     }
@@ -201,11 +190,7 @@ const Login = () => {
           );
 
           if (error) {
-            toast({
-              title: "Erro ao criar conta",
-              description: error.message,
-              variant: "destructive",
-            });
+            handleError(error, "Erro ao criar conta");
           } else {
             toast({
               title: "Conta criada!",

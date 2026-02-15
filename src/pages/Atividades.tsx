@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 
@@ -66,7 +69,7 @@ const Atividades = () => {
         .from("atividades")
         .select("*")
         .order("nome");
-      
+
       if (error) throw error;
       return data;
     },
@@ -100,7 +103,7 @@ const Atividades = () => {
       queryClient.invalidateQueries({ queryKey: ["atividades"] });
       toast({
         title: editingAtividade ? "Atividade atualizada" : "Atividade criada",
-        description: editingAtividade 
+        description: editingAtividade
           ? "A atividade foi atualizada com sucesso."
           : "A atividade foi criada com sucesso.",
       });
@@ -133,12 +136,8 @@ const Atividades = () => {
       setDeleteDialogOpen(false);
       setDeletingId(null);
     },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao excluir",
-        description: error.message || "Não foi possível excluir a atividade.",
-        variant: "destructive",
-      });
+    onError: (error) => {
+      handleError(error, "Erro ao salvar atividade");
     },
   });
 
@@ -218,8 +217,23 @@ const Atividades = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                  <div className="flex gap-2 pt-2">
+                    <Skeleton className="h-9 flex-1" />
+                    <Skeleton className="h-9 w-10" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : atividades && atividades.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -276,17 +290,13 @@ const Atividades = () => {
             ))}
           </div>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">
-                Nenhuma atividade cadastrada ainda.
-              </p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeira Atividade
-              </Button>
-            </CardContent>
-          </Card>
+          <PremiumEmptyState
+            title="Nenhuma atividade ainda"
+            description="Comece criando a primeira atividade do seu centro. Isso permitirá gerenciar turmas e matrículas de forma eficiente."
+            icon={Sparkles}
+            actionLabel="Criar Primeira Atividade"
+            onAction={() => handleOpenDialog()}
+          />
         )}
 
         {/* Dialog para criar/editar */}

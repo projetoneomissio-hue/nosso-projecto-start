@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Clock, Calendar, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { z } from "zod";
 
 const DIAS_SEMANA = [
@@ -85,7 +88,7 @@ const Turmas = () => {
           matriculas(count)
         `)
         .order("nome");
-      
+
       if (error) throw error;
       return data;
     },
@@ -148,7 +151,7 @@ const Turmas = () => {
       queryClient.invalidateQueries({ queryKey: ["turmas-coordenacao"] });
       toast({
         title: editingTurma ? "Turma atualizada" : "Turma criada",
-        description: editingTurma 
+        description: editingTurma
           ? "A turma foi atualizada com sucesso."
           : "A turma foi criada com sucesso.",
       });
@@ -181,12 +184,8 @@ const Turmas = () => {
       setDeleteDialogOpen(false);
       setDeletingId(null);
     },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao excluir",
-        description: error.message || "Não foi possível excluir a turma.",
-        variant: "destructive",
-      });
+    onError: (error) => {
+      handleError(error, "Erro ao salvar turma");
     },
   });
 
@@ -279,15 +278,39 @@ const Turmas = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-6 w-1/3" />
+                      <Skeleton className="h-4 w-1/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : turmas && turmas.length > 0 ? (
           <div className="grid gap-4">
             {turmas.map((turma) => {
               const matriculasCount = turma.matriculas?.[0]?.count || 0;
               const vagasDisponiveis = turma.capacidade_maxima - matriculasCount;
-              
+
               return (
                 <Card key={turma.id}>
                   <CardHeader>
@@ -352,17 +375,13 @@ const Turmas = () => {
             })}
           </div>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">
-                Nenhuma turma cadastrada ainda.
-              </p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeira Turma
-              </Button>
-            </CardContent>
-          </Card>
+          <PremiumEmptyState
+            title="Sua jornada começa aqui"
+            description="Crie turmas para organizar horários, professores e alunos. Uma turma bem organizada é a base de um centro eficiente."
+            icon={Users}
+            actionLabel="Criar Primeira Turma"
+            onAction={() => handleOpenDialog()}
+          />
         )}
 
         {/* Dialog para criar/editar */}

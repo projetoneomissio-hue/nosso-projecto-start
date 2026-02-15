@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Loader2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Search, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
 import {
   Dialog,
   DialogContent,
@@ -23,19 +24,29 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 const alunoSchema = z.object({
   nome_completo: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(200, "Nome muito longo"),
   data_nascimento: z.string().min(1, "Data de nascimento é obrigatória"),
-  cpf: z.string().trim().regex(/^\d{11}$/, "CPF deve conter 11 dígitos").optional().nullable(),
-  telefone: z.string().trim().max(20, "Telefone muito longo").optional().nullable(),
-  endereco: z.string().trim().max(500, "Endereço muito longo").optional().nullable(),
+  cpf: z.string().trim().regex(/^\d{11}$/, "CPF deve conter 11 dígitos").optional().nullable().or(z.literal("")),
+  telefone: z.string().trim().max(20, "Telefone muito longo").optional().nullable().or(z.literal("")),
+  endereco: z.string().trim().max(500, "Endereço muito longo").optional().nullable().or(z.literal("")),
   responsavel_id: z.string().uuid("ID do responsável inválido"),
 });
 
@@ -47,19 +58,22 @@ const Alunos = () => {
   const [editingAluno, setEditingAluno] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [formData, setFormData] = useState<AlunoFormData>({
-    nome_completo: "",
-    data_nascimento: "",
-    cpf: "",
-    telefone: "",
-    endereco: "",
-    responsavel_id: "",
-  });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  const form = useForm<AlunoFormData>({
+    resolver: zodResolver(alunoSchema),
+    defaultValues: {
+      nome_completo: "",
+      data_nascimento: "",
+      cpf: "",
+      telefone: "",
+      endereco: "",
+      responsavel_id: "",
+    },
+  });
 
   // Fetch alunos
   const { data: alunos, isLoading } = useQuery({
@@ -72,7 +86,7 @@ const Alunos = () => {
           responsavel:profiles!alunos_responsavel_id_fkey(nome_completo, email)
         `)
         .order("nome_completo");
-      
+
       if (error) throw error;
       return data;
     },
@@ -80,14 +94,14 @@ const Alunos = () => {
 
   // Create/Update mutation
   const saveMutation = useMutation({
-    mutationFn: async (data: AlunoFormData) => {
+    mutationFn: async (values: AlunoFormData) => {
       const payload = {
-        nome_completo: data.nome_completo,
-        data_nascimento: data.data_nascimento,
-        cpf: data.cpf || null,
-        telefone: data.telefone || null,
-        endereco: data.endereco || null,
-        responsavel_id: data.responsavel_id,
+        nome_completo: values.nome_completo,
+        data_nascimento: values.data_nascimento,
+        cpf: values.cpf || null,
+        telefone: values.telefone || null,
+        endereco: values.endereco || null,
+        responsavel_id: values.responsavel_id,
       };
 
       if (editingAluno) {
@@ -107,18 +121,14 @@ const Alunos = () => {
       queryClient.invalidateQueries({ queryKey: ["alunos"] });
       toast({
         title: editingAluno ? "Aluno atualizado" : "Aluno cadastrado",
-        description: editingAluno 
+        description: editingAluno
           ? "Os dados do aluno foram atualizados com sucesso."
           : "O aluno foi cadastrado com sucesso.",
       });
       handleCloseDialog();
     },
     onError: (error: any) => {
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível salvar o aluno.",
-        variant: "destructive",
-      });
+      handleError(error, "Erro ao salvar aluno");
     },
   });
 
@@ -141,18 +151,14 @@ const Alunos = () => {
       setDeletingId(null);
     },
     onError: (error: any) => {
-      toast({
-        title: "Erro ao excluir",
-        description: error.message || "Não foi possível excluir o aluno.",
-        variant: "destructive",
-      });
+      handleError(error, "Erro ao excluir aluno");
     },
   });
 
   const handleOpenDialog = (aluno?: any) => {
     if (aluno) {
       setEditingAluno(aluno);
-      setFormData({
+      form.reset({
         nome_completo: aluno.nome_completo,
         data_nascimento: aluno.data_nascimento,
         cpf: aluno.cpf || "",
@@ -162,7 +168,7 @@ const Alunos = () => {
       });
     } else {
       setEditingAluno(null);
-      setFormData({
+      form.reset({
         nome_completo: "",
         data_nascimento: "",
         cpf: "",
@@ -171,32 +177,17 @@ const Alunos = () => {
         responsavel_id: user?.id || "",
       });
     }
-    setFormErrors({});
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingAluno(null);
-    setFormErrors({});
+    form.reset();
   };
 
-  const handleSubmit = () => {
-    try {
-      const validated = alunoSchema.parse(formData);
-      setFormErrors({});
-      saveMutation.mutate(validated);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            errors[err.path[0].toString()] = err.message;
-          }
-        });
-        setFormErrors(errors);
-      }
-    }
+  const onSubmit = (values: AlunoFormData) => {
+    saveMutation.mutate(values);
   };
 
   const handleDelete = (id: string) => {
@@ -215,6 +206,7 @@ const Alunos = () => {
   );
 
   const calculateAge = (birthDate: string) => {
+    if (!birthDate) return 0;
     const today = new Date();
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
@@ -252,8 +244,10 @@ const Alunos = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="space-y-4">
+            <Skeleton className="h-[100px] w-full rounded-lg" />
+            <Skeleton className="h-[100px] w-full rounded-lg" />
+            <Skeleton className="h-[100px] w-full rounded-lg" />
           </div>
         ) : filteredAlunos && filteredAlunos.length > 0 ? (
           <Card>
@@ -301,21 +295,15 @@ const Alunos = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">
-                {searchTerm
-                  ? "Nenhum aluno encontrado com este nome."
-                  : "Nenhum aluno cadastrado ainda."}
-              </p>
-              {!searchTerm && (
-                <Button onClick={() => handleOpenDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Cadastrar Primeiro Aluno
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <PremiumEmptyState
+            title={searchTerm ? "Nenhum aluno encontrado" : "Nenhum aluno cadastrado"}
+            description={searchTerm
+              ? `Não encontramos resultados para "${searchTerm}". Tente buscar por outro nome.`
+              : "Comece cadastrando seu primeiro aluno para gerenciar matrículas e presenças."}
+            icon={UserPlus}
+            actionLabel={!searchTerm ? "Cadastrar Primeiro Aluno" : undefined}
+            onAction={!searchTerm ? () => handleOpenDialog() : undefined}
+          />
         )}
 
         {/* Dialog para criar/editar */}
@@ -332,106 +320,104 @@ const Alunos = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome_completo">Nome Completo *</Label>
-                <Input
-                  id="nome_completo"
-                  value={formData.nome_completo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nome_completo: e.target.value })
-                  }
-                  placeholder="Nome completo do aluno"
-                />
-                {formErrors.nome_completo && (
-                  <p className="text-sm text-destructive">{formErrors.nome_completo}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="data_nascimento">Data de Nascimento *</Label>
-                  <Input
-                    id="data_nascimento"
-                    type="date"
-                    value={formData.data_nascimento}
-                    onChange={(e) =>
-                      setFormData({ ...formData, data_nascimento: e.target.value })
-                    }
-                  />
-                  {formErrors.data_nascimento && (
-                    <p className="text-sm text-destructive">
-                      {formErrors.data_nascimento}
-                    </p>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="nome_completo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Completo *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome completo do aluno" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="data_nascimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="cpf"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CPF</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="00000000000"
+                            maxLength={11}
+                            {...field}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <Input
-                    id="cpf"
-                    value={formData.cpf || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        cpf: e.target.value.replace(/\D/g, ""),
-                      })
-                    }
-                    placeholder="00000000000"
-                    maxLength={11}
-                  />
-                  {formErrors.cpf && (
-                    <p className="text-sm text-destructive">{formErrors.cpf}</p>
+                <FormField
+                  control={form.control}
+                  name="telefone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(00) 00000-0000" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  value={formData.telefone || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, telefone: e.target.value })
-                  }
-                  placeholder="(00) 00000-0000"
                 />
-                {formErrors.telefone && (
-                  <p className="text-sm text-destructive">{formErrors.telefone}</p>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="endereco">Endereço</Label>
-                <Input
-                  id="endereco"
-                  value={formData.endereco || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endereco: e.target.value })
-                  }
-                  placeholder="Endereço completo"
+                <FormField
+                  control={form.control}
+                  name="endereco"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Endereço</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Endereço completo" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {formErrors.endereco && (
-                  <p className="text-sm text-destructive">{formErrors.endereco}</p>
-                )}
-              </div>
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={handleCloseDialog}
-                disabled={saveMutation.isPending}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
-                {saveMutation.isPending && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                {editingAluno ? "Atualizar" : "Cadastrar"}
-              </Button>
-            </DialogFooter>
+                <DialogFooter className="pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCloseDialog}
+                    disabled={saveMutation.isPending}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={saveMutation.isPending}>
+                    {saveMutation.isPending && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    {editingAluno ? "Atualizar" : "Cadastrar"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
 

@@ -1,12 +1,26 @@
 import { useRef } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Download, Loader2 } from "lucide-react";
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  PlusCircle,
+  Download,
+  Calendar,
+  Users,
+  Loader2
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { NovaDespesaDialog } from "@/components/financeiro/NovaDespesaDialog";
@@ -19,58 +33,38 @@ const Financeiro = () => {
   const reportRef = useRef<HTMLDivElement>(null);
 
   // Receita mensal (pagamentos pagos)
-  const { data: receitaMensal } = useQuery({
+  const { data: receitaMensal, isLoading: loadingReceita } = useQuery({
     queryKey: ["financeiro-receita-mensal"],
     queryFn: async () => {
       const hoje = new Date();
-      const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-      const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+      const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString();
+      const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString();
 
       const { data, error } = await supabase
         .from("pagamentos")
         .select("valor")
         .eq("status", "pago")
-        .gte("data_pagamento", primeiroDia.toISOString())
-        .lte("data_pagamento", ultimoDia.toISOString());
+        .gte("data_pagamento", primeiroDia)
+        .lte("data_pagamento", ultimoDia);
 
       if (error) throw error;
       return data?.reduce((acc, p) => acc + parseFloat(p.valor.toString()), 0) || 0;
     },
   });
 
-  // Receita por atividade
-  const { data: receitaPorAtividade } = useQuery({
+  // Receita por atividade (Otimizado: Agregação feita no banco via RPC)
+  const { data: receitaPorAtividade, isLoading: loadingAtividade } = useQuery({
     queryKey: ["financeiro-receita-atividade"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("matriculas")
-        .select(`
-          turma:turmas(
-            atividade:atividades(nome, valor_mensal)
-          )
-        `)
-        .eq("status", "ativa");
+      const { data, error } = await supabase.rpc("get_receita_por_atividade");
 
       if (error) throw error;
-
-      const receitas: Record<string, number> = {};
-      data?.forEach((m: any) => {
-        const atividade = m.turma?.atividade?.nome;
-        const valor = parseFloat(m.turma?.atividade?.valor_mensal?.toString() || "0");
-        if (atividade) {
-          receitas[atividade] = (receitas[atividade] || 0) + valor;
-        }
-      });
-
-      return Object.entries(receitas).map(([nome, valor]) => ({
-        nome,
-        valor,
-      }));
+      return data || [];
     },
   });
 
   // Inadimplência
-  const { data: inadimplencia } = useQuery({
+  const { data: inadimplencia, isLoading: loadingInadimplencia } = useQuery({
     queryKey: ["financeiro-inadimplencia"],
     queryFn: async () => {
       const hoje = new Date().toISOString().split("T")[0];
@@ -90,41 +84,51 @@ const Financeiro = () => {
     },
   });
 
-  // Receita dos últimos 6 meses
+  // Receita dos últimos 6 meses (Otimizado: Uma única query em vez de N+1)
   const { data: receitaMeses, isLoading: loadingMeses } = useQuery({
     queryKey: ["financeiro-receita-meses"],
     queryFn: async () => {
-      const meses = [];
       const hoje = new Date();
+      const seisMesesAtras = new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1);
 
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("valor, data_pagamento")
+        .eq("status", "pago")
+        .gte("data_pagamento", seisMesesAtras.toISOString())
+        .order("data_pagamento", { ascending: true });
+
+      if (error) throw error;
+
+      const mesesMap: Record<string, number> = {};
+
+      // Inicializar os últimos 6 meses com 0
       for (let i = 5; i >= 0; i--) {
-        const mes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-        const primeiroDia = new Date(mes.getFullYear(), mes.getMonth(), 1);
-        const ultimoDia = new Date(mes.getFullYear(), mes.getMonth() + 1, 0);
-
-        const { data, error } = await supabase
-          .from("pagamentos")
-          .select("valor")
-          .eq("status", "pago")
-          .gte("data_pagamento", primeiroDia.toISOString())
-          .lte("data_pagamento", ultimoDia.toISOString());
-
-        if (error) throw error;
-
-        const total = data?.reduce((acc, p) => acc + parseFloat(p.valor.toString()), 0) || 0;
-
-        meses.push({
-          mes: mes.toLocaleDateString("pt-BR", { month: "short" }),
-          receita: total,
-        });
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+        const formatKey = d.toLocaleDateString("pt-BR", { month: "short" });
+        mesesMap[formatKey] = 0;
       }
 
-      return meses;
+      // Agrupar resultados da query única
+      data?.forEach((p) => {
+        if (p.data_pagamento) {
+          const dataPag = new Date(p.data_pagamento);
+          const formatKey = dataPag.toLocaleDateString("pt-BR", { month: "short" });
+          if (mesesMap[formatKey] !== undefined) {
+            mesesMap[formatKey] += parseFloat(p.valor.toString());
+          }
+        }
+      });
+
+      return Object.entries(mesesMap).map(([mes, receita]) => ({
+        mes,
+        receita,
+      }));
     },
   });
 
   // Despesas (custos do prédio + salários dos funcionários)
-  const { data: despesas } = useQuery({
+  const { data: despesas, isLoading: loadingDespesas } = useQuery({
     queryKey: ["financeiro-despesas", "custos-predio"], // Add dependecy on custos-predio invalidation
     queryFn: async () => {
       const hoje = new Date();
@@ -206,11 +210,7 @@ const Financeiro = () => {
         description: "O relatório foi baixado com sucesso.",
       });
     } catch (error) {
-      toast({
-        title: "Erro ao gerar PDF",
-        description: "Não foi possível gerar o relatório.",
-        variant: "destructive",
-      });
+      handleError(error, "Erro ao gerar PDF");
     }
   };
 
@@ -236,55 +236,84 @@ const Financeiro = () => {
         <div ref={reportRef} className="space-y-6">
           {/* KPIs */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Receita Mensal</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Card className="transition-all hover:shadow-lg border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Receita Mensal
+                </CardTitle>
+                <DollarSign className="h-5 w-5 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  R$ {(receitaMensal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </div>
-                <p className="text-xs text-muted-foreground">Mês atual</p>
+                {loadingReceita ? (
+                  <Skeleton className="h-8 w-32" />
+                ) : (
+                  <div className="text-3xl font-bold text-foreground">
+                    R$ {receitaMensal?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">Total recebido este mês</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Despesas</CardTitle>
-                <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            <Card className="transition-all hover:shadow-lg border-l-4 border-l-red-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Despesas Mensais
+                </CardTitle>
+                <TrendingDown className="h-5 w-5 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  R$ {(despesas?.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </div>
-                <p className="text-xs text-muted-foreground">Fixas + Variáveis</p>
+                {loadingDespesas ? (
+                  <Skeleton className="h-8 w-32" />
+                ) : (
+                  <div className="text-3xl font-bold text-foreground">
+                    R$ {despesas?.total?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">Custos fixos e salários</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <Card className="transition-all hover:shadow-lg border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Saldo Operacional
+                </CardTitle>
+                <TrendingUp className="h-5 w-5 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${lucroLiquido >= 0 ? "text-success" : "text-destructive"}`}>
-                  R$ {lucroLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </div>
-                <p className="text-xs text-muted-foreground">Margem de {margemLucro}%</p>
+                {loadingReceita || loadingDespesas ? (
+                  <Skeleton className="h-8 w-32" />
+                ) : (
+                  <div className={cn(
+                    "text-3xl font-bold",
+                    (receitaMensal - despesas?.total) >= 0 ? "text-foreground" : "text-destructive"
+                  )}>
+                    R$ {(receitaMensal - despesas?.total)?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">Resultado do mês</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Inadimplência</CardTitle>
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            <Card className="transition-all hover:shadow-lg border-l-4 border-l-yellow-500">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Inadimplência
+                </CardTitle>
+                <AlertCircle className="h-5 w-5 text-yellow-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-destructive">
-                  R$ {(inadimplencia?.valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </div>
-                <p className="text-xs text-muted-foreground">{inadimplencia?.quantidade || 0} mensalidades</p>
+                {loadingInadimplencia ? (
+                  <Skeleton className="h-8 w-32" />
+                ) : (
+                  <div className="text-3xl font-bold text-destructive">
+                    R$ {inadimplencia?.valor?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {inadimplencia?.quantidade} pagamentos em atraso
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -297,24 +326,35 @@ const Financeiro = () => {
               </CardHeader>
               <CardContent>
                 {loadingMeses ? (
-                  <div className="flex items-center justify-center h-[300px]">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col gap-4">
+                    <Skeleton className="h-[300px] w-full" />
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="h-4 w-12" />
+                    </div>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={receitaMeses}>
-                      <CartesianGrid strokeDasharray="3 3" />
+                    <BarChart data={receitaMeses}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="mes" />
-                      <YAxis />
+                      <YAxis
+                        tickFormatter={(value) =>
+                          `R$ ${value.toLocaleString("pt-BR", { notation: "compact" })}`
+                        }
+                      />
                       <Tooltip
                         formatter={(value: number) => [
                           `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-                          "Receita"
+                          "Receita",
                         ]}
                       />
-                      <Legend />
-                      <Line type="monotone" dataKey="receita" stroke="#8884d8" name="Receita" />
-                    </LineChart>
+                      <Bar dataKey="receita" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 )}
               </CardContent>
@@ -325,7 +365,11 @@ const Financeiro = () => {
                 <CardTitle>Receita por Atividade</CardTitle>
               </CardHeader>
               <CardContent>
-                {receitaPorAtividade && receitaPorAtividade.length > 0 ? (
+                {loadingAtividade ? (
+                  <div className="flex items-center justify-center h-[300px]">
+                    <Skeleton className="h-48 w-48 rounded-full" />
+                  </div>
+                ) : Array.isArray(receitaPorAtividade) && receitaPorAtividade.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -338,7 +382,7 @@ const Financeiro = () => {
                         fill="#8884d8"
                         dataKey="valor"
                       >
-                        {receitaPorAtividade.map((entry, index) => (
+                        {receitaPorAtividade.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -504,60 +548,60 @@ const RecentPaymentsTable = () => {
 };
 
 const RecentExpensesTable = () => {
-    const { data: ultimasDespesas, isLoading } = useQuery({
-      queryKey: ["custos-predio"],
-      queryFn: async () => {
-        const { data, error } = await supabase
-          .from("custos_predio")
-          .select("*")
-          .order("data", { ascending: false })
-          .limit(10);
-  
-        if (error) throw error;
-        return data;
-      },
-    });
-  
-    if (isLoading) {
-      return (
-        <div className="flex justify-center py-4">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      );
-    }
-  
-    if (!ultimasDespesas?.length) {
-      return <p className="text-sm text-muted-foreground text-center py-4">Nenhuma despesa registrada.</p>;
-    }
-  
+  const { data: ultimasDespesas, isLoading } = useQuery({
+    queryKey: ["custos-predio"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("custos_predio")
+        .select("*")
+        .order("data", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) {
     return (
-      <div className="relative w-full overflow-auto">
-        <table className="w-full caption-bottom text-sm text-left">
-          <thead className="[&_tr]:border-b">
-            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-              <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Descrição</th>
-              <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Categoria</th>
-              <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Data</th>
-              <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Valor</th>
-            </tr>
-          </thead>
-          <tbody className="[&_tr:last-child]:border-0">
-            {ultimasDespesas.map((despesa: any) => (
-              <tr key={despesa.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                <td className="p-4 align-middle font-medium">{despesa.descricao}</td>
-                <td className="p-4 align-middle">{despesa.tipo}</td>
-                <td className="p-4 align-middle">
-                    {format(new Date(despesa.data), "dd/MM/yyyy")}
-                </td>
-                <td className="p-4 align-middle text-right font-medium text-destructive">
-                  - R$ {parseFloat(despesa.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex justify-center py-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
-  };
+  }
+
+  if (!ultimasDespesas?.length) {
+    return <p className="text-sm text-muted-foreground text-center py-4">Nenhuma despesa registrada.</p>;
+  }
+
+  return (
+    <div className="relative w-full overflow-auto">
+      <table className="w-full caption-bottom text-sm text-left">
+        <thead className="[&_tr]:border-b">
+          <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Descrição</th>
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Categoria</th>
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Data</th>
+            <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Valor</th>
+          </tr>
+        </thead>
+        <tbody className="[&_tr:last-child]:border-0">
+          {ultimasDespesas.map((despesa: any) => (
+            <tr key={despesa.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+              <td className="p-4 align-middle font-medium">{despesa.descricao}</td>
+              <td className="p-4 align-middle">{despesa.tipo}</td>
+              <td className="p-4 align-middle">
+                {format(new Date(despesa.data), "dd/MM/yyyy")}
+              </td>
+              <td className="p-4 align-middle text-right font-medium text-destructive">
+                - R$ {parseFloat(despesa.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 export default Financeiro;

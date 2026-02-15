@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Shield, Key } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +32,7 @@ export default function MfaVerify() {
     try {
       const factorId = location.state?.factorId;
       const challengeId = location.state?.challengeId;
-      
+
       if (!factorId || !challengeId) {
         throw new Error("Factor ID ou Challenge ID não encontrado");
       }
@@ -51,12 +52,7 @@ export default function MfaVerify() {
 
       setTimeout(() => navigate("/"), 1000);
     } catch (error: any) {
-      console.error("Error verifying MFA:", error);
-      toast({
-        title: "Erro na verificação",
-        description: error.message,
-        variant: "destructive",
-      });
+      handleError(error, "Erro na verificação");
     } finally {
       setIsVerifying(false);
     }
@@ -75,7 +71,7 @@ export default function MfaVerify() {
     setIsVerifying(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error("Usuário não autenticado");
       }
@@ -103,12 +99,7 @@ export default function MfaVerify() {
         });
       }
     } catch (error: any) {
-      console.error("Error verifying recovery code:", error);
-      toast({
-        title: "Erro na verificação",
-        description: error.message,
-        variant: "destructive",
-      });
+      handleError(error, "Erro na verificação");
     } finally {
       setIsVerifying(false);
     }

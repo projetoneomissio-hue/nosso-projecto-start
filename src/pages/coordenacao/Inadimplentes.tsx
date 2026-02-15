@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { handleError } from "@/utils/error-handler";
 
 interface InadimplenteData {
   pagamento_id: string;
@@ -45,21 +46,21 @@ const Inadimplentes = () => {
           id,
           data_vencimento,
           valor,
-          matricula:matriculas!inner(
+          matricula: matriculas!inner(
             id,
-            aluno:alunos!inner(
+            aluno: alunos!inner(
               id,
               nome_completo,
-              responsavel:responsavel_id(
+              responsavel: responsavel_id(
                 id,
                 nome_completo,
                 email,
                 telefone
               )
             ),
-            turma:turmas!inner(
+            turma: turmas!inner(
               nome,
-              atividade:atividades!inner(nome)
+              atividade: atividades!inner(nome)
             )
           )
         `)
@@ -100,12 +101,7 @@ const Inadimplentes = () => {
 
       setInadimplentes(Array.from(inadimplentesMap.values()));
     } catch (error) {
-      console.error("Erro ao carregar inadimplentes:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os inadimplentes",
-        variant: "destructive",
-      });
+      handleError(error, "Não foi possível carregar os inadimplentes");
     } finally {
       setLoading(false);
     }
@@ -115,7 +111,7 @@ const Inadimplentes = () => {
     try {
       setSendingEmail(inadimplente.aluno_id);
 
-      const { data, error } = await supabase.functions.invoke("send-payment-reminder", {
+      const { error } = await supabase.functions.invoke("send-payment-reminder", {
         body: {
           to: inadimplente.responsavel_email,
           responsavelNome: inadimplente.responsavel_nome,
@@ -137,12 +133,7 @@ const Inadimplentes = () => {
         description: "Email de cobrança enviado com sucesso",
       });
     } catch (error) {
-      console.error("Erro ao enviar email:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível enviar o email de cobrança",
-        variant: "destructive",
-      });
+      handleError(error, "Não foi possível enviar o email de cobrança");
     } finally {
       setSendingEmail(null);
     }

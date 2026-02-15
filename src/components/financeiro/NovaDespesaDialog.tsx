@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, DollarSign, Calendar, FileText } from "lucide-react";
@@ -47,11 +48,7 @@ export function NovaDespesaDialog() {
             });
         },
         onError: (error) => {
-            toast({
-                title: "Erro ao registrar",
-                description: error.message,
-                variant: "destructive",
-            });
+            handleError(error, "Erro ao registrar despesa");
         },
     });
 

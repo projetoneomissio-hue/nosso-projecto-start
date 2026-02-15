@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Shield, Download, Copy, Check } from "lucide-react";
@@ -55,18 +56,13 @@ export default function MfaSetup() {
         setQrCode(data.totp.qr_code);
         setSecret(data.totp.secret);
         setFactorId(data.id);
-        
+
         // Gera códigos de recuperação
         const codes = generateRecoveryCodes();
         setRecoveryCodes(codes);
       }
     } catch (error: any) {
-      console.error("Error enrolling MFA:", error);
-      toast({
-        title: "Erro ao configurar MFA",
-        description: error.message,
-        variant: "destructive",
-      });
+      handleError(error, "Erro ao configurar MFA");
     } finally {
       setIsLoading(false);
     }
@@ -122,12 +118,7 @@ export default function MfaSetup() {
       // Mostra códigos de recuperação
       setShowRecoveryCodes(true);
     } catch (error: any) {
-      console.error("Error verifying MFA:", error);
-      toast({
-        title: "Erro ao verificar código",
-        description: error.message,
-        variant: "destructive",
-      });
+      handleError(error, "Erro ao verificar código");
     } finally {
       setIsVerifying(false);
     }
@@ -148,7 +139,7 @@ export default function MfaSetup() {
     a.download = "neo-missio-recovery-codes.txt";
     a.click();
     URL.revokeObjectURL(url);
-    
+
     toast({
       title: "Códigos salvos",
       description: "Guarde estes códigos em local seguro!",

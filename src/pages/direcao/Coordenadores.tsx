@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { UserCog, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
+import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
+import { handleError } from "@/utils/error-handler";
 import {
   Dialog,
   DialogContent,
@@ -134,18 +137,14 @@ const Coordenadores = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["coordenador-atividades"] });
       toast({
-        title: "Atribuição removida",
-        description: "O coordenador foi removido da atividade.",
+        title: "Sucesso",
+        description: "Associação removida com sucesso.",
       });
       setDeleteDialogOpen(false);
       setDeletingId(null);
     },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao remover",
-        description: error.message || "Não foi possível remover a atribuição.",
-        variant: "destructive",
-      });
+    onError: (error) => {
+      handleError(error, "Erro ao remover associação");
     },
   });
 
@@ -189,6 +188,9 @@ const Coordenadores = () => {
 
   // Agrupar por coordenador
   const coordenadoresAgrupados = coordenadorAtividades?.reduce((acc: any, item: any) => {
+    // Robustness check: Ensure coordinator exists
+    if (!item.coordenador) return acc;
+
     const coordId = item.coordenador_id;
     if (!acc[coordId]) {
       acc[coordId] = {
@@ -198,7 +200,7 @@ const Coordenadores = () => {
     }
     acc[coordId].atividades.push({
       id: item.id,
-      atividade: item.atividade,
+      atividade: item.atividade || { nome: "Atividade não encontrada" },
     });
     return acc;
   }, {});
@@ -220,44 +222,68 @@ const Coordenadores = () => {
         </div>
 
         {/* Alerta de coordenadores sem atividade */}
-        <PendingUsersAlert 
-          count={coordenadoresSemAtividade.length} 
-          role="coordenacao" 
-          linkTo="/convites" 
+        <PendingUsersAlert
+          count={coordenadoresSemAtividade.length}
+          role="coordenacao"
+          linkTo="/convites"
         />
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="grid md:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <Skeleton className="h-6 w-48 mb-2" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : coordenadoresAgrupados && Object.keys(coordenadoresAgrupados).length > 0 ? (
-          <div className="grid gap-4">
-            {Object.values(coordenadoresAgrupados).map((item: any) => (
-              <Card key={item.coordenador.id}>
-                <CardHeader>
-                  <CardTitle className="text-xl">{item.coordenador.nome_completo}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{item.coordenador.email}</p>
+          <div className="grid md:grid-cols-2 gap-6 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
+            {Object.entries(coordenadoresAgrupados).map(([coordId, data]: [string, any]) => (
+              <Card key={coordId} className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <UserCog className="h-5 w-5 text-primary" />
+                      </div>
+                      {data.coordenador?.nome_completo}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">{data.coordenador?.email}</p>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">Atividades Coordenadas:</h4>
-                    <div className="space-y-2">
-                      {item.atividades.map((ativ: any) => (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                      Atividades sob Coordenação
+                    </h4>
+                    <div className="grid gap-2">
+                      {data.atividades.map((assoc: any) => (
                         <div
-                          key={ativ.id}
-                          className="flex items-center justify-between p-3 border rounded-lg"
+                          key={assoc.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-accent/30 group/item hover:bg-accent/50 transition-colors"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-sm">{ativ.atividade.nome}</span>
-                            <Badge variant={ativ.atividade.ativa ? "default" : "secondary"}>
-                              {ativ.atividade.ativa ? "Ativa" : "Inativa"}
+                            <span className="font-medium">{assoc.atividade?.nome}</span>
+                            <Badge variant={assoc.atividade?.ativa ? "default" : "secondary"}>
+                              {assoc.atividade?.ativa ? "Ativa" : "Inativa"}
                             </Badge>
                           </div>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(ativ.id)}
-                            className="text-destructive hover:text-destructive"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              setDeletingId(assoc.id);
+                              setDeleteDialogOpen(true);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -270,17 +296,13 @@ const Coordenadores = () => {
             ))}
           </div>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">
-                Nenhum coordenador atribuído ainda.
-              </p>
-              <Button onClick={handleOpenDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Atribuir Primeiro Coordenador
-              </Button>
-            </CardContent>
-          </Card>
+          <PremiumEmptyState
+            title="Nenhum coordenador atribuído"
+            description="Atribua atividades aos coordenadores para visualizar e gerenciar as responsabilidades aqui."
+            icon={UserCog}
+            actionLabel="Atribuir Primeiro Coordenador"
+            onAction={handleOpenDialog}
+          />
         )}
 
         {/* Dialog para atribuir */}

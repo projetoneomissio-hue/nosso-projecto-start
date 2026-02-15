@@ -1,10 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
 
 @layer base {
   :root {
@@ -64,61 +62,47 @@ All colors MUST be HSL.
     --info: 0 100% 40%;
   }
 
-  /* --- TEMA HUMANIZED SAAS (DASHBOARD - ICE BLUE) --- */
+  /* --- TEMA PREMIUM NEO MISSIO (DASHBOARD) --- */
   .humanized-theme {
-    /* Background: Ice Blue (Azul Gelo Suave) */
-    --background: 224 71% 97%;
-    /* Foreground: Indigo-950 (Texto Escuro Profundo) */
-    --foreground: 226 45% 15%;
+    /* Cores atualizadas baseadas no UI/UX Pro Max Skill */
+    --background: 210 40% 98%;      /* #F8FAFC - Slate 50 */
+    --foreground: 244 47% 21%;      /* #1E1B4B - Dark Indigo */
 
-    /* Card: White (Puro) */
     --card: 0 0% 100%;
-    --card-foreground: 226 45% 15%;
+    --card-foreground: 244 47% 21%;
 
-    /* Primary: Indigo-600 (Vibrante) */
-    --primary: 226 70% 55.5%;
+    --primary: 243 75% 59%;         /* #4F46E5 - Indigo 600 */
     --primary-foreground: 210 40% 98%;
 
-    /* Secondary: White (para elementos de destaque sutil) */
-    --secondary: 0 0% 100%;
-    --secondary-foreground: 226 70% 55.5%;
+    --secondary: 235 89% 74%;       /* #818CF8 - Soft Indigo */
+    --secondary-foreground: 244 47% 21%;
 
-    /* Muted: Indigo-50 */
+    --accent: 25 95% 53%;           /* #F97316 - Orange (CTA) */
+    --accent-foreground: 0 0% 100%;
+
     --muted: 224 71% 96%;
     --muted-foreground: 226 20% 50%;
 
-    /* Accent: White com leve tint */
-    --accent: 0 0% 100%;
-    --accent-foreground: 226 70% 55.5%;
+    --border: 214 32% 91%;          /* #E2E8F0 - Slate 200 */
+    --input: 214 32% 91%;
+    --ring: 243 75% 59%;
 
-    /* Border: Indigo-100 (Muito sutil) */
-    --border: 226 71% 94%;
-    --input: 226 71% 94%;
-    --ring: 226 70% 55.5%;
+    --radius: 0.75rem;              /* Arredondamento moderno (xl) */
 
-    /* Radius: 1.5rem (24px - Super Arredondado/Friendly) */
-    --radius: 1.5rem;
-
-    /* Sidebar Humanized (Light/Clean) */
+    /* Sidebar Clean Premium */
     --sidebar-background: 0 0% 100%;
-    /* Branco para contraste clean */
-    --sidebar-foreground: 226 45% 30%;
-    /* Cinza-Azulado para texto */
-    --sidebar-primary: 226 70% 55.5%;
+    --sidebar-foreground: 244 47% 30%;
+    --sidebar-primary: 243 75% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 224 71% 97%;
-    /* Ice Blue no Hover */
-    --sidebar-accent-foreground: 226 70% 55.5%;
-    --sidebar-border: 0 0% 100%;
-    /* Borda Branca (Invisível) */
-    --sidebar-ring: 226 70% 55.5%;
+    --sidebar-accent: 210 40% 98%;
+    --sidebar-accent-foreground: 243 75% 59%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 243 75% 59%;
   }
 
   .dark {
-    /* Dark Mode Default */
     --background: 0 0% 10%;
     --foreground: 0 0% 98%;
-    /* ... (rest of dark mode logic can stay generic or customized later) */
     --card: 0 0% 10%;
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 10%;
@@ -147,5 +131,37 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+  }
+}
+
+/* --- MICRO-INTERAÇÕES GLOBAIS --- */
+@layer components {
+  /* Botões e elementos interativos suavizados */
+  .btn-premium {
+    @apply transition-all duration-300;
+  }
+  
+  .btn-premium:hover {
+    @apply shadow-md transform -translate-y-[1px];
+  }
+
+  /* Cards com profundidade e hover suave */
+  .card-premium {
+    @apply transition-all duration-300 border border-border bg-card rounded-xl;
+  }
+  
+  .card-premium:hover {
+    @apply shadow-lg border-primary/20 transform -translate-y-1;
+  }
+
+  /* Transições suaves para estados de foco */
+  input:focus, select:focus, textarea:focus {
+    @apply transition-all duration-200 ring-offset-background;
   }
 }

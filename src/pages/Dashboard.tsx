@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import { handleError } from "@/utils/error-handler";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -19,7 +21,7 @@ const Dashboard = () => {
   }
 
   // Fetch total de alunos
-  const { data: totalAlunos } = useQuery({
+  const { data: totalAlunos, isLoading: loadingAlunos } = useQuery({
     queryKey: ["dashboard-total-alunos"],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -31,7 +33,7 @@ const Dashboard = () => {
   });
 
   // Fetch atividades ativas
-  const { data: atividadesAtivas } = useQuery({
+  const { data: atividadesAtivas, isLoading: loadingAtividadesAtivas } = useQuery({
     queryKey: ["dashboard-atividades-ativas"],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -44,7 +46,7 @@ const Dashboard = () => {
   });
 
   // Fetch receita mensal (pagamentos pagos do mês atual)
-  const { data: receitaMensal } = useQuery({
+  const { data: receitaMensal, isLoading: loadingReceita } = useQuery({
     queryKey: ["dashboard-receita-mensal"],
     queryFn: async () => {
       const hoje = new Date();
@@ -65,7 +67,7 @@ const Dashboard = () => {
   });
 
   // Fetch taxa de ocupação
-  const { data: taxaOcupacao } = useQuery({
+  const { data: taxaOcupacao, isLoading: loadingOcupacao } = useQuery({
     queryKey: ["dashboard-taxa-ocupacao"],
     queryFn: async () => {
       const { data: turmas, error } = await supabase
@@ -114,7 +116,7 @@ const Dashboard = () => {
   });
 
   // Fetch status de pagamentos
-  const { data: statusPagamentos, isLoading: loadingPagamentos } = useQuery({
+  const { data: statusPagamentos, isLoading: loadingPagamentosStatus } = useQuery({
     queryKey: ["dashboard-pagamentos-status"],
     queryFn: async () => {
       const hoje = new Date().toISOString().split("T")[0];
@@ -151,7 +153,7 @@ const Dashboard = () => {
   });
 
   // Fetch solicitações de matrícula (pendentes e sem pagamento)
-  const { data: solicitacoesPendentes, refetch: refetchSolicitacoes } = useQuery({
+  const { data: solicitacoesPendentes, isLoading: loadingSolicitacoes, refetch: refetchSolicitacoes } = useQuery({
     queryKey: ["dashboard-solicitacoes-pendentes"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -173,7 +175,7 @@ const Dashboard = () => {
 
       // Filter localmente para garantir que nao tem pagamento (embora pudesse ser via query complexa)
       // Mantemos apenas matriculas que NAO tem pagamentos registrados
-      return data.filter((m) => m.pagamentos[0]?.count === 0);
+      return (data || []).filter((m: any) => m.pagamentos?.[0]?.count === 0);
     },
   });
 
@@ -201,11 +203,7 @@ const Dashboard = () => {
       refetchSolicitacoes();
     },
     onError: (error) => {
-      toast({
-        title: "Erro ao aprovar",
-        description: error.message,
-        variant: "destructive",
-      });
+      handleError(error, "Erro ao aprovar");
     },
   });
 
@@ -238,7 +236,17 @@ const Dashboard = () => {
         </div>
 
         {/* Solicitações de Matrícula (Admission Funnel) */}
-        {solicitacoesPendentes && solicitacoesPendentes.length > 0 && (
+        {loadingSolicitacoes ? (
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </CardContent>
+          </Card>
+        ) : solicitacoesPendentes && solicitacoesPendentes.length > 0 && (
           <Card className="border-l-4 border-l-primary shadow-sm bg-primary/5">
             <CardHeader className="pb-3">
               <CardTitle className="text-xl flex items-center gap-2">
@@ -301,24 +309,28 @@ const Dashboard = () => {
             value={totalAlunos?.toString() || "0"}
             icon={Users}
             description="Alunos cadastrados"
+            isLoading={loadingAlunos}
           />
           <DashboardCard
             title="Atividades Ativas"
             value={atividadesAtivas?.toString() || "0"}
             icon={GraduationCap}
             description="Modalidades oferecidas"
+            isLoading={loadingAtividadesAtivas}
           />
           <DashboardCard
             title="Receita Mensal"
             value={`R$ ${receitaMensal?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || "0,00"}`}
             icon={DollarSign}
             description="Pagamentos recebidos"
+            isLoading={loadingReceita}
           />
           <DashboardCard
             title="Taxa de Ocupação"
             value={`${taxaOcupacao || 0}%`}
             icon={TrendingUp}
             description="Capacidade utilizada"
+            isLoading={loadingOcupacao}
           />
         </div>
 
@@ -330,8 +342,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {loadingAtividades ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
                 </div>
               ) : atividadesPopulares && atividadesPopulares.length > 0 ? (
                 atividadesPopulares.map((ativ) => (
@@ -355,9 +369,11 @@ const Dashboard = () => {
               <CardTitle className="text-lg">Pagamentos Pendentes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {loadingPagamentos ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              {loadingPagamentosStatus ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
                 </div>
               ) : statusPagamentos ? (
                 <>

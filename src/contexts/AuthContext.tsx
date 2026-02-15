@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
-import { useToast } from "@/hooks/use-toast"; // Importar toast
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type UserRole = "direcao" | "coordenacao" | "professor" | "responsavel";
 
@@ -33,80 +34,66 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast(); // Usar toast para feedback
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsAuthLoading(false);
+    });
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        
-        if (session?.user) {
-          // Defer fetching user data to avoid blocking
-          setTimeout(async () => {
-            await fetchUserData(session.user);
-          }, 0);
-        } else {
-          setUser(null);
+      async (event, currentSession) => {
+        setSession(currentSession);
+        setIsAuthLoading(false);
+
+        if (event === 'SIGNED_OUT') {
+          queryClient.clear();
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          queryClient.invalidateQueries({ queryKey: ["user-profile"] });
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        await fetchUserData(session.user);
-      }
-      setLoading(false);
-    });
-
     return () => subscription.unsubscribe();
-  }, []);
+  }, [queryClient]);
 
-  const fetchUserData = async (supabaseUser: SupabaseUser) => {
-    try {
-      // Fetch profile
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("nome_completo")
-        .eq("id", supabaseUser.id)
-        .single();
+  const { data: user, isLoading: isProfileLoading } = useQuery({
+    queryKey: ["user-profile", session?.user?.id],
+    enabled: !!session?.user,
+    queryFn: async (): Promise<User | null> => {
+      const supabaseUser = session!.user;
 
-      if (profileError) {
-        console.error("Erro ao buscar perfil:", profileError);
-        // Se não encontrar perfil, pode ser o caso do usuário "quebrado".
-        // O script SQL fornecido resolve isso, mas aqui avisamos o usuário.
-        return; 
-      }
+      try {
+        // Fetch profile and role in parallel
+        const [profileRes, roleRes] = await Promise.all([
+          supabase.from("profiles").select("nome_completo").eq("id", supabaseUser.id).single(),
+          supabase.from("user_roles").select("role").eq("user_id", supabaseUser.id).single()
+        ]);
 
-      // Fetch role
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", supabaseUser.id)
-        .single();
+        if (profileRes.error || roleRes.error) {
+          console.error("Erro ao buscar dados do usuário:", profileRes.error || roleRes.error);
+          return null;
+        }
 
-      if (roleError) {
-        console.error("Erro ao buscar papel (role):", roleError);
-        return;
-      }
-
-      if (profile && roleData) {
-        setUser({
+        return {
           id: supabaseUser.id,
-          name: profile.nome_completo,
+          name: profileRes.data.nome_completo,
           email: supabaseUser.email || "",
-          role: roleData.role as UserRole,
-        });
+          role: roleRes.data.role as UserRole,
+        };
+      } catch (error) {
+        console.error("Error in user queryFn:", error);
+        return null;
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
+    },
+    staleTime: Infinity, // Profile data doesn't change often
+  });
 
   const login = async (email: string, password: string) => {
     try {
@@ -114,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         password,
       });
-      
+
       if (error) throw error;
       return { error: null };
     } catch (error) {
@@ -125,9 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (email: string, password: string, name: string, role: UserRole, inviteToken?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
-      
-      // Passamos os dados como metadados (options.data).
-      // O Trigger no banco de dados lerá 'nome_completo' e 'invite_token' e fará as inserções.
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -141,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) throw error;
-      
+
       return { error: null };
     } catch (error) {
       return { error: error as Error };
@@ -150,20 +135,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    setUser(null);
     setSession(null);
+    queryClient.clear();
   };
 
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: user || null,
         session,
         login,
         signup,
         logout,
         isAuthenticated: !!user,
-        loading,
+        loading: isAuthLoading || (!!session?.user && isProfileLoading),
       }}
     >
       {children}

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Loader2, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, DollarSign, UserCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleError } from "@/utils/error-handler";
 import { z } from "zod";
 import { PendingUsersAlert } from "@/components/PendingUsersAlert";
 
@@ -72,7 +75,7 @@ const Professores = () => {
           )
         `)
         .order("ativo", { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -86,18 +89,18 @@ const Professores = () => {
       const { data: professoresExistentes, error: e1 } = await supabase
         .from("professores")
         .select("user_id");
-      
+
       if (e1) throw e1;
-      
+
       const userIdsExistentes = professoresExistentes?.map(p => p.user_id) || [];
-      
+
       const { data: userRoles, error: e2 } = await supabase
         .from("user_roles")
         .select("user_id, profiles(id, nome_completo, email)")
         .eq("role", "professor");
-      
+
       if (e2) throw e2;
-      
+
       return userRoles
         ?.filter(ur => !userIdsExistentes.includes(ur.user_id))
         .map(ur => ur.profiles)
@@ -133,7 +136,7 @@ const Professores = () => {
       queryClient.invalidateQueries({ queryKey: ["available-users-professor"] });
       toast({
         title: editingProfessor ? "Professor atualizado" : "Professor cadastrado",
-        description: editingProfessor 
+        description: editingProfessor
           ? "Os dados do professor foram atualizados."
           : "O professor foi cadastrado com sucesso.",
       });
@@ -166,12 +169,8 @@ const Professores = () => {
       setDeleteDialogOpen(false);
       setDeletingId(null);
     },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao excluir",
-        description: error.message || "Não foi possível excluir o professor.",
-        variant: "destructive",
-      });
+    onError: (error) => {
+      handleError(error, "Erro ao salvar professor");
     },
   });
 
@@ -237,12 +236,12 @@ const Professores = () => {
       (acc: number, t: any) => acc + (t.matriculas?.[0]?.count || 0),
       0
     ) || 0;
-    
+
     // Busca valor médio das atividades das turmas (simplificado)
     // Na prática, deveria buscar o valor específico de cada matrícula
     const valorMedioPorAluno = 150; // Valor exemplo
     const comissao = (totalAlunos * valorMedioPorAluno * parseFloat(professor.percentual_comissao.toString())) / 100;
-    
+
     return comissao;
   };
 
@@ -263,16 +262,41 @@ const Professores = () => {
         </div>
 
         {/* Alerta de professores pendentes */}
-        <PendingUsersAlert 
-          count={availableUsers?.length || 0} 
-          role="professor" 
-          linkTo="/convites" 
+        <PendingUsersAlert
+          count={availableUsers?.length || 0}
+          role="professor"
+          linkTo="/convites"
         />
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-3">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right space-y-1">
+                        <Skeleton className="h-3 w-20 ml-auto" />
+                        <Skeleton className="h-6 w-24 ml-auto" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-8 w-8" />
+                        <Skeleton className="h-8 w-8" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         ) : professores && professores.length > 0 ? (
           <Card>
             <CardHeader>
@@ -286,7 +310,7 @@ const Professores = () => {
                     0
                   ) || 0;
                   const comissaoEstimada = calculateComissao(prof);
-                  
+
                   return (
                     <div
                       key={prof.id}
@@ -343,17 +367,13 @@ const Professores = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">
-                Nenhum professor cadastrado ainda.
-              </p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Cadastrar Primeiro Professor
-              </Button>
-            </CardContent>
-          </Card>
+          <PremiumEmptyState
+            title="Sua equipe de professores"
+            description="Cadastre os professores que farão parte do seu centro. Você poderá gerenciar especialidades e comissões automáticas."
+            icon={UserCheck}
+            actionLabel="Cadastrar Primeiro Professor"
+            onAction={() => handleOpenDialog()}
+          />
         )}
 
         {/* Dialog para criar/editar */}
