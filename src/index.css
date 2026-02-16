@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&family=Poppins:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -64,40 +64,49 @@
 
   /* --- TEMA PREMIUM NEO MISSIO (DASHBOARD) --- */
   .humanized-theme {
-    /* Cores atualizadas baseadas no UI/UX Pro Max Skill */
-    --background: 210 40% 98%;      /* #F8FAFC - Slate 50 */
-    --foreground: 244 47% 21%;      /* #1E1B4B - Dark Indigo */
+    /* --- CORES OFICIAIS NEO MISSIO (Fonte: Estudos ID Visual) --- */
+
+    /* Background: Ice Blue (#F8FAFC) */
+    --background: 210 40% 98%;
+    /* Preenchimento principal de texto: Seriedade/Grafite (#363636) */
+    --foreground: 0 0% 21%;
 
     --card: 0 0% 100%;
-    --card-foreground: 244 47% 21%;
+    --card-foreground: 0 0% 21%;
 
-    --primary: 243 75% 59%;         /* #4F46E5 - Indigo 600 */
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Atividade/Magenta (#D40055) - Ação e Destaque */
+    --primary: 336 100% 42%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 235 89% 74%;       /* #818CF8 - Soft Indigo */
-    --secondary-foreground: 244 47% 21%;
+    /* Secondary: Conversa/Amarelo (#FFC20E) - Elementos Secundários */
+    --secondary: 45 100% 53%;
+    --secondary-foreground: 0 0% 21%;
 
-    --accent: 25 95% 53%;           /* #F97316 - Orange (CTA) */
+    /* Accent: Escuta/Ciano (#00B0D9) - Apoio e Detalhes */
+    --accent: 191 100% 43%;
     --accent-foreground: 0 0% 100%;
 
-    --muted: 224 71% 96%;
-    --muted-foreground: 226 20% 50%;
+    /* Info/Muted: Quietude/Azul Profundo (#1E3A8A) - Institucional */
+    --muted: 224 64% 96%;
+    /* Versão suave do Azul Profundo para fundos */
+    --muted-foreground: 224 64% 33%;
+    /* Azul Profundo para textos de apoio */
 
-    --border: 214 32% 91%;          /* #E2E8F0 - Slate 200 */
+    --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 243 75% 59%;
+    --ring: 336 100% 42%;
 
-    --radius: 0.75rem;              /* Arredondamento moderno (xl) */
+    --radius: 0.75rem;
 
-    /* Sidebar Clean Premium */
+    /* Sidebar Clean Premium com Cores Oficiais */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 244 47% 30%;
-    --sidebar-primary: 243 75% 59%;
+    --sidebar-foreground: 0 0% 21%;
+    --sidebar-primary: 336 100% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 98%;
-    --sidebar-accent-foreground: 243 75% 59%;
+    --sidebar-accent-foreground: 336 100% 42%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 243 75% 59%;
+    --sidebar-ring: 336 100% 42%;
   }
 
   .dark {
@@ -131,10 +140,15 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Poppins', 'Inter', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 700;
   }
@@ -142,11 +156,12 @@
 
 /* --- MICRO-INTERAÇÕES GLOBAIS --- */
 @layer components {
+
   /* Botões e elementos interativos suavizados */
   .btn-premium {
     @apply transition-all duration-300;
   }
-  
+
   .btn-premium:hover {
     @apply shadow-md transform -translate-y-[1px];
   }
@@ -155,13 +170,15 @@
   .card-premium {
     @apply transition-all duration-300 border border-border bg-card rounded-xl;
   }
-  
+
   .card-premium:hover {
     @apply shadow-lg border-primary/20 transform -translate-y-1;
   }
 
   /* Transições suaves para estados de foco */
-  input:focus, select:focus, textarea:focus {
+  input:focus,
+  select:focus,
+  textarea:focus {
     @apply transition-all duration-200 ring-offset-background;
   }
 }

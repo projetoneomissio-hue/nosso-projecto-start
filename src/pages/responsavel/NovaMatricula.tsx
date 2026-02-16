@@ -88,6 +88,20 @@ const NovaMatricula = () => {
   // Mutation para criar matrícula
   const criarMatriculaMutation = useMutation({
     mutationFn: async (data: { aluno_id: string; turma_id: string }) => {
+      // Double-check capacity before inserting (prevents stale data race condition)
+      const { data: turmaData, error: turmaError } = await supabase
+        .from("turmas")
+        .select("capacidade_maxima, matriculas(count)")
+        .eq("id", data.turma_id)
+        .single();
+
+      if (turmaError) throw turmaError;
+
+      const matriculasAtuais = turmaData.matriculas?.[0]?.count || 0;
+      if (matriculasAtuais >= turmaData.capacidade_maxima) {
+        throw new Error("Esta turma não tem mais vagas disponíveis. Por favor, escolha outra turma.");
+      }
+
       const dataInicio = new Date().toISOString().split("T")[0];
 
       const { error } = await supabase
@@ -101,7 +115,13 @@ const NovaMatricula = () => {
           },
         ]);
 
-      if (error) throw error;
+      if (error) {
+        // Handle the DB trigger error with a friendly message
+        if (error.message?.includes("Turma lotada")) {
+          throw new Error("Esta turma atingiu a capacidade máxima. Por favor, escolha outra turma.");
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matriculas-aluno"] });

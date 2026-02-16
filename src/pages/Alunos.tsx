@@ -12,7 +12,39 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  User,
+  Calendar,
+  IdCard,
+  Phone,
+  MapPin,
+  Users,
+  Check,
+  ChevronsUpDown,
+} from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +61,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { handleError } from "@/utils/error-handler";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,7 +77,16 @@ import {
 const alunoSchema = z.object({
   nome_completo: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(200, "Nome muito longo"),
   data_nascimento: z.string().min(1, "Data de nascimento é obrigatória"),
-  cpf: z.string().trim().regex(/^\d{11}$/, "CPF deve conter 11 dígitos").optional().nullable().or(z.literal("")),
+  cpf: z.string().trim().optional().nullable().or(z.literal("")).refine(
+    (val) => {
+      if (!val || val === "") return true;
+      const clean = val.replace(/\D/g, "");
+      if (clean.length === 0) return true;
+      if (clean.length !== 11) return false;
+      return validateCPF(clean);
+    },
+    { message: "CPF inválido. Verifique os dígitos." }
+  ),
   telefone: z.string().trim().max(20, "Telefone muito longo").optional().nullable().or(z.literal("")),
   endereco: z.string().trim().max(500, "Endereço muito longo").optional().nullable().or(z.literal("")),
   responsavel_id: z.string().uuid("ID do responsável inválido"),
@@ -92,13 +134,46 @@ const Alunos = () => {
     },
   });
 
+  // Fetch profiles (for responsable selection)
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, nome_completo, email")
+        .order("nome_completo");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: user?.role === "direcao" || user?.role === "coordenacao",
+  });
+
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (values: AlunoFormData) => {
+      const cleanCpf = values.cpf ? unmaskCPF(values.cpf) : null;
+
+      // Check for duplicate CPF if provided
+      if (cleanCpf && cleanCpf.length === 11) {
+        const { data: existing, error: checkError } = await supabase
+          .from("alunos")
+          .select("id, nome_completo")
+          .eq("cpf", cleanCpf)
+          .maybeSingle();
+
+        if (checkError) throw checkError;
+        if (existing && existing.id !== editingAluno?.id) {
+          throw new Error(
+            `Já existe um aluno cadastrado com este CPF: ${existing.nome_completo}`
+          );
+        }
+      }
+
       const payload = {
         nome_completo: values.nome_completo,
         data_nascimento: values.data_nascimento,
-        cpf: values.cpf || null,
+        cpf: cleanCpf || null,
         telefone: values.telefone || null,
         endereco: values.endereco || null,
         responsavel_id: values.responsavel_id,
@@ -109,12 +184,22 @@ const Alunos = () => {
           .from("alunos")
           .update(payload)
           .eq("id", editingAluno.id);
-        if (error) throw error;
+        if (error) {
+          if (error.message?.includes("idx_alunos_cpf_unique")) {
+            throw new Error("Já existe um aluno cadastrado com este CPF.");
+          }
+          throw error;
+        }
       } else {
         const { error } = await supabase
           .from("alunos")
           .insert([payload]);
-        if (error) throw error;
+        if (error) {
+          if (error.message?.includes("idx_alunos_cpf_unique")) {
+            throw new Error("Já existe um aluno cadastrado com este CPF.");
+          }
+          throw error;
+        }
       }
     },
     onSuccess: () => {
@@ -321,30 +406,96 @@ const Alunos = () => {
             </DialogHeader>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="nome_completo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome Completo *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome completo do aluno" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
+                {/* Seção: Dados Pessoais */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <User className="h-4 w-4 text-primary" />
+                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
+                      Dados Pessoais
+                    </h3>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="data_nascimento"
+                    name="nome_completo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Data de Nascimento *</FormLabel>
+                        <FormLabel className="flex items-center gap-2 text-primary/80">
+                          <User className="h-3.5 w-3.5" /> Nome Completo *
+                        </FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input placeholder="Nome completo do aluno" {...field} className="transition-all focus:ring-2 focus:ring-primary/20" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="data_nascimento"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2 text-primary/80">
+                            <Calendar className="h-3.5 w-3.5" /> Data de Nascimento *
+                          </FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} className="transition-all focus:ring-2 focus:ring-primary/20" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="cpf"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2 text-primary/80">
+                            <IdCard className="h-3.5 w-3.5" /> CPF
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="000.000.000-00"
+                              maxLength={14}
+                              {...field}
+                              value={field.value ? formatCPF(field.value) : ""}
+                              onChange={(e) => {
+                                const formatted = formatCPF(e.target.value);
+                                field.onChange(unmaskCPF(formatted));
+                              }}
+                              className="transition-all focus:ring-2 focus:ring-primary/20"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Seção: Contato */}
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
+                      Contato e Localização
+                    </h3>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="telefone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2 text-primary/80">
+                          <Phone className="h-3.5 w-3.5" /> Telefone
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="(00) 00000-0000" {...field} value={field.value || ""} className="transition-all focus:ring-2 focus:ring-primary/20" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -353,18 +504,14 @@ const Alunos = () => {
 
                   <FormField
                     control={form.control}
-                    name="cpf"
+                    name="endereco"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>CPF</FormLabel>
+                        <FormLabel className="flex items-center gap-2 text-primary/80">
+                          <MapPin className="h-3.5 w-3.5" /> Endereço
+                        </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="00000000000"
-                            maxLength={11}
-                            {...field}
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))}
-                          />
+                          <Input placeholder="Endereço completo" {...field} value={field.value || ""} className="transition-all focus:ring-2 focus:ring-primary/20" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -372,50 +519,105 @@ const Alunos = () => {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="telefone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone</FormLabel>
-                      <FormControl>
-                        <Input placeholder="(00) 00000-0000" {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Seção: Vínculo (Apenas Diretoria/Coordenação) */}
+                {(user?.role === "direcao" || user?.role === "coordenacao") && (
+                  <div className="space-y-4 pt-2">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <Users className="h-4 w-4 text-primary" />
+                      <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
+                        Vínculo Familiar
+                      </h3>
+                    </div>
 
-                <FormField
-                  control={form.control}
-                  name="endereco"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Endereço</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Endereço completo" {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="responsavel_id"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="flex items-center gap-2 text-primary/80 mb-2">
+                            <User className="h-3.5 w-3.5" /> Responsável Legal *
+                          </FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className={cn(
+                                    "w-full justify-between font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value
+                                    ? profiles?.find(
+                                      (profile) => profile.id === field.value
+                                    )?.nome_completo || "Responsável selecionado"
+                                    : "Buscar responsável..."}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Digite o nome..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhum perfil encontrado.</CommandEmpty>
+                                  <CommandGroup>
+                                    {profiles?.map((profile) => (
+                                      <CommandItem
+                                        value={profile.nome_completo}
+                                        key={profile.id}
+                                        onSelect={() => {
+                                          form.setValue("responsavel_id", profile.id);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            profile.id === field.value
+                                              ? "opacity-100"
+                                              : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col">
+                                          <span>{profile.nome_completo}</span>
+                                          <span className="text-xs text-muted-foreground">{profile.email}</span>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
 
-                <DialogFooter className="pt-4">
+                <div className="flex justify-end gap-3 pt-6 border-t">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={handleCloseDialog}
                     disabled={saveMutation.isPending}
+                    className="px-6"
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={saveMutation.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={saveMutation.isPending}
+                    className="px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                  >
                     {saveMutation.isPending && (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     )}
-                    {editingAluno ? "Atualizar" : "Cadastrar"}
+                    {editingAluno ? "Salvar Alterações" : "Cadastrar Aluno"}
                   </Button>
-                </DialogFooter>
+                </div>
               </form>
             </Form>
           </DialogContent>

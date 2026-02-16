@@ -29,3 +29,8 @@ dist-ssr
 
 # Supabase
 supabase/.temp/
+
+# Playwright
+e2e/.auth/
+test-results/
+playwright-report/

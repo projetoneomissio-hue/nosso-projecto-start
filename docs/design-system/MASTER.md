@@ -8,15 +8,16 @@ Este documento é a **Fonte Única da Verdade** para a identidade visual do NeoM
 
 Adotamos uma abordagem híbrida que transmite confiança (Fintech) e engajamento (Educação).
 
-| Token | Finalidade | Hex | Exemplo |
-| :--- | :--- | :--- | :--- |
-| `primary` | Marca / Navegação | `#4F46E5` | ![#4F46E5](https://via.placeholder.com/15/4F46E5?text=+) Indigo |
-| `secondary` | Destaques / Badges | `#818CF8` | ![#818CF8](https://via.placeholder.com/15/818CF8?text=+) Soft Indigo |
-| `accent` | CTAs / Ações | `#F97316` | ![#F97316](https://via.placeholder.com/15/F97316?text=+) Orange |
-| `success` | Financeiro Positivo | `#10B981` | ![#10B981](https://via.placeholder.com/15/10B981?text=+) Emerald |
-| `background` | Fundo Global | `#F8FAFC` | ![#F8FAFC](https://via.placeholder.com/15/F8FAFC?text=+) Slate 50 |
-| `text-main` | Texto Principal | `#1E1B4B` | ![#1E1B4B](https://via.placeholder.com/15/101010?text=+) Dark Indigo |
-| `border` | Divisores / Cards | `#E2E8F0` | ![#E2E8F0](https://via.placeholder.com/15/E2E8F0?text=+) Slate 200 |
+| Token | Nome Oficial | Finalidade | Hex | Mood |
+| :--- | :--- | :--- | :--- | :--- |
+| `primary` | **Atividade** | Ação / Destaque | `#D40055` | Energia e Movimento (Magenta) |
+| `secondary` | **Conversa** | Elementos Secundários | `#FFC20E` | Troca e Comunicação (Amarelo) |
+| `accent` | **Escuta** | Detalhes / Apoio | `#00B0D9` | Empatia e Acolhimento (Ciano) |
+| `info` | **Quietude** | Informação / Institucional | `#1E3A8A` | Confiança e Estabilidade (Azul Profundo) |
+| `highlight` | **Conhecimento** | Áreas de Estudo | `#6656A8` | Aprendizado e Evolução (Roxo) |
+| `text-main` | **Seriedade** | Textos Principais | `#363636` | Profissionalismo (Grafite) |
+| `success` | -- | Sucesso / Financeiro | `#10B981` | Mantido do sistema anterior |
+| `background` | -- | Fundo Global | `#F8FAFC` | Ice Blue (Suave) |
 
 ---
 
@@ -24,8 +25,8 @@ Adotamos uma abordagem híbrida que transmite confiança (Fintech) e engajamento
 
 | Tipo | Fonte | Mood |
 | :--- | :--- | :--- |
-| **Headings** | `Plus Jakarta Sans` | Moderno, amigável e profissional. |
-| **Body** | `Inter` | Alta legibilidade em qualquer tamanho. |
+| **Headings** | `Komet` (ou `Plus Jakarta Sans` como fallback) | Jovial, descontraída e moderna. |
+| **Body** | `Poppins` (ou `Inter` como fallback) | Geométrica, limpa e legível. |
 
 ---
 

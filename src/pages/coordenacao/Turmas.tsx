@@ -14,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { pdf } from "@react-pdf/renderer";
+import { ListaAlunosPDF } from "@/components/reports/ListaAlunosPDF";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,8 +30,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useTurmas, useAtividades, useProfessores, useTurmaMutations } from "@/hooks/useTurmas";
+import { turmasService } from "@/services/turmas.service";
 import { useToast } from "@/hooks/use-toast";
 import { handleError } from "@/utils/error-handler";
 import { z } from "zod";
@@ -73,121 +75,39 @@ const Turmas = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Fetch turmas com contagem de matrículas
-  const { data: turmas, isLoading } = useQuery({
-    queryKey: ["turmas-coordenacao"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("turmas")
-        .select(`
-          *,
-          atividade:atividades(nome),
-          professor:professores(id, user:profiles(nome_completo)),
-          matriculas(count)
-        `)
-        .order("nome");
+  const { data: turmas, isLoading } = useTurmas();
+  const { data: atividades } = useAtividades();
+  const { data: professores } = useProfessores();
+  const { saveMutation: turmaSaveMutation, deleteMutation: turmaDeleteMutation } = useTurmaMutations();
 
-      if (error) throw error;
-      return data;
-    },
-  });
+  const handleSaveTurma = (data: TurmaFormData) => {
+    const payload = {
+      nome: data.nome,
+      atividade_id: data.atividade_id,
+      professor_id: data.professor_id || null,
+      horario: data.horario,
+      dias_semana: data.dias_semana,
+      capacidade_maxima: data.capacidade_maxima,
+      ativa: data.ativa,
+    };
 
-  // Fetch atividades
-  const { data: atividades } = useQuery({
-    queryKey: ["atividades-select"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("atividades")
-        .select("id, nome")
-        .eq("ativa", true)
-        .order("nome");
-      if (error) throw error;
-      return data;
-    },
-  });
+    turmaSaveMutation.mutate(
+      { id: editingTurma?.id, data: payload },
+      { onSuccess: () => handleCloseDialog() }
+    );
+  };
 
-  // Fetch professores
-  const { data: professores } = useQuery({
-    queryKey: ["professores-select"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("professores")
-        .select("id, user:profiles(nome_completo)")
-        .eq("ativo", true);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Create/Update mutation
-  const saveMutation = useMutation({
-    mutationFn: async (data: TurmaFormData) => {
-      const payload = {
-        nome: data.nome,
-        atividade_id: data.atividade_id,
-        professor_id: data.professor_id || null,
-        horario: data.horario,
-        dias_semana: data.dias_semana,
-        capacidade_maxima: data.capacidade_maxima,
-        ativa: data.ativa,
-      };
-
-      if (editingTurma) {
-        const { error } = await supabase
-          .from("turmas")
-          .update(payload)
-          .eq("id", editingTurma.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("turmas")
-          .insert([payload]);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["turmas-coordenacao"] });
-      toast({
-        title: editingTurma ? "Turma atualizada" : "Turma criada",
-        description: editingTurma
-          ? "A turma foi atualizada com sucesso."
-          : "A turma foi criada com sucesso.",
+  const confirmDelete = () => {
+    if (deletingId) {
+      turmaDeleteMutation.mutate(deletingId, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setDeletingId(null);
+        },
       });
-      handleCloseDialog();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível salvar a turma.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("turmas")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["turmas-coordenacao"] });
-      toast({
-        title: "Turma excluída",
-        description: "A turma foi excluída com sucesso.",
-      });
-      setDeleteDialogOpen(false);
-      setDeletingId(null);
-    },
-    onError: (error) => {
-      handleError(error, "Erro ao salvar turma");
-    },
-  });
+    }
+  };
 
   const handleOpenDialog = (turma?: any) => {
     if (turma) {
@@ -227,7 +147,7 @@ const Turmas = () => {
     try {
       const validated = turmaSchema.parse(formData);
       setFormErrors({});
-      saveMutation.mutate(validated);
+      handleSaveTurma(validated);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const errors: Record<string, string> = {};
@@ -246,12 +166,6 @@ const Turmas = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (deletingId) {
-      deleteMutation.mutate(deletingId);
-    }
-  };
-
   const toggleDia = (dia: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -259,6 +173,41 @@ const Turmas = () => {
         ? prev.dias_semana.filter((d) => d !== dia)
         : [...prev.dias_semana, dia],
     }));
+  };
+
+  const handleExportAlunos = async (turma: any) => {
+    try {
+      toast({
+        title: "Gerando PDF...",
+        description: "Buscando dados dos alunos da turma.",
+      });
+
+      const alunosData = await turmasService.fetchAlunosDaTurma(turma.id);
+
+      const blob = await pdf(
+        <ListaAlunosPDF
+          turmaNome={turma.nome}
+          atividadeNome={turma.atividade?.nome}
+          alunos={alunosData}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `lista-alunos-${turma.nome.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Lista exportada!",
+        description: `O PDF da turma ${turma.nome} foi baixado.`,
+      });
+    } catch (error: any) {
+      handleError(error, "Erro ao exportar lista de alunos");
+    }
   };
 
   return (
@@ -341,17 +290,44 @@ const Turmas = () => {
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{turma.dias_semana.join(", ")}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {matriculasCount}/{turma.capacidade_maxima} alunos
-                        </span>
-                        <Badge variant={vagasDisponiveis > 0 ? "default" : "destructive"} className="ml-2">
-                          {vagasDisponiveis > 0 ? `${vagasDisponiveis} vagas` : "Lotado"}
-                        </Badge>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              {matriculasCount}/{turma.capacidade_maxima} alunos
+                            </span>
+                          </div>
+                          <Badge variant={vagasDisponiveis > 0 ? "default" : "destructive"}>
+                            {vagasDisponiveis > 0 ? `${vagasDisponiveis} vagas` : "Lotado"}
+                          </Badge>
+                        </div>
+                        {/* Barra de ocupação visual */}
+                        <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${matriculasCount / turma.capacidade_maxima >= 0.9
+                              ? "bg-destructive"
+                              : matriculasCount / turma.capacidade_maxima >= 0.7
+                                ? "bg-yellow-500"
+                                : "bg-primary"
+                              }`}
+                            style={{
+                              width: `${Math.min(100, (matriculasCount / turma.capacidade_maxima) * 100)}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExportAlunos(turma)}
+                        className="gap-2"
+                      >
+                        <Users className="h-3 w-3" />
+                        Lista PDF
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

@@ -75,7 +75,7 @@ const MatriculasPendentes = () => {
 
       for (let i = 0; i < 12; i++) {
         const vencimento = new Date(hoje.getFullYear(), hoje.getMonth() + i + 1, 5);
-        
+
         pagamentos.push({
           matricula_id: matriculaId,
           valor: valorMensal,
@@ -98,11 +98,16 @@ const MatriculasPendentes = () => {
       });
     },
     onError: (error: any) => {
+      const message = error.message?.includes("Turma lotada")
+        ? "A turma atingiu a capacidade máxima. A matrícula não pode ser aprovada."
+        : error.message || "Não foi possível aprovar a matrícula.";
       toast({
         title: "Erro ao aprovar",
-        description: error.message || "Não foi possível aprovar a matrícula.",
+        description: message,
         variant: "destructive",
       });
+      // Refresh data to get updated counts
+      queryClient.invalidateQueries({ queryKey: ["matriculas-pendentes"] });
     },
   });
 
@@ -111,9 +116,9 @@ const MatriculasPendentes = () => {
     mutationFn: async ({ id, obs }: { id: string; obs: string }) => {
       const { error } = await supabase
         .from("matriculas")
-        .update({ 
+        .update({
           status: "cancelada",
-          observacoes: obs 
+          observacoes: obs
         })
         .eq("id", id);
 
@@ -153,9 +158,9 @@ const MatriculasPendentes = () => {
     }
 
     const valorMensal = parseFloat(matricula.turma.atividade.valor_mensal.toString());
-    aprovarMutation.mutate({ 
+    aprovarMutation.mutate({
       matriculaId: matricula.id,
-      valorMensal 
+      valorMensal
     });
   };
 

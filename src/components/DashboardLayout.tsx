@@ -116,7 +116,7 @@ const Sidebar = () => {
           <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
         </div>
       )}
-      <nav className="flex flex-1 flex-col px-4">
+      <nav className="flex flex-1 flex-col px-4 overflow-y-auto">
         <ul role="list" className="flex flex-1 flex-col gap-y-1">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;

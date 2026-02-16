@@ -18,14 +18,102 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  Megaphone
+  Megaphone,
+  Edit2,
+  Camera
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAlunoMutations } from "@/hooks/useAlunos";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
+import { useState } from "react";
 
 const DashboardResponsavel = () => {
   const { user } = useAuth();
+  const { saveMutation } = useAlunoMutations();
+
+  // State for Edit
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAluno, setEditingAluno] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    nome: "",
+    data_nascimento: "",
+    cpf: "",
+    telefone: "",
+    endereco: "",
+    alergias: "",
+    medicamentos: "",
+    observacoes: "",
+    foto_url: null as string | null,
+  });
+  const [cpfError, setCpfError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleCpfChange = (value: string) => {
+    const formatted = formatCPF(value);
+    setFormData({ ...formData, cpf: formatted });
+    setCpfError(null);
+
+    const clean = unmaskCPF(formatted);
+    if (clean.length === 11 && !validateCPF(clean)) {
+      setCpfError("CPF inválido");
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+      setUploading(true);
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user?.id}/${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('student-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('student-photos')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, foto_url: data.publicUrl }));
+    } catch (error: any) {
+      console.error("Erro no upload:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cpfError) return;
+    saveMutation.mutate(
+      { id: editingAluno?.id, data: formData },
+      {
+        onSuccess: () => {
+          setIsDialogOpen(false);
+          setEditingAluno(null);
+          setFormData({
+            nome: "", data_nascimento: "", cpf: "", telefone: "", endereco: "",
+            alergias: "", medicamentos: "", observacoes: "", foto_url: null
+          });
+        },
+      }
+    );
+  };
 
   // Fetch alunos do responsável
   const { data: alunos, isLoading: loadingAlunos } = useQuery({
@@ -34,7 +122,7 @@ const DashboardResponsavel = () => {
       if (!user) return [];
       const { data, error } = await supabase
         .from("alunos")
-        .select("id, nome_completo, data_nascimento")
+        .select("id, nome_completo, data_nascimento, cpf, telefone, endereco, alergias, medicamentos, observacoes, foto_url")
         .eq("responsavel_id", user.id);
       if (error) throw error;
       return data || [];
@@ -222,6 +310,28 @@ const DashboardResponsavel = () => {
                         </p>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingAluno(aluno);
+                        setFormData({
+                          nome: aluno.nome_completo,
+                          data_nascimento: aluno.data_nascimento,
+                          cpf: formatCPF(aluno.cpf || ""),
+                          telefone: aluno.telefone || "",
+                          endereco: aluno.endereco || "",
+                          alergias: (aluno as any).alergias || "",
+                          medicamentos: (aluno as any).medicamentos || "",
+                          observacoes: (aluno as any).observacoes || "",
+                          foto_url: (aluno as any).foto_url || null,
+                        });
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <Edit2 className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+
                   </div>
                 ))
               ) : (
@@ -335,6 +445,130 @@ const DashboardResponsavel = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Aluno</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+
+            {/* Foto Upload UI */}
+            <div className="flex flex-col items-center gap-4 py-2">
+              <div className="relative group cursor-pointer w-24 h-24">
+                <Avatar className="w-24 h-24 border-2 border-white shadow-md">
+                  <AvatarImage src={formData.foto_url || ""} className="object-cover" />
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xl">
+                    {(formData.nome?.[0] || "A").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <label
+                  htmlFor="edit-photo-upload"
+                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full cursor-pointer backdrop-blur-sm"
+                >
+                  {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+                </label>
+                <Input
+                  id="edit-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                  disabled={uploading}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome Completo</Label>
+                <Input
+                  id="nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="data_nascimento">Data de Nascimento</Label>
+                <Input
+                  id="data_nascimento"
+                  type="date"
+                  value={formData.data_nascimento}
+                  onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  value={formData.cpf}
+                  onChange={(e) => handleCpfChange(e.target.value)}
+                  placeholder="000.000.000-00"
+                />
+                {cpfError && <p className="text-sm text-red-500">{cpfError}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              <div className="col-span-1 md:col-span-2 space-y-2">
+                <Label htmlFor="endereco">Endereço</Label>
+                <Input
+                  id="endereco"
+                  value={formData.endereco}
+                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                />
+              </div>
+
+              {/* Health Fields */}
+              <div className="col-span-1 md:col-span-2 space-y-2">
+                <Label htmlFor="alergias">Alergias</Label>
+                <Input
+                  id="alergias"
+                  value={formData.alergias}
+                  onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
+                  placeholder="Ex: Amendoim, Penicilina"
+                />
+              </div>
+              <div className="col-span-1 md:col-span-2 space-y-2">
+                <Label htmlFor="medicamentos">Medicamentos Contínuos</Label>
+                <Input
+                  id="medicamentos"
+                  value={formData.medicamentos}
+                  onChange={(e) => setFormData({ ...formData, medicamentos: e.target.value })}
+                  placeholder="Ex: Ritalina 10mg"
+                />
+              </div>
+              <div className="col-span-1 md:col-span-2 space-y-2">
+                <Label htmlFor="observacoes">Observações Gerais</Label>
+                <Input
+                  id="observacoes"
+                  value={formData.observacoes}
+                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                  placeholder="Outras informações importantes"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Alterações
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
@@ -428,42 +662,42 @@ const MuralAvisos = () => {
 
 const FrequenciaCard = () => {
   const { user } = useAuth();
-  
+
   const { data: presencas } = useQuery({
     queryKey: ["dashboard-presencas", user?.id],
     queryFn: async () => {
-       if (!user) return [];
-       // Get children IDs first
-       const { data: alunos } = await supabase.from("alunos").select("id").eq("responsavel_id", user.id);
-       if (!alunos?.length) return [];
-       
-       const alunoIds = alunos.map(a => a.id);
-       
-       // Get matriculas for these children
-       const { data: matriculas } = await supabase
-         .from("matriculas")
-         .select("id, aluno_id")
-         .in("aluno_id", alunoIds);
-       
-       if (!matriculas?.length) return [];
-       
-       const matriculaIds = matriculas.map(m => m.id);
-       
-       // Get recent attendance for these matriculas using presencas table
-       const { data, error } = await supabase
-         .from("presencas")
-         .select(`
+      if (!user) return [];
+      // Get children IDs first
+      const { data: alunos } = await supabase.from("alunos").select("id").eq("responsavel_id", user.id);
+      if (!alunos?.length) return [];
+
+      const alunoIds = alunos.map(a => a.id);
+
+      // Get matriculas for these children
+      const { data: matriculas } = await supabase
+        .from("matriculas")
+        .select("id, aluno_id")
+        .in("aluno_id", alunoIds);
+
+      if (!matriculas?.length) return [];
+
+      const matriculaIds = matriculas.map(m => m.id);
+
+      // Get recent attendance for these matriculas using presencas table
+      const { data, error } = await supabase
+        .from("presencas")
+        .select(`
            data,
            presente,
            observacao,
            matricula_id
          `)
-         .in("matricula_id", matriculaIds)
-         .order("data", { ascending: false })
-         .limit(5);
+        .in("matricula_id", matriculaIds)
+        .order("data", { ascending: false })
+        .limit(5);
 
-       if (error) throw error;
-       return data || [];
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!user
   });
@@ -472,33 +706,33 @@ const FrequenciaCard = () => {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
-           <ClipboardList className="h-5 w-5" />
-           Últimas Presenças
+          <ClipboardList className="h-5 w-5" />
+          Últimas Presenças
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-         {presencas && presencas.length > 0 ? (
-            presencas.map((p, idx) => (
-               <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <div>
-                     <p className="text-sm text-muted-foreground">
-                        {format(new Date(p.data), "dd/MM/yyyy", { locale: ptBR })}
-                     </p>
-                  </div>
-                  <div>
-                     {p.presente ? (
-                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Presente</Badge>
-                     ) : (
-                        <Badge variant="destructive">Falta</Badge>
-                     )}
-                  </div>
-               </div>
-            ))
-         ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-               Nenhum registro recente.
-            </p>
-         )}
+        {presencas && presencas.length > 0 ? (
+          presencas.map((p, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(p.data), "dd/MM/yyyy", { locale: ptBR })}
+                </p>
+              </div>
+              <div>
+                {p.presente ? (
+                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Presente</Badge>
+                ) : (
+                  <Badge variant="destructive">Falta</Badge>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Nenhum registro recente.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

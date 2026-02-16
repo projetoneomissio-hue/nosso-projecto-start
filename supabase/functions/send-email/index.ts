@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { WELCOME_EMAIL_TEMPLATE } from "../_shared/email-templates.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -9,8 +10,13 @@ const corsHeaders = {
 
 interface EmailRequest {
     to: string;
-    subject: string;
-    html: string;
+    type: "welcome" | "custom";
+    subject?: string;
+    html?: string;
+    data?: {
+        nomeResponsavel: string;
+        nomeAluno: string;
+    };
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -19,7 +25,20 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     try {
-        const { to, subject, html }: EmailRequest = await req.json();
+        const { to, type, subject: reqSubject, html: reqHtml, data }: EmailRequest = await req.json();
+
+        let subject = reqSubject;
+        let html = reqHtml;
+
+        // Use functionality mapping
+        if (type === "welcome" && data) {
+            subject = "Bem-vindo ao NeoMissio!";
+            html = WELCOME_EMAIL_TEMPLATE(data.nomeResponsavel, data.nomeAluno);
+        }
+
+        if (!subject || !html) {
+            throw new Error("Missing subject or html content");
+        }
 
         // Fallback: If no API key, log to console (Dev mode)
         if (!RESEND_API_KEY) {
@@ -41,24 +60,24 @@ const handler = async (req: Request): Promise<Response> => {
                 Authorization: `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: "NeoMissio <onboarding@resend.dev>", // Default for testing
-                to: [to], // Resend expects an array for 'to' strings in some SDKs, but raw API accepts string or array. Array is safer.
+                from: "NeoMissio <onboarding@resend.dev>", // Change to verified domain in prod
+                to: [to],
                 subject: subject,
                 html: html,
             }),
         });
 
-        const data = await res.json();
+        const resData = await res.json();
 
         if (!res.ok) {
-            console.error("Resend API Error:", data);
-            return new Response(JSON.stringify({ error: data }), {
+            console.error("Resend API Error:", resData);
+            return new Response(JSON.stringify({ error: resData }), {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
-        return new Response(JSON.stringify(data), {
+        return new Response(JSON.stringify(resData), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
