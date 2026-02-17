@@ -11,6 +11,8 @@ import { ptBR } from "date-fns/locale";
 import { Link, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
+import { pdf } from "@react-pdf/renderer";
+import { ReciboPagamento } from "@/components/reports/ReciboPagamento";
 
 const Pagamentos = () => {
   const { user } = useAuth();
@@ -270,7 +272,7 @@ const Pagamentos = () => {
                           </div>
                           <div className="flex gap-2">
                             {(pagamento.status === "pendente" || pagamento.status === "atrasado") && (
-                              <Button 
+                              <Button
                                 onClick={() => handlePagarOnline(pagamento.id)}
                                 disabled={payingId === pagamento.id}
                                 size="sm"
@@ -284,7 +286,39 @@ const Pagamentos = () => {
                               </Button>
                             )}
                             {pagamento.status === "pago" && (
-                              <Button variant="outline" size="icon" title="Baixar comprovante">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                title="Baixar comprovante"
+                                onClick={async () => {
+                                  try {
+                                    toast({
+                                      title: "Gerando recibo...",
+                                      description: "Aguarde enquanto preparamos o PDF."
+                                    });
+
+                                    const blob = await pdf(
+                                      <ReciboPagamento pagamento={pagamento as any} />
+                                    ).toBlob();
+
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement("a");
+                                    link.href = url;
+                                    link.download = `recibo-${pagamento.id.slice(0, 8)}.pdf`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(url);
+                                  } catch (error) {
+                                    console.error("Erro ao gerar recibo:", error);
+                                    toast({
+                                      title: "Erro",
+                                      description: "Não foi possível gerar o recibo.",
+                                      variant: "destructive"
+                                    });
+                                  }
+                                }}
+                              >
                                 <Download className="h-4 w-4" />
                               </Button>
                             )}

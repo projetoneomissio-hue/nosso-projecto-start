@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, X, Loader2, Phone, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -12,372 +12,235 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useUnidade } from "@/contexts/UnidadeContext";
 
 const MatriculasPendentes = () => {
+  const { currentUnidade } = useUnidade();
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [selectedMatricula, setSelectedMatricula] = useState<any>(null);
-  const [observacoes, setObservacoes] = useState("");
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [selectedSolicitacao, setSelectedSolicitacao] = useState<any>(null);
+  const [selectedTurma, setSelectedTurma] = useState<string>("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch matrículas pendentes
-  const { data: matriculasPendentes, isLoading } = useQuery({
-    queryKey: ["matriculas-pendentes"],
+  // 1. Fetch solicitações
+  const { data: solicitacoes, isLoading } = useQuery({
+    queryKey: ["solicitacoes_matricula", currentUnidade?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("matriculas")
-        .select(`
-          *,
-          aluno:alunos(
-            nome_completo,
-            data_nascimento,
-            responsavel:profiles!alunos_responsavel_id_fkey(nome_completo, email, telefone)
-          ),
-          turma:turmas(
-            nome,
-            horario,
-            dias_semana,
-            capacidade_maxima,
-            atividade:atividades(nome, valor_mensal),
-            matriculas(count)
-          )
-        `)
+        .from("solicitacoes_matricula")
+        .select("*")
         .eq("status", "pendente")
+        .eq("unidade_id", currentUnidade?.id)
         .order("created_at", { ascending: false });
 
+      // Gracefully handle missing table (pending migration)
+      if (error) {
+        if (error.code === "PGRST204" || error.message?.includes("does not exist")) {
+          console.warn("Tabela solicitacoes_matricula ainda não existe. Execute as migrações pendentes.");
+          return [];
+        }
+        throw error;
+      }
+      return data;
+    },
+    enabled: !!currentUnidade?.id,
+  });
+
+  // 2. Fetch turmas para o dialog de aprovação
+  const { data: turmas } = useQuery({
+    queryKey: ["turmas-disponiveis", currentUnidade?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("turmas")
+        .select("id, nome, horario, dias_semana, atividade:atividades(nome)")
+        .eq("unidade_id", currentUnidade?.id);
       if (error) throw error;
       return data;
     },
+    enabled: !!approveDialogOpen && !!currentUnidade?.id,
   });
 
-  // Aprovar matrícula e gerar pagamentos
+  // 3. Mutation de Aprovação
   const aprovarMutation = useMutation({
-    mutationFn: async ({ matriculaId, valorMensal }: { matriculaId: string; valorMensal: number }) => {
-      // 1. Atualizar status da matrícula
-      const { error: matriculaError } = await supabase
+    mutationFn: async () => {
+      if (!selectedSolicitacao || !selectedTurma || !currentUnidade?.id) return;
+
+      // A. Criar Aluno
+      const { data: novoAluno, error: erroAluno } = await supabase
+        .from("alunos")
+        .insert({
+          nome_completo: selectedSolicitacao.nome_completo,
+          data_nascimento: selectedSolicitacao.data_nascimento,
+          telefone: selectedSolicitacao.whatsapp,
+          unidade_id: currentUnidade.id,
+          // Outros campos null
+        })
+        .select("id")
+        .single();
+
+      if (erroAluno) throw new Error(`Erro ao criar aluno: ${erroAluno.message}`);
+
+      // B. Criar Matrícula (Já ativa)
+      const { error: erroMatricula } = await supabase
         .from("matriculas")
-        .update({ status: "ativa" })
-        .eq("id", matriculaId);
-
-      if (matriculaError) throw matriculaError;
-
-      // 2. Gerar pagamentos mensais (próximos 12 meses)
-      const hoje = new Date();
-      const pagamentos = [];
-
-      for (let i = 0; i < 12; i++) {
-        const vencimento = new Date(hoje.getFullYear(), hoje.getMonth() + i + 1, 5);
-
-        pagamentos.push({
-          matricula_id: matriculaId,
-          valor: valorMensal,
-          data_vencimento: vencimento.toISOString().split("T")[0],
-          status: "pendente",
+        .insert({
+          aluno_id: novoAluno.id,
+          turma_id: selectedTurma,
+          unidade_id: currentUnidade.id,
+          status: "ativa",
+          data_matricula: new Date().toISOString(),
         });
-      }
 
-      const { error: pagamentosError } = await supabase
-        .from("pagamentos")
-        .insert(pagamentos);
+      if (erroMatricula) throw new Error(`Erro ao matricular: ${erroMatricula.message}`);
 
-      if (pagamentosError) throw pagamentosError;
+      // C. Atualizar Solicitação
+      const { error: erroSolicitacao } = await supabase
+        .from("solicitacoes_matricula")
+        .update({ status: "aprovada" })
+        .eq("id", selectedSolicitacao.id);
+
+      if (erroSolicitacao) throw new Error(`Erro ao atualizar solicitação: ${erroSolicitacao.message}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["matriculas-pendentes"] });
-      toast({
-        title: "Matrícula aprovada",
-        description: "A matrícula foi aprovada com sucesso.",
-      });
+      queryClient.invalidateQueries({ queryKey: ["solicitacoes_matricula"] });
+      toast({ title: "Matrícula Aprovada com Sucesso!" });
+      setApproveDialogOpen(false);
+      setSelectedSolicitacao(null);
+      setSelectedTurma("");
     },
     onError: (error: any) => {
-      const message = error.message?.includes("Turma lotada")
-        ? "A turma atingiu a capacidade máxima. A matrícula não pode ser aprovada."
-        : error.message || "Não foi possível aprovar a matrícula.";
-      toast({
-        title: "Erro ao aprovar",
-        description: message,
-        variant: "destructive",
-      });
-      // Refresh data to get updated counts
-      queryClient.invalidateQueries({ queryKey: ["matriculas-pendentes"] });
-    },
+      toast({ title: "Erro na aprovação", description: error.message, variant: "destructive" });
+    }
   });
 
-  // Rejeitar matrícula
+  // 4. Mutation de Rejeição
   const rejeitarMutation = useMutation({
-    mutationFn: async ({ id, obs }: { id: string; obs: string }) => {
+    mutationFn: async () => {
+      if (!selectedSolicitacao) return;
       const { error } = await supabase
-        .from("matriculas")
-        .update({
-          status: "cancelada",
-          observacoes: obs
-        })
-        .eq("id", id);
-
+        .from("solicitacoes_matricula")
+        .update({ status: "rejeitada" })
+        .eq("id", selectedSolicitacao.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["matriculas-pendentes"] });
-      toast({
-        title: "Matrícula rejeitada",
-        description: "A matrícula foi rejeitada.",
-      });
+      queryClient.invalidateQueries({ queryKey: ["solicitacoes_matricula"] });
+      toast({ title: "Solicitação Rejeitada" });
       setRejectDialogOpen(false);
-      setSelectedMatricula(null);
-      setObservacoes("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao rejeitar",
-        description: error.message || "Não foi possível rejeitar a matrícula.",
-        variant: "destructive",
-      });
+      setSelectedSolicitacao(null);
     },
   });
 
-  const handleAprovar = (matricula: any) => {
-    // Verifica se a turma tem vagas
-    const matriculasAtuais = matricula.turma.matriculas?.[0]?.count || 0;
-    const vagasDisponiveis = matricula.turma.capacidade_maxima - matriculasAtuais;
-
-    if (vagasDisponiveis <= 0) {
-      toast({
-        title: "Turma lotada",
-        description: "Esta turma não tem mais vagas disponíveis.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const valorMensal = parseFloat(matricula.turma.atividade.valor_mensal.toString());
-    aprovarMutation.mutate({
-      matriculaId: matricula.id,
-      valorMensal
-    });
-  };
-
-  const handleRejeitar = (matricula: any) => {
-    setSelectedMatricula(matricula);
-    setRejectDialogOpen(true);
-  };
-
-  const confirmRejeitar = () => {
-    if (selectedMatricula) {
-      rejeitarMutation.mutate({
-        id: selectedMatricula.id,
-        obs: observacoes,
-      });
-    }
-  };
-
-  const calculateAge = (birthDate: string) => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
+  const handleOpenApprove = (solicitacao: any) => {
+    setSelectedSolicitacao(solicitacao);
+    setApproveDialogOpen(true);
   };
 
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Matrículas Pendentes</h1>
+          <h1 className="text-3xl font-bold text-foreground">Solicitações de Matrícula</h1>
           <p className="text-muted-foreground mt-1">
-            Aprovar ou rejeitar novas solicitações de matrícula
+            Gestão de candidatos vindos da Matrícula Online
           </p>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : matriculasPendentes && matriculasPendentes.length > 0 ? (
-          <div className="grid gap-4">
-            {matriculasPendentes.map((item) => {
-              const matriculasAtuais = item.turma.matriculas?.[0]?.count || 0;
-              const vagasDisponiveis = item.turma.capacidade_maxima - matriculasAtuais;
-              const turmaLotada = vagasDisponiveis <= 0;
-
-              return (
-                <Card key={item.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-xl">{item.aluno.nome_completo}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          Idade: {calculateAge(item.aluno.data_nascimento)} anos
-                        </p>
-                      </div>
-                      <Badge>Pendente</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4">
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-semibold mb-2">Atividade</h4>
-                          <p className="text-sm">{item.turma.atividade.nome}</p>
-                          <p className="text-sm text-muted-foreground">{item.turma.nome}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {item.turma.dias_semana.join(", ")} • {item.turma.horario}
-                          </p>
-                          <p className="text-sm font-semibold mt-1">
-                            R$ {parseFloat(item.turma.atividade.valor_mensal.toString()).toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                            /mês
-                          </p>
-                        </div>
-
-                        <div>
-                          <h4 className="text-sm font-semibold mb-2">Responsável</h4>
-                          <p className="text-sm">{item.aluno.responsavel.nome_completo}</p>
-                          <p className="text-xs text-muted-foreground">{item.aluno.responsavel.email}</p>
-                          {item.aluno.responsavel.telefone && (
-                            <p className="text-xs text-muted-foreground">
-                              {item.aluno.responsavel.telefone}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-semibold mb-1">Vagas</h4>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={turmaLotada ? "destructive" : "default"}>
-                            {matriculasAtuais}/{item.turma.capacidade_maxima} alunos
-                          </Badge>
-                          {turmaLotada && (
-                            <div className="flex items-center gap-1 text-destructive text-xs">
-                              <AlertCircle className="h-3 w-3" />
-                              Turma lotada
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Solicitada em:{" "}
-                          {format(new Date(item.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
-                            locale: ptBR,
-                          })}
-                        </p>
-                      </div>
-
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          className="gap-2 flex-1 sm:flex-initial"
-                          onClick={() => handleAprovar(item)}
-                          disabled={aprovarMutation.isPending || turmaLotada}
-                        >
-                          {aprovarMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Check className="h-4 w-4" />
-                          )}
-                          Aprovar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 flex-1 sm:flex-initial text-destructive hover:text-destructive"
-                          onClick={() => handleRejeitar(item)}
-                          disabled={rejeitarMutation.isPending}
-                        >
-                          {rejeitarMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <X className="h-4 w-4" />
-                          )}
-                          Rejeitar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>
+        ) : !solicitacoes?.length ? (
+          <div className="text-center py-12 text-muted-foreground">Nenhuma solicitação pendente.</div>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">
-                Não há matrículas pendentes no momento.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {solicitacoes.map((sol) => (
+              <Card key={sol.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg">{sol.nome_completo}</CardTitle>
+                    <Badge>Online</Badge>
+                  </div>
+                  <CardDescription>
+                    Recebido em {format(new Date(sol.created_at), "dd/MM 'às' HH:mm")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{sol.whatsapp}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Nasc: {format(new Date(sol.data_nascimento), "dd/MM/yyyy")}</span>
+                  </div>
+
+                  <div className="flex gap-2 mt-4 pt-2">
+                    <Button className="w-full" size="sm" onClick={() => handleOpenApprove(sol)}>
+                      <Check className="mr-2 h-4 w-4" /> Aprovar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedSolicitacao(sol); setRejectDialogOpen(true); }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
-        {/* Dialog para rejeitar */}
-        <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+        {/* Dialog Aprovar */}
+        <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Rejeitar Matrícula</DialogTitle>
+              <DialogTitle>Aprovar Matrícula</DialogTitle>
               <DialogDescription>
-                Informe o motivo da rejeição. Esta informação será salva no sistema.
+                Selecione a turma para enturmar <strong>{selectedSolicitacao?.nome_completo}</strong>.
               </DialogDescription>
             </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              {selectedMatricula && (
-                <div className="p-3 bg-muted rounded-md">
-                  <p className="text-sm font-semibold">
-                    {selectedMatricula.aluno.nome_completo}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedMatricula.turma.nome}
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Motivo da Rejeição</Label>
-                <Textarea
-                  id="observacoes"
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Ex: Turma sem vagas, documentação incompleta, etc."
-                  rows={4}
-                />
-              </div>
+            <div className="py-4">
+              <Label>Turma de Destino</Label>
+              <Select value={selectedTurma} onValueChange={setSelectedTurma}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma turma..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {turmas?.map((t: any) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.atividade?.nome} - {t.nome} ({t.dias_semana?.[0]})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setRejectDialogOpen(false);
-                  setSelectedMatricula(null);
-                  setObservacoes("");
-                }}
-                disabled={rejeitarMutation.isPending}
-              >
-                Cancelar
+              <Button onClick={() => aprovarMutation.mutate()} disabled={aprovarMutation.isPending || !selectedTurma}>
+                {aprovarMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirmar Matrícula
               </Button>
-              <Button
-                onClick={confirmRejeitar}
-                disabled={rejeitarMutation.isPending}
-                variant="destructive"
-              >
-                {rejeitarMutation.isPending && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                Confirmar Rejeição
-              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog Rejeitar */}
+        <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rejeitar Solicitação</DialogTitle>
+              <DialogDescription>
+                Tem certeza? O contato será removido da lista de pendentes.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => rejeitarMutation.mutate()}>Rejeitar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -387,3 +250,4 @@ const MatriculasPendentes = () => {
 };
 
 export default MatriculasPendentes;
+

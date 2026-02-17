@@ -82,8 +82,10 @@ export const turmasService = {
         const { data, error } = await supabase
             .from("matriculas")
             .select(`
+        id,
         status,
         aluno:alunos(
+          id,
           nome_completo,
           data_nascimento,
           responsavel:profiles!alunos_responsavel_id_fkey(nome_completo)
@@ -94,6 +96,8 @@ export const turmasService = {
         if (error) throw error;
 
         return (data || []).map((m: any) => ({
+            id: m.id, // matricula_id
+            aluno_id: m.aluno.id,
             nome_completo: m.aluno.nome_completo,
             data_nascimento: m.aluno.data_nascimento,
             responsavel_nome: m.aluno.responsavel?.nome_completo,

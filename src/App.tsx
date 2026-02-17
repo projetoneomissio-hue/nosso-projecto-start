@@ -2,16 +2,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { UnidadeProvider } from "@/contexts/UnidadeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PostHogProvider } from "@/providers/PostHogProvider";
+import { ThemeProvider } from "@/components/theme-provider";
 
 import Index from "./pages/Index";
 import Planos from "./pages/Planos";
 import Checkout from "./pages/Checkout";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
+import { RealtimeNotifications } from "./components/RealtimeNotifications";
 import Dashboard from "./pages/Dashboard";
 import Atividades from "./pages/Atividades";
 import Alunos from "./pages/Alunos";
@@ -19,9 +23,13 @@ import Professores from "./pages/Professores";
 import Financeiro from "./pages/Financeiro";
 import Predio from "./pages/Predio";
 import Configuracoes from "./pages/Configuracoes";
+import CalendarioEscolar from "./pages/CalendarioEscolar";
 import MfaSetup from "./pages/MfaSetup";
 import MfaVerify from "./pages/MfaVerify";
 import NotFound from "./pages/NotFound";
+
+import { ReloadPrompt } from "./components/ReloadPrompt";
+import MatriculaOnline from "./pages/public/MatriculaOnline";
 
 // Direção
 import Usuarios from "./pages/direcao/Usuarios";
@@ -38,6 +46,7 @@ import Inadimplentes from "./pages/coordenacao/Inadimplentes";
 import Relatorios from "./pages/coordenacao/Relatorios";
 import GerenciarNotificacoes from "./pages/coordenacao/GerenciarNotificacoes";
 import GerarLinkPagamento from "./pages/coordenacao/GerarLinkPagamento";
+import RelatorioVoluntarios from "./pages/coordenacao/RelatorioVoluntarios";
 
 // Professores
 import Turmas from "./pages/professor/Turmas";
@@ -58,7 +67,16 @@ import RegistrarPagamento from "./pages/responsavel/RegistrarPagamento";
 import DashboardResponsavel from "./pages/responsavel/DashboardResponsavel";
 import PagamentoSucesso from "./pages/responsavel/PagamentoSucesso";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 60, // 1 hour
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -72,6 +90,7 @@ export const AppRoutes = () => {
       <Route path="/planos" element={<Planos />} />
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/matricula/:slug" element={<MatriculaOnline />} />
 
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/atividades" element={<ProtectedRoute><Atividades /></ProtectedRoute>} />
@@ -80,6 +99,7 @@ export const AppRoutes = () => {
       <Route path="/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
       <Route path="/predio" element={<ProtectedRoute><Predio /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+      <Route path="/calendario" element={<ProtectedRoute><CalendarioEscolar /></ProtectedRoute>} />
 
       {/* Direção */}
       <Route path="/direcao/usuarios" element={<ProtectedRoute allowedRoles={["direcao"]}><Usuarios /></ProtectedRoute>} />
@@ -95,6 +115,7 @@ export const AppRoutes = () => {
       <Route path="/coordenacao/relatorios" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Relatorios /></ProtectedRoute>} />
       <Route path="/coordenacao/notificacoes" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><GerenciarNotificacoes /></ProtectedRoute>} />
       <Route path="/coordenacao/gerar-link-pagamento" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><GerarLinkPagamento /></ProtectedRoute>} />
+      <Route path="/coordenacao/voluntarios" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><RelatorioVoluntarios /></ProtectedRoute>} />
 
       {/* Professores */}
       <Route path="/professor/turmas" element={<ProtectedRoute allowedRoles={["professor"]}><Turmas /></ProtectedRoute>} />
@@ -123,17 +144,25 @@ export const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <PostHogProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </PostHogProvider>
-      </TooltipProvider>
-    </AuthProvider>
+    <HelmetProvider>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <AuthProvider>
+          <UnidadeProvider>
+            <TooltipProvider>
+              <PostHogProvider>
+                <Toaster />
+                <Sonner />
+                <RealtimeNotifications />
+                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                  <AppRoutes />
+                </BrowserRouter>
+              </PostHogProvider>
+            </TooltipProvider>
+          </UnidadeProvider>
+          <ReloadPrompt /> {/* Added ReloadPrompt here */}
+        </AuthProvider>
+      </ThemeProvider>
+    </HelmetProvider>
   </QueryClientProvider>
 );
 

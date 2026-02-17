@@ -1,27 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { financeiroService } from "@/services/financeiro.service";
 
-/** Hook para KPI: Receita do mês atual */
-export function useReceitaMensal() {
+/** Hook para KPIs: Receita, Despesas, Lucro e Inadimplência (com comparação) */
+export function useFinanceiroKPIs() {
     return useQuery({
-        queryKey: ["financeiro-receita-mensal"],
-        queryFn: financeiroService.fetchReceitaMensal,
+        queryKey: ["financeiro-kpis"],
+        queryFn: financeiroService.fetchFinanceiroKPIs,
     });
 }
 
-/** Hook para KPI: Despesas do mês atual (custos + salários) */
-export function useDespesasMensal() {
+/** Hook para gráfico: Despesas por categoria */
+export function useDespesasPorCategoria() {
     return useQuery({
-        queryKey: ["financeiro-despesas", "custos-predio"],
-        queryFn: financeiroService.fetchDespesasMensal,
-    });
-}
-
-/** Hook para KPI: Inadimplência */
-export function useInadimplencia() {
-    return useQuery({
-        queryKey: ["financeiro-inadimplencia"],
-        queryFn: financeiroService.fetchInadimplencia,
+        queryKey: ["financeiro-despesas-categoria"],
+        queryFn: financeiroService.fetchDespesasPorCategoria,
     });
 }
 
@@ -33,11 +25,11 @@ export function useReceitaPorAtividade() {
     });
 }
 
-/** Hook para gráfico: Receita dos últimos N meses */
-export function useReceitaMeses(meses = 6) {
+/** Hook para gráfico: Fluxo de Caixa (Receita x Despesas) dos últimos N meses */
+export function useFluxoCaixaMeses(meses = 6) {
     return useQuery({
-        queryKey: ["financeiro-receita-meses", meses],
-        queryFn: () => financeiroService.fetchReceitaMeses(meses),
+        queryKey: ["financeiro-fluxo-caixa", meses],
+        queryFn: () => financeiroService.fetchFluxoCaixaMeses(meses),
     });
 }
 

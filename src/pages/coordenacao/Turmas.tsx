@@ -61,6 +61,7 @@ type TurmaFormData = z.infer<typeof turmaSchema>;
 const Turmas = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedTurmaCertificados, setSelectedTurmaCertificados] = useState<any>(null);
   const [editingTurma, setEditingTurma] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TurmaFormData>({
@@ -331,6 +332,15 @@ const Turmas = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => setSelectedTurmaCertificados(turma)}
+                        className="gap-2"
+                      >
+                        <Award className="h-3 w-3" />
+                        Certificados
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleOpenDialog(turma)}
                       >
                         <Pencil className="h-3 w-3 mr-1" />
@@ -543,6 +553,14 @@ const Turmas = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        {/* Dialog de Certificados */}
+        {selectedTurmaCertificados && (
+          <GerarCertificadosDialog
+            open={!!selectedTurmaCertificados}
+            onOpenChange={(open) => !open && setSelectedTurmaCertificados(null)}
+            turma={selectedTurmaCertificados}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

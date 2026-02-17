@@ -131,6 +131,48 @@
     --ring: 0 100% 45%;
     --radius: 0.5rem;
   }
+
+  /* Dark mode overrides for dashboard (.humanized-theme) */
+  .dark .humanized-theme {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 224 40% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 224 40% 14%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 336 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 80% 40%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 191 80% 35%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 224 30% 20%;
+    --muted-foreground: 215 20% 65%;
+
+    --border: 224 20% 22%;
+    --input: 224 20% 22%;
+    --ring: 336 100% 50%;
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 336 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 30% 18%;
+    --sidebar-accent-foreground: 336 100% 60%;
+    --sidebar-border: 224 20% 22%;
+    --sidebar-ring: 336 100% 50%;
+
+    --success: 153 60% 40%;
+    --warning: 43 80% 45%;
+    --warning-foreground: 43 96% 90%;
+    --info: 191 80% 45%;
+  }
 }
 
 @layer base {

@@ -28,7 +28,8 @@ import {
     Trash2,
     Edit2,
     MoreHorizontal,
-    GraduationCap
+    GraduationCap,
+    FileDown
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
+import { generateWhatsAppLink, WhatsAppTemplates } from "@/utils/whatsapp";
 import {
     Select,
     SelectContent,
@@ -121,6 +123,36 @@ const Alunos = () => {
         );
     };
 
+    const handleExportCSV = () => {
+        if (!filteredAlunos || filteredAlunos.length === 0) {
+            toast({ title: "Nada para exportar", description: "A lista está vazia.", variant: "destructive" });
+            return;
+        }
+
+        const headers = ["ID", "Nome Completo", "Data Nascimento", "CPF", "Telefone", "Responsável", "Status"];
+        const rows = filteredAlunos.map(aluno => [
+            aluno.id,
+            `"${aluno.nome_completo}"`,
+            aluno.data_nascimento,
+            aluno.cpf,
+            aluno.telefone,
+            `"${aluno.responsavel_nome || ''}"`,
+            getAlunoStatus(aluno.matriculas)
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + headers.join(",") + "\n"
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "alunos_neomissio.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <DashboardLayout>
             <div className="p-6 lg:p-8 space-y-6">
@@ -131,10 +163,16 @@ const Alunos = () => {
                             Gerencie os alunos, matrículas e históricos.
                         </p>
                     </div>
-                    <Button onClick={() => window.location.href = '/responsavel/cadastrar-aluno'} className="bg-neomissio-primary hover:bg-neomissio-primary/90">
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Novo Aluno
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleExportCSV}>
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Exportar CSV
+                        </Button>
+                        <Button onClick={() => window.location.href = '/responsavel/cadastrar-aluno'} className="bg-neomissio-primary hover:bg-neomissio-primary/90">
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Novo Aluno
+                        </Button>
+                    </div>
                 </div>
 
                 <Card>
@@ -220,44 +258,76 @@ const Alunos = () => {
                                                         {turmas || "-"}
                                                     </TableCell>
                                                     <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                    <span className="sr-only">Menu</span>
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={() => {
-                                                                    setEditingAluno(aluno);
-                                                                    setFormData({
-                                                                        nome: aluno.nome_completo,
-                                                                        data_nascimento: aluno.data_nascimento,
-                                                                        cpf: formatCPF(aluno.cpf || ""),
-                                                                        telefone: aluno.telefone || "",
-                                                                        endereco: aluno.endereco || "",
-                                                                        alergias: (aluno as any).alergias || "",
-                                                                        medicamentos: (aluno as any).medicamentos || "",
-                                                                        observacoes: (aluno as any).observacoes || "",
-                                                                    });
-                                                                    setIsDialogOpen(true);
-                                                                }}>
-                                                                    <Edit2 className="mr-2 h-4 w-4" /> Editar
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    className="text-destructive focus:text-destructive"
+                                                        <div className="flex justify-end gap-2">
+                                                            {aluno.telefone && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                                    title="Chamar no WhatsApp"
                                                                     onClick={() => {
-                                                                        if (confirm("Tem certeza que deseja excluir este aluno? O histórico será perdido.")) {
-                                                                            deleteMutation.mutate(aluno.id);
-                                                                        }
+                                                                        const nomeResp = aluno.responsavel_nome || "Responsável";
+                                                                        const link = generateWhatsAppLink(
+                                                                            aluno.telefone,
+                                                                            WhatsAppTemplates.contatoGeral(nomeResp)
+                                                                        );
+                                                                        window.open(link, "_blank");
                                                                     }}
                                                                 >
-                                                                    <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        width="16"
+                                                                        height="16"
+                                                                        viewBox="0 0 24 24"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="2"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        className="lucide lucide-message-circle"
+                                                                    >
+                                                                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                                                                    </svg>
+                                                                </Button>
+                                                            )}
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                        <span className="sr-only">Menu</span>
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                                                    <DropdownMenuItem onClick={() => {
+                                                                        setEditingAluno(aluno);
+                                                                        setFormData({
+                                                                            nome: aluno.nome_completo,
+                                                                            data_nascimento: aluno.data_nascimento,
+                                                                            cpf: formatCPF(aluno.cpf || ""),
+                                                                            telefone: aluno.telefone || "",
+                                                                            endereco: aluno.endereco || "",
+                                                                            alergias: (aluno as any).alergias || "",
+                                                                            medicamentos: (aluno as any).medicamentos || "",
+                                                                            observacoes: (aluno as any).observacoes || "",
+                                                                        });
+                                                                        setIsDialogOpen(true);
+                                                                    }}>
+                                                                        <Edit2 className="mr-2 h-4 w-4" /> Editar
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        className="text-destructive focus:text-destructive"
+                                                                        onClick={() => {
+                                                                            if (confirm("Tem certeza que deseja excluir este aluno? O histórico será perdido.")) {
+                                                                                deleteMutation.mutate(aluno.id);
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                     </TableCell>
                                                 </TableRow>
                                             );

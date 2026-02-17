@@ -30,6 +30,9 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
+import { ModeToggle } from "@/components/mode-toggle";
+import { UnidadeSwitcher } from "@/components/UnidadeSwitcher";
+import { InstallPWA } from "@/components/InstallPWA";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -65,6 +68,7 @@ const getNavigationByRole = (role: string) => {
         { name: "Link Pagamento", href: "/coordenacao/gerar-link-pagamento", icon: LinkIcon },
         { name: "Notificações", href: "/coordenacao/notificacoes", icon: Mail },
         { name: "Relatórios", href: "/coordenacao/relatorios", icon: BarChart },
+        { name: "Voluntários", href: "/coordenacao/voluntarios", icon: UserCheck },
         { name: "Financeiro", href: "/financeiro", icon: DollarSign },
       ];
     case "professor":
@@ -109,9 +113,15 @@ const Sidebar = () => {
     <div className="flex h-full flex-col gap-y-5 bg-sidebar border-r border-sidebar-border">
       <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-sidebar-border">
         <h1 className="text-xl font-bold text-sidebar-foreground">Zafen</h1>
+        <ModeToggle />
       </div>
+
+      <div className="px-6 mt-4">
+        <UnidadeSwitcher />
+      </div>
+
       {user && (
-        <div className="px-6 -mt-2">
+        <div className="px-6 mt-2">
           <p className="text-xs text-muted-foreground">Logado como:</p>
           <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
         </div>
@@ -138,6 +148,7 @@ const Sidebar = () => {
             );
           })}
           <li className="mt-auto">
+            <InstallPWA />
             <Separator className="mb-2" />
             <Link
               to="/configuracoes"

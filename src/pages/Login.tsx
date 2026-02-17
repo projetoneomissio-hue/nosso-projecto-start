@@ -54,8 +54,10 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [inviteToken, setInviteToken] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [hasInvite, setHasInvite] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const { login, signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -81,6 +83,15 @@ const Login = () => {
 
       if (error) {
         handleError(error, "Erro ao fazer login");
+        if ((error as any).code === "too_many_requests" || (error as any).message?.includes("attempts")) {
+          setIsBlocked(true);
+          setTimeout(() => setIsBlocked(false), 30000); // 30s block
+          toast({
+            title: "Muitas tentativas",
+            description: "Aguarde 30 segundos antes de tentar novamente.",
+            variant: "destructive"
+          });
+        }
         setIsLoading(false);
         return;
       }
@@ -210,7 +221,7 @@ const Login = () => {
           });
         }
       } else {
-        const validation = signupSchema.safeParse({ name, email, password });
+        const validation = signupSchema.safeParse({ name, email, password, referralCode });
 
         if (!validation.success) {
           toast({
@@ -225,7 +236,9 @@ const Login = () => {
           validation.data.email,
           validation.data.password,
           validation.data.name,
-          "responsavel"
+          "responsavel",
+          undefined,
+          validation.data.referralCode
         );
 
         if (error) {
@@ -293,8 +306,8 @@ const Login = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar"}
+                <Button type="submit" className="w-full" disabled={isLoading || isBlocked}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (isBlocked ? "Aguarde..." : "Entrar")}
                 </Button>
               </form>
             </TabsContent>
@@ -365,6 +378,20 @@ const Login = () => {
                     required
                   />
                 </div>
+
+                {!hasInvite && (
+                  <div className="space-y-2">
+                    <Label htmlFor="referral-code">Código de Indicação (Opcional)</Label>
+                    <Input
+                      id="referral-code"
+                      type="text"
+                      placeholder="Ex: ABC12345"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                      maxLength={8}
+                    />
+                  </div>
+                )}
 
                 {!hasInvite && (
                   <div className="p-4 bg-muted rounded-lg">

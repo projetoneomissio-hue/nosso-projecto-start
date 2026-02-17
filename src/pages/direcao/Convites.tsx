@@ -36,10 +36,7 @@ export default function Convites() {
     queryFn: async () => {
       const { data: invitationsData, error } = await supabase
         .from("invitations")
-        .select(`
-          *,
-          profiles:created_by(nome_completo)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -58,10 +55,10 @@ export default function Convites() {
               .select("id")
               .eq("user_id", (await supabase.from("profiles").select("id").eq("email", inv.email).single()).data?.id || "")
               .maybeSingle();
-            
-            return { 
-              ...inv, 
-              vinculacao_status: prof ? "vinculado" as const : "aguardando_vinculacao" as const 
+
+            return {
+              ...inv,
+              vinculacao_status: prof ? "vinculado" as const : "aguardando_vinculacao" as const
             };
           } else if (inv.role === "coordenacao") {
             const { data: profile } = await supabase
@@ -69,7 +66,7 @@ export default function Convites() {
               .select("id")
               .eq("email", inv.email)
               .maybeSingle();
-            
+
             if (!profile) {
               return { ...inv, vinculacao_status: "cadastrado" as const };
             }
@@ -79,10 +76,10 @@ export default function Convites() {
               .select("id")
               .eq("coordenador_id", profile.id)
               .maybeSingle();
-            
-            return { 
-              ...inv, 
-              vinculacao_status: coord ? "vinculado" as const : "aguardando_vinculacao" as const 
+
+            return {
+              ...inv,
+              vinculacao_status: coord ? "vinculado" as const : "aguardando_vinculacao" as const
             };
           }
 

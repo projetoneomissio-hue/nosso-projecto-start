@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
+import { PAYMENT_REMINDER_TEMPLATE, PAYMENT_DUE_TODAY_TEMPLATE } from "../_shared/email-templates.ts";
+
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -50,39 +52,8 @@ serve(async (req) => {
         // Case A: Due Today AND No notice sent today
         // Case B: Overdue AND No notice sent today
 
-        // Note: Supabase JS complex filtering can be tricky. 
-        // We'll fetch all 'pending' payments and filter in memory for this MVP simplicity 
-        // or use a more specific query if volume allows.
-        // Let's rely on filter: status=pendente
+        // filter: status=pendente
 
-        const { data: payments, error } = await supabase
-            .from("pagamentos")
-            .select(`
-        id,
-        valor,
-        data_vencimento,
-        ultimo_aviso_data,
-        matriculas!inner (
-          id,
-          alunos!inner (
-            nome_completo,
-            responsavel_id,
-          )
-          turmas!inner (
-             atividades!inner (nome)
-          )
-        )
-      `)
-            .eq("status", "pendente")
-            .is("data_pagamento", null);
-
-        if (error) throw error;
-
-        // We need to fetch Profile Emails (Responsavel) manually or via join if relations set up perfectly
-        // Relation: matriculas -> alunos -> responsavel_id -> profiles(id)
-        // The previous select was missing the join to profiles. Let's fix it.
-
-        // Improved Query with Profiles Join
         const { data: richPayments, error: richError } = await supabase
             .from("pagamentos")
             .select(`
@@ -100,7 +71,8 @@ serve(async (req) => {
           )
         )
       `)
-            .eq("status", "pendente");
+            .eq("status", "pendente")
+            .is("data_pagamento", null);
 
         if (richError) throw richError;
 
@@ -127,22 +99,40 @@ serve(async (req) => {
             let body = "";
             let shouldSend = false;
 
+            // Link simulating payment access (could be dynamic)
+            const paymentLink = "https://neomissio.com/financeiro";
+
             if (dueDate === today) {
                 // Case: Due Today
                 if (lastNotice !== today) {
                     subject = `Lembrete: Mensalidade de ${studentName} vence hoje!`;
-                    body = `Olá ${profile.nome_completo},<br/><br/>Lembramos que a mensalidade de <strong>${activityName}</strong> do aluno(a) <strong>${studentName}</strong> vence hoje (${formatDate(today)}).<br/>Valor: R$ ${p.valor}<br/><br/>Por favor, acesse o sistema para realizar o pagamento.`;
+                    body = PAYMENT_DUE_TODAY_TEMPLATE(
+                        profile.nome_completo,
+                        studentName,
+                        activityName,
+                        p.valor,
+                        paymentLink
+                    );
                     shouldSend = true;
                 }
             } else if (dueDate < today) {
                 // Case: Overdue
-                // Send if never notified OR notified before today
                 if (lastNotice !== today) {
+                    const daysOverdue = Math.floor((new Date(today).getTime() - new Date(dueDate).getTime()) / (1000 * 3600 * 24));
+
                     subject = `Atenção: Mensalidade de ${studentName} em atraso`;
-                    body = `Olá ${profile.nome_completo},<br/><br/>Consta em nosso sistema uma pendência referente à mensalidade de <strong>${activityName}</strong>.<br/>Vencimento: ${formatDate(dueDate)}<br/><br/>Solicitamos que regularize a situação o quanto antes.`;
+                    body = PAYMENT_REMINDER_TEMPLATE(
+                        profile.nome_completo,
+                        studentName,
+                        activityName,
+                        p.valor,
+                        daysOverdue,
+                        paymentLink
+                    );
                     shouldSend = true;
                 }
             }
+
 
             if (shouldSend) {
                 emailsToSend.push({

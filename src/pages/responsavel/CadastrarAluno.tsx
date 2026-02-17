@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUnidade } from "@/contexts/UnidadeContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,9 +26,11 @@ import { WizardSteps } from "@/components/ui/wizard-steps";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Camera, User, AlertCircle, ArrowRight, ArrowLeft, Save, CheckCircle } from "lucide-react";
 import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
+import { compressImage } from "@/utils/compressImage";
 
 const CadastrarAluno = () => {
   const { user } = useAuth();
+  const { currentUnidade } = useUnidade();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -56,7 +59,8 @@ const CadastrarAluno = () => {
         return;
       }
       setUploading(true);
-      const file = event.target.files[0];
+      const originalFile = event.target.files[0];
+      const file = await compressImage(originalFile);
       const fileExt = file.name.split('.').pop();
       const filePath = `${user?.id}/${Math.random()}.${fileExt}`;
 
@@ -120,6 +124,7 @@ const CadastrarAluno = () => {
         // OR assuming we only persist what connects to DB.
         // Let's allow saving core data first.
         foto_url: fotoUrl,
+        ...(currentUnidade?.id ? { unidade_id: currentUnidade.id } : {}),
       });
 
       if (error) {

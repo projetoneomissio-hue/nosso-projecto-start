@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,17 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 const Configuracoes = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+
+  const requestNotificationPermission = async () => {
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === "granted") {
+      toast({ title: "Notificações ativadas com sucesso!" });
+    } else {
+      toast({ title: "Permissão negada", variant: "destructive" });
+    }
+  };
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -243,6 +255,23 @@ const Configuracoes = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Notificações Push</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receba alertas no seu dispositivo
+                      </p>
+                    </div>
+                    <Button
+                      variant={notificationPermission === "granted" ? "outline" : "default"}
+                      onClick={requestNotificationPermission}
+                      disabled={notificationPermission === "granted"}
+                      size="sm"
+                    >
+                      {notificationPermission === "granted" ? "Ativado" : "Ativar"}
+                    </Button>
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label htmlFor="email-notifications">Notificações por Email</Label>

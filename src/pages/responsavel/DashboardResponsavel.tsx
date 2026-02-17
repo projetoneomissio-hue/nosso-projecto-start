@@ -37,6 +37,8 @@ import { Input } from "@/components/ui/input";
 import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
 import { useState } from "react";
 
+import { OnboardingResponsavel } from "@/components/responsavel/OnboardingResponsavel";
+
 const DashboardResponsavel = () => {
   const { user } = useAuth();
   const { saveMutation } = useAlunoMutations();
@@ -213,6 +215,15 @@ const DashboardResponsavel = () => {
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show Onboarding if no students found
+  if (alunos && alunos.length === 0) {
+    return (
+      <DashboardLayout>
+        <OnboardingResponsavel />
       </DashboardLayout>
     );
   }

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ObservacaoAluno } from "@/components/professor/ObservacaoAluno";
 
 const Chamada = () => {
     const { user } = useAuth();
@@ -110,15 +111,32 @@ const Chamada = () => {
 
             const matriculaIds = studentsData.matriculas.map(m => m.id);
 
-            // Delete existing
-            await supabase.from("presencas")
-                .delete()
-                .in("matricula_id", matriculaIds)
-                .eq("data", date);
+            try {
+                // Delete existing
+                await supabase.from("presencas")
+                    .delete()
+                    .in("matricula_id", matriculaIds)
+                    .eq("data", date);
 
-            // Insert new
-            const { error } = await supabase.from("presencas").insert(upsertData);
-            if (error) throw error;
+                // Insert new
+                const { error } = await supabase.from("presencas").insert(upsertData);
+                if (error) throw error;
+            } catch (error) {
+                // FALLBACK OFFLINE
+                console.warn("Erro ao salvar online. Salvando offline...", error);
+
+                const offlineQueue = JSON.parse(localStorage.getItem("offline_chamadas") || "[]");
+                offlineQueue.push({
+                    date,
+                    turmaId: selectedTurmaId,
+                    data: upsertData,
+                    timestamp: Date.now()
+                });
+                localStorage.setItem("offline_chamadas", JSON.stringify(offlineQueue));
+
+                // Throw error to trigger onError context, but specialized message
+                throw new Error("Sem conexão. Dados salvos no dispositivo.");
+            }
         },
         onSuccess: () => {
             toast({
@@ -128,11 +146,20 @@ const Chamada = () => {
             queryClient.invalidateQueries({ queryKey: ["chamada-students"] });
         },
         onError: (err) => {
-            toast({
-                title: "Erro ao salvar",
-                description: err.message,
-                variant: "destructive"
-            });
+            if (err.message.includes("Sem conexão")) {
+                toast({
+                    title: "Salvo Offline",
+                    description: "Sem internet. Sincronizaremos quando retomar a conexão.",
+                    variant: "default", // Or warning
+                    className: "bg-yellow-500 text-white"
+                });
+            } else {
+                toast({
+                    title: "Erro ao salvar",
+                    description: err.message,
+                    variant: "destructive"
+                });
+            }
         }
     });
 
@@ -152,28 +179,76 @@ const Chamada = () => {
 
     return (
         <DashboardLayout>
-            <div className="space-y-6">
+            <div className="space-y-4 pb-20"> {/* pb-20 for bottom action bar */}
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Chamada</h1>
-                    <p className="text-muted-foreground">
-                        Registre a presença dos alunos nas suas turmas
+                    <h1 className="text-2xl font-bold tracking-tight">Chamada</h1>
+                    <p className="text-muted-foreground text-sm">
+                        Registre a presença dos alunos
                     </p>
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5" />
-                            Selecionar Turma e Data
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid lg:grid-cols-3 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Selecione a Data</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex justify-center">
+                            <Calendar
+                                mode="single"
+                                selected={new Date(date + "T12:00:00")}
+                                onSelect={(d) => d && setDate(d.toISOString().split("T")[0])}
+                                className="rounded-md border"
+                                locale={ptBR}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card className="lg:col-span-2">
+                        <CardHeader className="pb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <CardTitle>Chamada</CardTitle>
+                                    {selectedTurmaId && (
+                                        <p className="text-sm text-muted-foreground">
+                                            {Object.values(attendance).filter(Boolean).length} presentes de {studentsData?.matriculas?.length || 0} alunos
+                                        </p>
+                                    )}
+                                </div>
+
+                                {selectedTurmaId && (studentsData?.matriculas?.length || 0) > 0 && (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                const newState = { ...attendance };
+                                                studentsData?.matriculas?.forEach((m: any) => newState[m.id] = true);
+                                                setAttendance(newState);
+                                            }}
+                                        >
+                                            Todos Presentes
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                const newState = { ...attendance };
+                                                studentsData?.matriculas?.forEach((m: any) => newState[m.id] = false);
+                                                setAttendance(newState);
+                                            }}
+                                        >
+                                            Todos Ausentes
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Turma</Label>
                                 <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Selecione uma turma" />
+                                        <SelectValue placeholder="Selecione..." />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {loadingTurmas && <SelectItem value="loading" disabled>Carregando...</SelectItem>}
@@ -185,7 +260,9 @@ const Chamada = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
+
+                            {/* Mobile Date Input (visible only on small screens if needed, or stick to Calendar) */}
+                            <div className="lg:hidden">
                                 <Label>Data</Label>
                                 <Input
                                     type="date"
@@ -193,75 +270,96 @@ const Chamada = () => {
                                     onChange={(e) => setDate(e.target.value)}
                                 />
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
 
-                {selectedTurmaId && (
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle>Lista de Alunos</CardTitle>
-                            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-                                {saveMutation.isPending ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Save className="mr-2 h-4 w-4" />
-                                )}
-                                Salvar Chamada
-                            </Button>
-                        </CardHeader>
-                        <CardContent>
-                            {loadingStudents ? (
-                                <div className="flex justify-center py-8">
-                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                                </div>
-                            ) : studentsData?.matriculas?.length === 0 ? (
-                                <p className="text-center text-muted-foreground py-8">
-                                    Nenhum aluno matriculado nesta turma.
-                                </p>
-                            ) : (
-                                <div className="space-y-4">
-                                    {studentsData?.matriculas?.map((m: any) => (
-                                        <div key={m.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors rounded-lg border">
-                                            <div className="flex items-center gap-4">
-                                                <div
-                                                    className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold
-                                                        ${attendance[m.id] ? "bg-green-500" : "bg-red-500"}
-                                                    `}
-                                                >
-                                                    {m.alunos?.nome_completo?.charAt(0) || "?"}
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium">{m.alunos?.nome_completo}</p>
-                                                    <p className="text-xs text-muted-foreground">Matrícula: {m.id.slice(0, 8)}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Label htmlFor={`pres-${m.id}`} className="cursor-pointer">
-                                                        {attendance[m.id] ? "Presente" : "Ausente"}
-                                                    </Label>
-                                                    <Checkbox
-                                                        id={`pres-${m.id}`}
-                                                        checked={attendance[m.id]}
-                                                        onCheckedChange={() => togglePresence(m.id)}
-                                                    />
-                                                </div>
-                                                <Input
-                                                    placeholder="Observação"
-                                                    className="w-40"
-                                                    value={observations[m.id] || ""}
-                                                    onChange={(e) => updateObservation(m.id, e.target.value)}
-                                                />
-                                            </div>
+                            {selectedTurmaId && (
+                                <div className="space-y-3">
+                                    {loadingStudents ? (
+                                        <div className="flex justify-center py-8">
+                                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                         </div>
-                                    ))}
+                                    ) : studentsData?.matriculas?.length === 0 ? (
+                                        <Card className="p-8 text-center text-muted-foreground">
+                                            Nenhum aluno nesta turma.
+                                        </Card>
+                                    ) : (
+                                        studentsData?.matriculas?.map((m: any) => (
+                                            <Card
+                                                key={m.id}
+                                                className={`transition-all duration-200 cursor-pointer active:scale-[0.99] border-l-4 ${attendance[m.id]
+                                                        ? "border-l-green-500 bg-green-50/30 hover:bg-green-50/50"
+                                                        : "border-l-red-500 bg-red-50/30 hover:bg-red-50/50"
+                                                    }`}
+                                                onClick={() => togglePresence(m.id)}
+                                            >
+                                                <CardContent className="p-4 flex items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3 overflow-hidden flex-1">
+                                                        <div
+                                                            className={`h-12 w-12 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm transition-colors
+                                                                ${attendance[m.id] ? "bg-green-500" : "bg-red-500"}
+                                                            `}
+                                                        >
+                                                            {m.alunos?.nome_completo?.charAt(0) || "?"}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-semibold truncate text-foreground text-base">
+                                                                {m.alunos?.nome_completo}
+                                                            </p>
+                                                            <div
+                                                                className="flex gap-2 mt-1"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <ObservacaoAluno
+                                                                    alunoId={m.alunos?.id}
+                                                                    alunoNome={m.alunos?.nome_completo}
+                                                                    turmaId={selectedTurmaId}
+                                                                    initialText={observations[m.id]?.split(" | Foto: ")[0] || ""}
+                                                                    onSave={(text, photoUrl) => {
+                                                                        const finalObs = photoUrl ? `${text} | Foto: ${photoUrl}` : text;
+                                                                        updateObservation(m.id, finalObs);
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="shrink-0">
+                                                        <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${attendance[m.id]
+                                                                ? "bg-green-100 text-green-700"
+                                                                : "bg-red-100 text-red-700"
+                                                            }`}>
+                                                            {attendance[m.id] ? "Presente" : "Ausente"}
+                                                        </span>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))
+                                    )}
                                 </div>
                             )}
                         </CardContent>
                     </Card>
-                )}
+                </div>
+
+
+                {/* Floating Action Bar for Mobile */}
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t flex items-center justify-between gap-4 z-50 md:pl-64">
+                    <div className="text-sm text-muted-foreground hidden sm:block">
+                        {studentsData?.matriculas?.length || 0} alunos listados
+                    </div>
+                    <Button
+                        size="lg"
+                        className="w-full sm:w-auto shadow-lg"
+                        onClick={() => saveMutation.mutate()}
+                        disabled={saveMutation.isPending || !selectedTurmaId}
+                    >
+                        {saveMutation.isPending ? (
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        ) : (
+                            <Save className="mr-2 h-5 w-5" />
+                        )}
+                        Salvar Chamada
+                    </Button>
+                </div>
             </div>
         </DashboardLayout>
     );

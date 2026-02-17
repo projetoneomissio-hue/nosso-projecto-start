@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,7 @@ const professorSchema = z.object({
   especialidade: z.string().trim().max(200, "Especialidade muito longa").optional().nullable(),
   percentual_comissao: z.number().min(0, "Comissão deve ser positiva").max(100, "Comissão deve ser no máximo 100%"),
   ativo: z.boolean(),
+  is_volunteer: z.boolean().optional(),
 });
 
 type ProfessorFormData = z.infer<typeof professorSchema>;
@@ -53,6 +55,7 @@ const Professores = () => {
     especialidade: "",
     percentual_comissao: 15,
     ativo: true,
+    is_volunteer: false,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -114,8 +117,9 @@ const Professores = () => {
       const payload = {
         user_id: data.user_id,
         especialidade: data.especialidade || null,
-        percentual_comissao: data.percentual_comissao,
+        percentual_comissao: data.is_volunteer ? 0 : data.percentual_comissao, // Force 0 commission for volunteers
         ativo: data.ativo,
+        is_volunteer: data.is_volunteer,
       };
 
       if (editingProfessor) {
@@ -182,6 +186,7 @@ const Professores = () => {
         especialidade: professor.especialidade || "",
         percentual_comissao: parseFloat(professor.percentual_comissao.toString()),
         ativo: professor.ativo,
+        is_volunteer: professor.is_volunteer || false,
       });
     } else {
       setEditingProfessor(null);
@@ -190,6 +195,7 @@ const Professores = () => {
         especialidade: "",
         percentual_comissao: 15,
         ativo: true,
+        is_volunteer: false,
       });
     }
     setFormErrors({});
@@ -322,6 +328,11 @@ const Professores = () => {
                           <Badge variant={prof.ativo ? "default" : "secondary"}>
                             {prof.ativo ? "Ativo" : "Inativo"}
                           </Badge>
+                          {prof.is_volunteer && (
+                            <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50">
+                              Voluntário
+                            </Badge>
+                          )}
                         </div>
                         {prof.especialidade && (
                           <p className="text-sm text-muted-foreground">{prof.especialidade}</p>
@@ -432,28 +443,41 @@ const Professores = () => {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="percentual_comissao">Percentual de Comissão (%) *</Label>
-                <Input
-                  id="percentual_comissao"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={formData.percentual_comissao}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      percentual_comissao: parseFloat(e.target.value) || 0,
-                    })
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_volunteer"
+                  checked={formData.is_volunteer}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, is_volunteer: checked, percentual_comissao: checked ? 0 : formData.percentual_comissao })
                   }
                 />
-                {formErrors.percentual_comissao && (
-                  <p className="text-sm text-destructive">
-                    {formErrors.percentual_comissao}
-                  </p>
-                )}
+                <Label htmlFor="is_volunteer">Trabalho Voluntário?</Label>
               </div>
+
+              {!formData.is_volunteer && (
+                <div className="space-y-2">
+                  <Label htmlFor="percentual_comissao">Percentual de Comissão (%) *</Label>
+                  <Input
+                    id="percentual_comissao"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={formData.percentual_comissao}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        percentual_comissao: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                  {formErrors.percentual_comissao && (
+                    <p className="text-sm text-destructive">
+                      {formErrors.percentual_comissao}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <DialogFooter>

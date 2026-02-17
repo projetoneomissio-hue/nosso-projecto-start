@@ -17,7 +17,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   login: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signup: (email: string, password: string, name: string, role: UserRole, inviteToken?: string) => Promise<{ error: Error | null }>;
+  signup: (email: string, password: string, name: string, role: UserRole, inviteToken?: string, referralCode?: string) => Promise<{ error: Error | null }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   loading: boolean;
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = async (email: string, password: string, name: string, role: UserRole, inviteToken?: string) => {
+  const signup = async (email: string, password: string, name: string, role: UserRole, inviteToken?: string, referralCode?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
 
@@ -121,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           data: {
             nome_completo: name,
             invite_token: inviteToken || null,
+            referral_code: referralCode || null,
           },
         },
       });
