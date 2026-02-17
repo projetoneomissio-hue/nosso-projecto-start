@@ -468,7 +468,7 @@ const DashboardResponsavel = () => {
             <div className="flex flex-col items-center gap-4 py-2">
               <div className="relative group cursor-pointer w-24 h-24">
                 <Avatar className="w-24 h-24 border-2 border-white shadow-md">
-                  <AvatarImage src={formData.foto_url || ""} className="object-cover" />
+                  {formData.foto_url && <AvatarImage src={formData.foto_url} className="object-cover" />}
                   <AvatarFallback className="bg-muted text-muted-foreground text-xl">
                     {(formData.nome?.[0] || "A").toUpperCase()}
                   </AvatarFallback>

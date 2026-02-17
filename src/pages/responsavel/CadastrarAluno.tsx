@@ -352,7 +352,7 @@ const CadastrarAluno = () => {
                   <div className="flex flex-col items-center gap-6 py-4">
                     <div className="relative group cursor-pointer w-40 h-40">
                       <Avatar className="w-40 h-40 border-4 border-white shadow-xl">
-                        <AvatarImage src={fotoUrl || ""} className="object-cover" />
+                        {fotoUrl && <AvatarImage src={fotoUrl} className="object-cover" />}
                         <AvatarFallback className="bg-muted text-muted-foreground text-4xl">
                           {(formData.nomeCompleto?.[0] || "A").toUpperCase()}
                         </AvatarFallback>
