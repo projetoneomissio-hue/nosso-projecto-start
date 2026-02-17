@@ -38,9 +38,10 @@ import { PendingUsersAlert } from "@/components/PendingUsersAlert";
 const professorSchema = z.object({
   user_id: z.string().uuid("Selecione um usuário"),
   especialidade: z.string().trim().max(200, "Especialidade muito longa").optional().nullable(),
-  percentual_comissao: z.number().min(0, "Comissão deve ser positiva").max(100, "Comissão deve ser no máximo 100%"),
+  tipo_contrato: z.enum(["parceiro", "fixo", "voluntario"]),
+  valor_fixo: z.number().min(0, "Valor deve ser positivo").optional(),
+  percentual_comissao: z.number().min(0, "Comissão deve ser positiva").max(100, "Comissão deve ser no máximo 100%").optional(),
   ativo: z.boolean(),
-  is_volunteer: z.boolean().optional(),
 });
 
 type ProfessorFormData = z.infer<typeof professorSchema>;
@@ -53,9 +54,10 @@ const Professores = () => {
   const [formData, setFormData] = useState<ProfessorFormData>({
     user_id: "",
     especialidade: "",
+    tipo_contrato: "parceiro",
+    valor_fixo: 0,
     percentual_comissao: 15,
     ativo: true,
-    is_volunteer: false,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -117,9 +119,11 @@ const Professores = () => {
       const payload = {
         user_id: data.user_id,
         especialidade: data.especialidade || null,
-        percentual_comissao: data.is_volunteer ? 0 : data.percentual_comissao, // Force 0 commission for volunteers
+        tipo_contrato: data.tipo_contrato,
+        valor_fixo: data.tipo_contrato === "fixo" ? data.valor_fixo : 0,
+        percentual_comissao: data.tipo_contrato === "parceiro" ? data.percentual_comissao : 0,
         ativo: data.ativo,
-        is_volunteer: data.is_volunteer,
+        is_volunteer: data.tipo_contrato === "voluntario", // Maintain compatibility
       };
 
       if (editingProfessor) {
@@ -184,18 +188,20 @@ const Professores = () => {
       setFormData({
         user_id: professor.user_id,
         especialidade: professor.especialidade || "",
-        percentual_comissao: parseFloat(professor.percentual_comissao.toString()),
+        tipo_contrato: professor.tipo_contrato || "parceiro",
+        valor_fixo: Number(professor.valor_fixo) || 0,
+        percentual_comissao: Number(professor.percentual_comissao) || 0,
         ativo: professor.ativo,
-        is_volunteer: professor.is_volunteer || false,
       });
     } else {
       setEditingProfessor(null);
       setFormData({
         user_id: "",
         especialidade: "",
+        tipo_contrato: "parceiro",
+        valor_fixo: 0,
         percentual_comissao: 15,
         ativo: true,
-        is_volunteer: false,
       });
     }
     setFormErrors({});
@@ -443,18 +449,48 @@ const Professores = () => {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_volunteer"
-                  checked={formData.is_volunteer}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_volunteer: checked, percentual_comissao: checked ? 0 : formData.percentual_comissao })
+              <div className="space-y-2">
+                <Label htmlFor="tipo_contrato">Tipo de Contrato</Label>
+                <Select
+                  value={formData.tipo_contrato}
+                  onValueChange={(value: "parceiro" | "fixo" | "voluntario") =>
+                    setFormData({ ...formData, tipo_contrato: value })
                   }
-                />
-                <Label htmlFor="is_volunteer">Trabalho Voluntário?</Label>
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="parceiro">Parceiro (Comissão)</SelectItem>
+                    <SelectItem value="fixo">Fixo (Salário)</SelectItem>
+                    <SelectItem value="voluntario">Voluntário</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {!formData.is_volunteer && (
+              {formData.tipo_contrato === "fixo" && (
+                <div className="space-y-2">
+                  <Label htmlFor="valor_fixo">Valor Fixo Mensal (R$)</Label>
+                  <Input
+                    id="valor_fixo"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.valor_fixo}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        valor_fixo: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                  />
+                  {formErrors.valor_fixo && (
+                    <p className="text-sm text-destructive">{formErrors.valor_fixo}</p>
+                  )}
+                </div>
+              )}
+
+              {formData.tipo_contrato === "parceiro" && (
                 <div className="space-y-2">
                   <Label htmlFor="percentual_comissao">Percentual de Comissão (%) *</Label>
                   <Input

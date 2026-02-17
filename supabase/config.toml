@@ -20,3 +20,25 @@ verify_jwt = false
 
 [functions.send-comunicado]
 verify_jwt = true
+
+[functions.create-asaas-charge]
+enabled = true
+verify_jwt = true
+import_map = "./functions/create-asaas-charge/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/create-asaas-charge/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/create-asaas-charge/*.html" ]
+
+[functions.asaas-webhook]
+enabled = true
+verify_jwt = true
+import_map = "./functions/asaas-webhook/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/asaas-webhook/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/asaas-webhook/*.html" ]

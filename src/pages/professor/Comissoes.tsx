@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp } from "lucide-react";
+import { DollarSign, TrendingUp, User, Heart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,11 +17,24 @@ const Comissoes = () => {
     queryFn: async () => {
       const { data: professor } = await supabase
         .from("professores")
-        .select("id, percentual_comissao")
+        .select("id, percentual_comissao, tipo_contrato, valor_fixo")
         .eq("user_id", user?.id)
         .single();
 
       if (!professor) return null;
+
+      // Se não for parceiro, não precisa calcular comissões detalhadas
+      if (professor.tipo_contrato !== 'parceiro') {
+        return {
+          isPartner: false,
+          tipoContrato: professor.tipo_contrato,
+          valorFixo: professor.valor_fixo || 0,
+          current: 0,
+          alunos: 0,
+          percentual: 0,
+          history: []
+        };
+      }
 
       // Get turmas do professor
       const { data: turmas } = await supabase
@@ -30,7 +43,13 @@ const Comissoes = () => {
         .eq("professor_id", professor.id)
         .eq("ativa", true);
 
-      if (!turmas || turmas.length === 0) return { current: 0, percentual: professor.percentual_comissao, history: [] };
+      if (!turmas || turmas.length === 0) return {
+        isPartner: true,
+        tipoContrato: 'parceiro',
+        current: 0,
+        percentual: professor.percentual_comissao,
+        history: []
+      };
 
       const turmaIds = turmas.map((t) => t.id);
 
@@ -109,6 +128,8 @@ const Comissoes = () => {
       }
 
       return {
+        isPartner: true,
+        tipoContrato: 'parceiro',
         current: currentTotal,
         alunos: currentAlunos,
         percentual: professor.percentual_comissao,
@@ -118,13 +139,67 @@ const Comissoes = () => {
     enabled: !!user?.id,
   });
 
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 lg:p-8 space-y-6">
+          <Skeleton className="h-12 w-64" />
+          <div className="grid md:grid-cols-2 gap-6">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  // View Alternativa para Contratos Não-Parceiros
+  if (comissaoData && !comissaoData.isPartner) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 lg:p-8 space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Meu Contrato</h1>
+            <p className="text-muted-foreground mt-1">
+              Detalhes da sua remuneração
+            </p>
+          </div>
+
+          <Card className="border-l-4 border-l-primary bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                {comissaoData.tipoContrato === 'voluntario' ? <Heart className="text-red-500" /> : <User className="text-primary" />}
+                Professores {comissaoData.tipoContrato === 'voluntario' ? 'Voluntário' : 'Contratado (Fixo)'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                {comissaoData.tipoContrato === 'voluntario'
+                  ? "Obrigado por sua dedicação voluntária! Este painel de comissões não se aplica ao seu perfil."
+                  : `Seu contrato é de valor fixo mensal. Consulte o RH ou a Direção para detalhes sobre seu holerite.`}
+              </p>
+              {comissaoData.tipoContrato === 'fixo' && (
+                <div className="mt-4 p-4 bg-background rounded border">
+                  <span className="text-sm text-muted-foreground">Valor Base Mensal</span>
+                  <div className="text-2xl font-bold">
+                    R$ {comissaoData.valorFixo?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Minhas Comissões</h1>
           <p className="text-muted-foreground mt-1">
-            Acompanhe seus ganhos mensais
+            Professores Parceiro (Variável)
           </p>
         </div>
 
@@ -135,21 +210,14 @@ const Comissoes = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <>
-                  <Skeleton className="h-8 w-32 mb-2" />
-                  <Skeleton className="h-4 w-24" />
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    R$ {comissaoData?.current.toFixed(2).replace(".", ",")}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {comissaoData?.alunos} alunos ativos
-                  </p>
-                </>
-              )}
+              <>
+                <div className="text-2xl font-bold">
+                  R$ {comissaoData?.current.toFixed(2).replace(".", ",")}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {comissaoData?.alunos} alunos ativos
+                </p>
+              </>
             </CardContent>
           </Card>
 
@@ -159,19 +227,12 @@ const Comissoes = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <>
-                  <Skeleton className="h-8 w-20 mb-2" />
-                  <Skeleton className="h-4 w-32" />
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{comissaoData?.percentual}%</div>
-                  <p className="text-xs text-muted-foreground">
-                    Por aluno matriculado
-                  </p>
-                </>
-              )}
+              <>
+                <div className="text-2xl font-bold">{comissaoData?.percentual}%</div>
+                <p className="text-xs text-muted-foreground">
+                  Por aluno matriculado
+                </p>
+              </>
             </CardContent>
           </Card>
         </div>
@@ -181,16 +242,7 @@ const Comissoes = () => {
             <CardTitle>Histórico de Comissões</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="p-4 border rounded-lg">
-                    <Skeleton className="h-5 w-32 mb-2" />
-                    <Skeleton className="h-4 w-48" />
-                  </div>
-                ))}
-              </div>
-            ) : !comissaoData?.history || comissaoData.history.length === 0 ? (
+            {!comissaoData?.history || comissaoData.history.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 Nenhum histórico disponível
               </p>

@@ -10,6 +10,7 @@ import { Loader2, Link as LinkIcon, Copy, CheckCircle, Search, ExternalLink } fr
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { asaasService } from "@/services/asaas.service";
 
 const GerarLinkPagamento = () => {
   const { toast } = useToast();
@@ -47,12 +48,24 @@ const GerarLinkPagamento = () => {
   // Mutation para gerar link de pagamento
   const gerarLinkMutation = useMutation({
     mutationFn: async (pagamentoId: string) => {
-      const { data, error } = await supabase.functions.invoke("generate-link-v2", {
-        body: { pagamentoId },
+      // Encontrar o pagamento completo nos dados carregados
+      const pagamento = pagamentos?.find((p) => p.id === pagamentoId);
+      if (!pagamento) throw new Error("Pagamento não encontrado localmente");
+
+      const matricula = pagamento.matricula as any;
+
+      // Chamar o serviço centralizado (que já trata erros 401 e validação)
+      const result = await asaasService.createCharge({
+        aluno_id: matricula.aluno.id, // O serviço busca dados do responsável internamente, mas precisamos do ID do aluno
+        valor: Number(pagamento.valor),
+        vencimento: pagamento.data_vencimento,
+        forma_pagamento: "BOLETO", // Padrão para permitir Pix/Boleto no checkout
+        external_id: pagamento.id,
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
+
+      // O serviço retorna { success: true, gateway_url: ... }
+      // Adaptar para o formato esperado pelo componente (que espera { url: ... } ou usa gateway_url)
+      return { url: result.gateway_url };
     },
     onSuccess: (data, pagamentoId) => {
       setGeneratedLinks((prev) => ({ ...prev, [pagamentoId]: data.url }));
@@ -61,7 +74,8 @@ const GerarLinkPagamento = () => {
         description: "O link de pagamento foi criado com sucesso.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error("Erro ao gerar link:", error);
       toast({
         title: "Erro ao gerar link",
         description: error.message,
