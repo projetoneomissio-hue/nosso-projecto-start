@@ -13,7 +13,7 @@ export function useFinanceiroKPIs() {
 export function useDespesasPorCategoria() {
     return useQuery({
         queryKey: ["financeiro-despesas-categoria"],
-        queryFn: financeiroService.fetchDespesasPorCategoria,
+        queryFn: financeiroService.fetchDespesasPorTipo,
     });
 }
 
@@ -53,6 +53,6 @@ export function useCustosRecentes(limit = 10) {
 export function useInadimplentes() {
     return useQuery({
         queryKey: ["financeiro-inadimplentes"],
-        queryFn: financeiroService.fetchInadimplentes,
+        queryFn: financeiroService.fetchInadimplentesOtimizado,
     });
 }

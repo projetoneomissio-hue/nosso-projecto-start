@@ -42,7 +42,7 @@ const getNavigationByRole = (role: string) => {
   switch (role) {
     case "direcao":
       return [
-        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { name: "Alunos", href: "/alunos", icon: Users },
         { name: "Atividades", href: "/atividades", icon: Dumbbell },
         { name: "Professores", href: "/professores", icon: GraduationCap },
@@ -59,7 +59,7 @@ const getNavigationByRole = (role: string) => {
       ];
     case "coordenacao":
       return [
-        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { name: "Minhas Atividades", href: "/atividades", icon: Dumbbell },
         { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
         { name: "Alunos", href: "/alunos", icon: Users },
@@ -73,7 +73,7 @@ const getNavigationByRole = (role: string) => {
       ];
     case "professor":
       return [
-        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { name: "Minhas Turmas", href: "/professor/turmas", icon: Users },
         { name: "Chamada / Frequência", href: "/professor/chamada", icon: ClipboardList },
         { name: "Meus Alunos", href: "/professor/alunos", icon: Users },

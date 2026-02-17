@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const financeiroService = {
     /** Receita mensal (pagamentos pagos no mês atual) */
@@ -63,5 +65,118 @@ export const financeiroService = {
         });
 
         return result;
+    },
+
+    /** Despesas por tipo (ex-categoria) */
+    async fetchDespesasPorTipo() {
+        const { data, error } = await supabase
+            .from("custos_predio")
+            .select("tipo, valor");
+
+        if (error) throw error;
+
+        const summary: Record<string, number> = {};
+        data?.forEach((item) => {
+            const cat = item.tipo || "Outros";
+            summary[cat] = (summary[cat] || 0) + Number(item.valor);
+        });
+
+        return Object.entries(summary).map(([name, value]) => ({ name, value }));
+    },
+
+    /** Últimos pagamentos recebidos */
+    async fetchUltimosPagamentos(limit = 10) {
+        const { data, error } = await supabase
+            .from("pagamentos")
+            .select(`
+                id,
+                valor,
+                data_pagamento,
+                status,
+                matricula:matriculas(
+                    aluno:alunos(
+                        nome_completo,
+                        responsavel:profiles!responsavel_id(id, nome_completo, email, telefone)
+                    ),
+                    turma:turmas(
+                        id,
+                        nome,
+                        atividade:atividades(id, nome)
+                    )
+                )
+            `)
+            .eq("status", "pago")
+            .order("data_pagamento", { ascending: false })
+            .limit(limit);
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    /** Custos recentes do prédio */
+    async fetchCustosRecentes(limit = 10) {
+        const { data, error } = await supabase
+            .from("custos_predio")
+            .select("id, item, valor, tipo, data_competencia")
+            .order("data_competencia", { ascending: false })
+            .limit(limit);
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    /** Lista de inadimplentes detalhada (Otimizada) */
+    async fetchInadimplentesOtimizado() {
+        const { data, error } = await supabase
+            .from("pagamentos")
+            .select(`
+                id,
+                valor,
+                data_vencimento,
+                status,
+                gateway_url,
+                matricula:matriculas(
+                    aluno:alunos(
+                        id,
+                        nome_completo,
+                        responsavel:profiles!responsavel_id(id, nome_completo, email, telefone)
+                    ),
+                    turma:turmas(
+                        id,
+                        nome,
+                        atividade:atividades(id, nome)
+                    )
+                )
+            `)
+            .eq("status", "pendente")
+            .lt("data_vencimento", new Date().toISOString().split("T")[0])
+            .order("data_vencimento", { ascending: true });
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    /** Dados para exportação PDF/CSV */
+    async fetchDadosPDF() {
+        const hoje = new Date();
+        const startOfMonth = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString();
+
+        const [pagamentos, custos] = await Promise.all([
+            supabase.from("pagamentos").select("*").gte("created_at", startOfMonth),
+            supabase.from("custos_predio").select("*").gte("created_at", startOfMonth)
+        ]);
+
+        if (pagamentos.error) throw pagamentos.error;
+        if (custos.error) throw custos.error;
+
+        const merged = [
+            ...(pagamentos.data?.map(p => ({ ...p, tipo: 'entrada', categoria: 'Mensalidade' })) || []),
+            ...(custos.data?.map(c => ({ ...c, tipo: 'saida' })) || [])
+        ];
+
+        return {
+            data: merged,
+            periodo: format(hoje, "MMMM yyyy", { locale: ptBR })
+        };
     }
 };

@@ -9,11 +9,17 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ContactTimeline } from "@/components/alunos/ContactTimeline";
 import {
   Select,
   SelectContent,
@@ -30,6 +36,7 @@ import {
   Users,
   Check,
   ChevronsUpDown,
+  CalendarClock,
 } from "lucide-react";
 import {
   Popover,
@@ -100,6 +107,10 @@ const Alunos = () => {
   const [editingAluno, setEditingAluno] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // State Contact Timeline
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [selectedAlunoForTimeline, setSelectedAlunoForTimeline] = useState<any>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -280,6 +291,16 @@ const Alunos = () => {
     setDeleteDialogOpen(true);
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    // This seems to be missing in the original Alunos.tsx or maybe it was onSubmit.
+    // The previous Alunos.tsx used onSubmit from useForm.
+  };
+
+  const handleOpenTimeline = (aluno: any) => {
+    setSelectedAlunoForTimeline(aluno);
+    setTimelineOpen(true);
+  };
+
   const confirmDelete = () => {
     if (deletingId) {
       deleteMutation.mutate(deletingId);
@@ -357,6 +378,15 @@ const Alunos = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenTimeline(aluno)}
+                        className="gap-1"
+                      >
+                        <CalendarClock className="h-3 w-3" />
+                        Histórico
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -650,6 +680,21 @@ const Alunos = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Sheet do Histórico de Contatos */}
+        <Sheet open={timelineOpen} onOpenChange={setTimelineOpen}>
+          <SheetContent className="sm:max-w-[400px] w-full">
+            <SheetHeader className="mb-4">
+              <SheetTitle>Histórico de Contatos</SheetTitle>
+              <SheetDescription>
+                Registros de interações com {selectedAlunoForTimeline?.nome_completo}
+              </SheetDescription>
+            </SheetHeader>
+            {selectedAlunoForTimeline && (
+              <ContactTimeline alunoId={selectedAlunoForTimeline.id} />
+            )}
+          </SheetContent>
+        </Sheet>
       </div>
     </DashboardLayout>
   );

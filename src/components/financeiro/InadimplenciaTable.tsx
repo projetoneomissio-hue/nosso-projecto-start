@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Loader2, Send, QrCode } from "lucide-react";
+import { Loader2, Send, QrCode, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useInadimplentes } from "@/hooks/useFinanceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { generateWhatsAppLink, WhatsAppTemplates } from "@/utils/whatsapp";
 import { asaasService } from "@/services/asaas.service";
+import { contactsService } from "@/services/contacts.service";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -37,10 +38,16 @@ export const InadimplenciaTable = () => {
             });
 
             if (result.success) {
-                // Atualiza localmente ou refetch - Idealmente invalidar query
+                // Registrar log de contato AUTOMÁTICO
+                await contactsService.create({
+                    aluno_id: pagamento.matricula?.aluno?.id,
+                    tipo: "cobranca",
+                    descricao: `Cobrança Asaas (Boleto/Pix) gerada automaticamente. Valor: R$ ${parseFloat(pagamento.valor).toFixed(2)}`
+                });
+
                 toast({
                     title: "Cobrança Gerada!",
-                    description: "O link foi criado e salvo no pagamento.",
+                    description: "O link foi criado e o log de contato registrado.",
                 });
                 // Recarregar página ou query para mostrar o link novo (simples reload por enquanto)
                 window.location.reload();
@@ -93,9 +100,16 @@ export const InadimplenciaTable = () => {
 
             if (error) throw error;
 
+            // Registrar log de contato AUTOMÁTICO
+            await contactsService.create({
+                aluno_id: pagamento.matricula?.aluno?.id,
+                tipo: "cobranca",
+                descricao: `Lembrete de pagamento enviado por e-mail para ${emailResponsavel}.`
+            });
+
             toast({
                 title: "Lembrete enviado!",
-                description: `Email enviado para ${pagamento.matricula?.aluno?.responsavel?.nome_completo}.`,
+                description: `Email enviado e log de contato registrado.`,
             });
 
         } catch (error: any) {
@@ -107,6 +121,27 @@ export const InadimplenciaTable = () => {
             });
         } finally {
             setSendingEmail(null);
+        }
+    };
+
+    const handleManualContact = async (alunoId: string, tipo: any, desc: string) => {
+        try {
+            await contactsService.create({
+                aluno_id: alunoId,
+                tipo: tipo,
+                descricao: desc
+            });
+            toast({
+                title: "Contato registrado",
+                description: "O log foi salvo no histórico do aluno.",
+            });
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: "Erro ao registrar",
+                description: "Não foi possível salvar o log.",
+                variant: "destructive"
+            });
         }
     };
 
@@ -200,13 +235,43 @@ export const InadimplenciaTable = () => {
                                     )}
                                     Lembrete
                                 </Button>
+
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="gap-2"
+                                            title="Registrar Contato Manual"
+                                        >
+                                            <ClipboardList className="h-3 w-3" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Registrar Contato</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Escolha o tipo de contato realizado com o responsável.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <div className="grid grid-cols-2 gap-2 py-4">
+                                            <Button variant="outline" onClick={() => handleManualContact(pagamento.matricula.aluno.id, "ligacao", "Cobrança via ligação telefônica.")}>Ligação</Button>
+                                            <Button variant="outline" onClick={() => handleManualContact(pagamento.matricula.aluno.id, "whatsapp", "Cobrança via mensagem WhatsApp.")}>WhatsApp</Button>
+                                            <Button variant="outline" onClick={() => handleManualContact(pagamento.matricula.aluno.id, "reuniao", "Reunião presencial para tratar débitos.")}>Reunião</Button>
+                                            <Button variant="outline" onClick={() => handleManualContact(pagamento.matricula.aluno.id, "cobranca", "Prometeu pagamento para os próximos dias.")}>Prometeu Pagar</Button>
+                                        </div>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Fechar</AlertDialogCancel>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                                 {pagamento.matricula?.aluno?.responsavel?.telefone && (
                                     <Button
                                         size="sm"
                                         variant="ghost"
                                         className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50"
                                         title="Cobrar no WhatsApp"
-                                        onClick={() => {
+                                        onClick={async () => {
                                             const nomeResp = pagamento.matricula?.aluno?.responsavel?.nome_completo || "Responsável";
                                             const nomeAluno = pagamento.matricula?.aluno?.nome_completo || "Aluno";
                                             const dataVencimento = new Date(pagamento.data_vencimento);
@@ -218,6 +283,10 @@ export const InadimplenciaTable = () => {
                                                 pagamento.matricula.aluno.responsavel.telefone,
                                                 WhatsAppTemplates.cobranca(nomeResp, nomeAluno, mesRef, valor) + linkBoleto
                                             );
+
+                                            // Registrar log automático ao abrir WhatsApp
+                                            await handleManualContact(pagamento.matricula.aluno.id, "whatsapp", `Abriu link de cobrança WhatsApp para o mês de ${mesRef}.`);
+
                                             window.open(link, "_blank");
                                         }}
                                     >
