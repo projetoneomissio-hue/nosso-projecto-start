@@ -35,6 +35,7 @@ import MatriculaOnline from "./pages/public/MatriculaOnline";
 import Usuarios from "./pages/direcao/Usuarios";
 import Convites from "./pages/direcao/Convites";
 import Matriculas from "./pages/direcao/Matriculas";
+import ManagementDashboard from "./pages/direcao/ManagementDashboard";
 
 import Coordenadores from "./pages/direcao/Coordenadores";
 import Comunicados from "./pages/direcao/Comunicados";
@@ -102,6 +103,7 @@ export const AppRoutes = () => {
       <Route path="/calendario" element={<ProtectedRoute><CalendarioEscolar /></ProtectedRoute>} />
 
       {/* Direção */}
+      <Route path="/direcao/dashboard" element={<ProtectedRoute allowedRoles={["direcao"]}><ManagementDashboard /></ProtectedRoute>} />
       <Route path="/direcao/usuarios" element={<ProtectedRoute allowedRoles={["direcao"]}><Usuarios /></ProtectedRoute>} />
       <Route path="/direcao/coordenadores" element={<ProtectedRoute allowedRoles={["direcao"]}><Coordenadores /></ProtectedRoute>} />
       <Route path="/convites" element={<ProtectedRoute allowedRoles={["direcao"]}><Convites /></ProtectedRoute>} />

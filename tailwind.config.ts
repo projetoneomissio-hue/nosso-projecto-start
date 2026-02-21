@@ -70,6 +70,17 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // Neo Missio Official Tokens
+        atividade: "#E8004F",
+        conversa: "#FFC200",
+        escuta: "#4DD9C0",
+        conhecimento: "#6B5CE7",
+        quietude: "#001F7A",
+        seriedade: "#1A1A1A",
+      },
+      fontFamily: {
+        sans: ["Poppins", "Inter", "sans-serif"],
+        display: ["Plus Jakarta Sans", "Poppins", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

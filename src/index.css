@@ -7,11 +7,12 @@
 @layer base {
   :root {
     /* --- TEMA PADRÃO (GLOBAL / HOME / LOGIN) --- */
-    /* Primary: Red (Tom Vermelho Original para Home) */
-    --primary: 0 100% 40%;
+    /* Primary: Atividade (Rosa Vibrante #E8004F) */
+    --primary: 340 100% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --background: 0 0% 100%;
+    /* Background: Gray 100 (#F5F5F5) */
+    --background: 0 0% 96%;
     --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
@@ -29,25 +30,25 @@
     --accent: 0 100% 95%;
     --accent-foreground: 0 100% 40%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 100% 45%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 91%;
     --input: 0 0% 91%;
-    --ring: 0 100% 40%;
+    --ring: 340 100% 45%;
 
     --radius: 0.5rem;
     /* Padrão mais quadrado na home */
 
-    /* Sidebar Default */
-    --sidebar-background: 0 100% 40%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 100% 50%;
+    /* Sidebar Default (Home/Base) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 340 100% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 100% 45%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 100% 35%;
-    --sidebar-ring: 0 100% 50%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 340 100% 45%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 340 100% 45%;
 
     /* Charts Default */
     --chart-1: 0 100% 40%;
@@ -64,72 +65,38 @@
 
   /* --- TEMA PREMIUM NEO MISSIO (DASHBOARD) --- */
   .humanized-theme {
-    /* --- CORES OFICIAIS NEO MISSIO (Fonte: Estudos ID Visual) --- */
-
-    /* Background: Ice Blue (#F8FAFC) */
+    /* --- CORES OFICIAIS NEO MISSIO --- */
     --background: 210 40% 98%;
-    /* Preenchimento principal de texto: Seriedade/Grafite (#363636) */
-    --foreground: 0 0% 21%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 21%;
+    --card-foreground: 0 0% 10%;
 
-    /* Primary: Atividade/Magenta (#D40055) - Ação e Destaque */
-    --primary: 336 100% 42%;
+    --primary: 340 100% 45%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Conversa/Amarelo (#FFC20E) - Elementos Secundários */
-    --secondary: 45 100% 53%;
-    --secondary-foreground: 0 0% 21%;
-
-    /* Accent: Escuta/Ciano (#00B0D9) - Apoio e Detalhes */
-    --accent: 191 100% 43%;
-    --accent-foreground: 0 0% 100%;
-
-    /* Info/Muted: Quietude/Azul Profundo (#1E3A8A) - Institucional */
-    --muted: 224 64% 96%;
-    /* Versão suave do Azul Profundo para fundos */
-    --muted-foreground: 224 64% 33%;
-    /* Azul Profundo para textos de apoio */
-
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 336 100% 42%;
-
-    --radius: 0.75rem;
-
-    /* Sidebar Clean Premium com Cores Oficiais */
+    /* Sidebar Light Premium */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 21%;
-    --sidebar-primary: 336 100% 42%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 98%;
-    --sidebar-accent-foreground: 336 100% 42%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 336 100% 42%;
+    --sidebar-foreground: 0 0% 10%;
   }
 
+  /* Dark mode overrides for dashboard (.humanized-theme) */
+  .dark .humanized-theme,
   .dark {
-    --background: 0 0% 10%;
+    --background: 240 10% 4%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 10%;
+
+    --card: 240 10% 6%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 100% 45%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 100% 20%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 100% 45%;
-    --radius: 0.5rem;
+
+    --primary: 340 100% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Sidebar Dark Premium */
+    --sidebar-background: 240 10% 4%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-accent: 240 10% 10%;
   }
 
   /* Dark mode overrides for dashboard (.humanized-theme) */
@@ -222,5 +189,42 @@
   select:focus,
   textarea:focus {
     @apply transition-all duration-200 ring-offset-background;
+  }
+
+  /* Glassmorphism Classes */
+  .glass {
+    @apply bg-white/70 backdrop-blur-lg border border-white/20;
+  }
+
+  .dark .glass {
+    @apply bg-black/40 backdrop-blur-xl border border-white/10;
+  }
+
+  /* Bento Grid Utility */
+  .bento-grid {
+    @apply grid gap-4 md:gap-6;
+  }
+
+  /* Custom Scrollbar Premium */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+  }
+
+  /* Hidden Scrollbar */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

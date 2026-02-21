@@ -20,6 +20,10 @@ const Dashboard = () => {
     return <Navigate to="/responsavel/dashboard" replace />;
   }
 
+  if (user?.role === "direcao" || user?.role === "coordenacao") {
+    return <Navigate to="/direcao/dashboard" replace />;
+  }
+
   // Fetch total de alunos
   const { data: totalAlunos, isLoading: loadingAlunos } = useQuery({
     queryKey: ["dashboard-total-alunos"],
