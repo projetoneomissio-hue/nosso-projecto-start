@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { financeiroService } from "@/services/financeiro.service";
+import { matriculasService } from "@/services/matriculas.service";
+import { turmasService } from "@/services/turmas.service";
 import {
     AreaChart,
     Area,
@@ -80,6 +82,21 @@ const ManagementDashboard = () => {
         queryFn: () => financeiroService.fetchInadimplentesOtimizado(),
     });
 
+    const { data: matriculasPendentes, isLoading: loadingPendentes } = useQuery({
+        queryKey: ["management-matriculas-pendentes"],
+        queryFn: () => matriculasService.fetchAll({ status: "pendente" }),
+    });
+
+    const { data: turmas, isLoading: loadingTurmas } = useQuery({
+        queryKey: ["management-turmas-ocupacao"],
+        queryFn: () => turmasService.fetchAll(),
+    });
+
+    // Helper to calculate total occupation
+    const totalCapacidade = turmas?.reduce((acc, t) => acc + (t.capacidade_maxima || 0), 0) || 0;
+    const totalMatriculados = turmas?.reduce((acc, t) => acc + (t.matriculas?.[0]?.count || 0), 0) || 0;
+    const ocupacaoPercent = totalCapacidade > 0 ? (totalMatriculados / totalCapacidade) * 100 : 0;
+
     return (
         <DashboardLayout>
             <div className="min-h-screen bg-background p-6 lg:p-8 text-foreground space-y-8">
@@ -109,39 +126,39 @@ const ManagementDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <GlassCard
                         title="Total de Alunos"
-                        value={totalAlunos?.toString() || "284"}
+                        value={totalAlunos?.toString() || "0"}
                         icon={<Users className="h-5 w-5" />}
                         description="matriculados ativos"
-                        trend={{ value: 12, isPositive: true }}
+                        trend={{ value: 0, isPositive: true }}
                         color={colors.escuta}
                         isLoading={loadingAlunos}
                     />
                     <GlassCard
                         title="Receita Mensal"
-                        value={`R$ ${((kpis?.receita?.total || 61200) / 1000).toFixed(1)}k`}
+                        value={kpis?.receita?.total ? `R$ ${(kpis.receita.total / 1000).toFixed(1)}k` : "R$ 0.0k"}
                         icon={<DollarSign className="h-5 w-5" />}
-                        description="Meta: R$ 65k"
-                        trend={{ value: 9.3, isPositive: true }}
+                        description="Mensalidade"
+                        trend={{ value: 0, isPositive: true }}
                         color={colors.atividade}
                         isLoading={loadingKpis}
                     />
                     <GlassCard
                         title="Inadimplência"
-                        value={`${kpis?.inadimplencia?.variacao || "8.4"}%`}
+                        value={kpis?.inadimplencia?.total ? `R$ ${(kpis.inadimplencia.total / 1000).toFixed(1)}k` : "R$ 0.0k"}
                         icon={<AlertCircle className="h-5 w-5" />}
-                        description="responsáveis em atraso"
-                        trend={{ value: 1.2, isPositive: false }}
+                        description="vencidos"
+                        trend={{ value: 0, isPositive: false }}
                         color={colors.conversa}
                         isLoading={loadingKpis}
                     />
                     <GlassCard
                         title="Ocupação Geral"
-                        value="76.0%"
+                        value={`${ocupacaoPercent.toFixed(1)}%`}
                         icon={<TrendingUp className="h-5 w-5" />}
-                        description="turma em lotação máxima"
-                        trend={{ value: 4, isPositive: true }}
+                        description={`${totalMatriculados}/${totalCapacidade} vagas`}
+                        trend={{ value: 0, isPositive: true }}
                         color={colors.conhecimento}
-                        isLoading={loadingKpis}
+                        isLoading={loadingTurmas}
                     />
                 </div>
 
@@ -252,7 +269,9 @@ const ManagementDashboard = () => {
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-xl font-black text-foreground">R$ 61.2k</span>
+                                    <span className="text-xl font-black text-foreground">
+                                        R$ {((kpis?.receita?.total || 0) / 1000).toFixed(1)}k
+                                    </span>
                                     <span className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.1em] opacity-40">Total</span>
                                 </div>
                             </div>
@@ -286,38 +305,47 @@ const ManagementDashboard = () => {
                     >
                         <div className="flex items-center justify-between mb-4 mt-1">
                             <span className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.1em]">Aprovação pendente</span>
-                            <Badge variant="outline" className="bg-[#FFC200]/10 text-[#FFC200] border-0 text-[9px] font-black px-2 py-0.5">4 PENDENTES</Badge>
+                            {matriculasPendentes && matriculasPendentes.length > 0 && (
+                                <Badge variant="outline" className="bg-[#FFC200]/10 text-[#FFC200] border-0 text-[9px] font-black px-2 py-0.5">
+                                    {matriculasPendentes.length} PENDENTES
+                                </Badge>
+                            )}
                         </div>
                         <ScrollArea className="h-[260px] pr-4">
-                            <div className="space-y-3">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="group p-3 rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all flex items-center justify-between shadow-sm">
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className="h-8 w-8 rounded-lg flex items-center justify-center font-black text-[10px] text-white"
-                                                style={{ backgroundColor: i === 1 ? colors.atividade : i === 2 ? colors.conversa : i === 3 ? colors.conhecimento : colors.escuta }}
-                                            >
-                                                {i === 1 ? "BA" : i === 2 ? "RT" : i === 3 ? "LC" : "GS"}
+                            {loadingPendentes ? (
+                                <div className="space-y-3 flex flex-col items-center justify-center h-full opacity-40">
+                                    <Activity className="h-8 w-8 mb-2 animate-spin" />
+                                    <span className="text-[10px] uppercase font-black">Carregando...</span>
+                                </div>
+                            ) : matriculasPendentes && matriculasPendentes.length > 0 ? (
+                                <div className="space-y-3">
+                                    {matriculasPendentes.map((m: any) => (
+                                        <div key={m.id} className="group p-3 rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all flex items-center justify-between shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center font-black text-[10px] text-white uppercase">
+                                                    {m.aluno?.nome_completo?.[0] || "?"}
+                                                </div>
+                                                <div>
+                                                    <div className="text-[11px] font-bold text-foreground tracking-tight">{m.aluno?.nome_completo}</div>
+                                                    <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                                                        {m.turma?.atividade?.nome || "Sem Atividade"}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="text-[11px] font-bold text-foreground tracking-tight">
-                                                    {i === 1 ? "Beatriz Almeida" : i === 2 ? "Rafael Torres" : i === 3 ? "Larissa Cunha" : "Gabriel Souza"}
-                                                </div>
-                                                <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                                                    <span style={{ color: i === 1 ? colors.atividade : i === 2 ? colors.conversa : i === 3 ? colors.conhecimento : colors.escuta }}>
-                                                        {i === 1 ? "Ballet" : i === 2 ? "Jiu-Jitsu" : i === 3 ? "Desenho" : "Vôlei"}
-                                                    </span>
-                                                </div>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full hover:bg-green-500/20 text-green-500">
+                                                    <ArrowUpRight className="h-3 w-3" />
+                                                </Button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full hover:bg-green-500/20 text-green-500">
-                                                <ArrowUpRight className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="space-y-3 flex flex-col items-center justify-center h-full opacity-40">
+                                    <Activity className="h-8 w-8 mb-2" />
+                                    <span className="text-[10px] uppercase font-black">Sem novas matrículas</span>
+                                </div>
+                            )}
                         </ScrollArea>
                     </GlassCard>
 
@@ -337,7 +365,7 @@ const ManagementDashboard = () => {
                                     <div key={p.id} className="p-3 rounded-xl bg-card/40 border border-border/50 flex items-center justify-between group transition-all hover:border-[#E8004F]/30">
                                         <div className="flex items-center gap-3">
                                             <div className="h-8 w-8 rounded-lg bg-[#E8004F]/5 flex items-center justify-center text-[#E8004F] font-black text-[10px]">
-                                                {p.matricula?.aluno?.nome_completo?.[0]}
+                                                {p.matricula?.aluno?.nome_completo?.[0] || "?"}
                                             </div>
                                             <div>
                                                 <div className="text-[11px] font-bold text-foreground leading-none tracking-tight truncate max-w-[100px]">{p.matricula?.aluno?.nome_completo}</div>
@@ -364,29 +392,40 @@ const ManagementDashboard = () => {
                         icon={<TrendingUp className="h-4 w-4" />}
                     >
                         <div className="space-y-5 mt-4">
-                            {[
-                                { name: "Jiu-Jitsu · Inic.", value: 92, current: 22, max: 24, color: colors.atividade },
-                                { name: "Ballet · Inter.", value: 75, current: 15, max: 20, color: colors.conhecimento },
-                                { name: "Reforço Escolar", value: 100, current: 30, max: 30, color: colors.escuta },
-                                { name: "Desenho · Livre", value: 58, current: 14, max: 24, color: colors.conversa },
-                            ].map((item) => (
-                                <div key={item.name} className="space-y-2">
-                                    <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
-                                        <span className="text-foreground/70 truncate max-w-[100px]">{item.name}</span>
-                                        <span style={{ color: item.color }}>{item.value}%</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full transition-all duration-1000 ease-out"
-                                            style={{
-                                                width: `${item.value}%`,
-                                                backgroundColor: item.color,
-                                                boxShadow: `0 0 8px ${item.color}44`
-                                            }}
-                                        />
-                                    </div>
+                            {loadingTurmas ? (
+                                <div className="flex flex-col items-center justify-center h-[200px] opacity-20">
+                                    <Activity className="h-8 w-8 mb-2 animate-spin" />
+                                    <span className="text-[9px] uppercase font-black">Carregando turmas...</span>
                                 </div>
-                            ))}
+                            ) : turmas && turmas.length > 0 ? (
+                                turmas.map((turma: any) => {
+                                    const mCount = turma.matriculas?.[0]?.count || 0;
+                                    const pct = turma.capacidade_maxima > 0 ? (mCount / turma.capacidade_maxima) * 100 : 0;
+                                    return (
+                                        <div key={turma.id} className="space-y-2">
+                                            <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
+                                                <span className="text-foreground/70 truncate max-w-[120px]">{turma.nome}</span>
+                                                <span style={{ color: pct > 80 ? colors.atividade : colors.escuta }}>{pct.toFixed(0)}%</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                                                    style={{
+                                                        width: `${pct}%`,
+                                                        backgroundColor: pct > 80 ? colors.atividade : colors.escuta,
+                                                        boxShadow: `0 0 8px ${pct > 80 ? colors.atividade : colors.escuta}44`
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-[200px] opacity-20">
+                                    <TrendingUp className="h-8 w-8 mb-2" />
+                                    <span className="text-[9px] uppercase font-black">Nenhuma turma registrada</span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="mt-5 p-3 rounded-xl bg-[#E8004F]/5 border border-[#E8004F]/10 flex gap-3 items-center animate-pulse">
