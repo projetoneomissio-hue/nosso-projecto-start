@@ -15,6 +15,14 @@ import { useQuery } from "@tanstack/react-query";
 import { financeiroService } from "@/services/financeiro.service";
 import { matriculasService } from "@/services/matriculas.service";
 import { turmasService } from "@/services/turmas.service";
+import { useState } from "react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     AreaChart,
     Area,
@@ -34,6 +42,16 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 
+interface FinanceiroKPIs {
+    receita?: { total: number; liquida: number; repasse_professores: number };
+    inadimplencia?: { total: number; vencidos: number; quantidade: number };
+}
+
+interface ReceitaAtividade {
+    nome: string;
+    valor: number;
+}
+
 const ManagementDashboard = () => {
     // Tokens from Design System
     const colors = {
@@ -46,6 +64,27 @@ const ManagementDashboard = () => {
 
     const chartColors = [colors.atividade, colors.conhecimento, colors.escuta, colors.conversa, colors.quietude];
 
+    // Filter State
+    const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+    const months = [
+        { value: 1, label: "Janeiro" },
+        { value: 2, label: "Fevereiro" },
+        { value: 3, label: "Março" },
+        { value: 4, label: "Abril" },
+        { value: 5, label: "Maio" },
+        { value: 6, label: "Junho" },
+        { value: 7, label: "Julho" },
+        { value: 8, label: "Agosto" },
+        { value: 9, label: "Setembro" },
+        { value: 10, label: "Outubro" },
+        { value: 11, label: "Novembro" },
+        { value: 12, label: "Dezembro" },
+    ];
+
+    const years = [2024, 2025, 2026];
+
     // Data Fetching
     const { data: totalAlunos, isLoading: loadingAlunos } = useQuery({
         queryKey: ["management-total-alunos"],
@@ -56,15 +95,15 @@ const ManagementDashboard = () => {
         },
     });
 
-    const { data: kpis, isLoading: loadingKpis } = useQuery({
-        queryKey: ["management-kpis"],
-        queryFn: () => financeiroService.fetchFinanceiroKPIs(),
+    const { data: kpis, isLoading: loadingKpis } = useQuery<FinanceiroKPIs>({
+        queryKey: ["management-kpis", selectedMonth, selectedYear],
+        queryFn: () => financeiroService.fetchFinanceiroKPIs({ month: selectedMonth, year: selectedYear }),
     });
 
     const { data: fluxocaixa, isLoading: loadingFluxo } = useQuery({
-        queryKey: ["management-fluxo-caixa"],
+        queryKey: ["management-fluxo-caixa", selectedYear],
         queryFn: async () => {
-            const data = await financeiroService.fetchFluxoCaixaMeses();
+            const data = await financeiroService.fetchFluxoCaixaMeses(selectedYear);
             return Object.entries(data).map(([mes, values]) => ({
                 mes,
                 ...values
@@ -72,10 +111,36 @@ const ManagementDashboard = () => {
         }
     });
 
-    const { data: receitaAtividade, isLoading: loadingAtividade } = useQuery({
+    // Helper to get color by activity name
+    const getActivityColor = (name: string = "") => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes("jiu")) return colors.atividade; // Rosa
+        if (lowerName.includes("desenho")) return colors.conversa; // Amarelo
+        if (lowerName.includes("vôlei") || lowerName.includes("volei")) return colors.escuta; // Turquesa
+        if (lowerName.includes("pilates")) return colors.conhecimento; // Roxo
+        if (lowerName.includes("reforço") || lowerName.includes("reforco")) return colors.quietude; // Azul Escuro
+        if (lowerName.includes("ballet") || lowerName.includes("balé")) return "#FFB6C1"; // Rosa Bebê/Claro
+        if (lowerName.includes("inglês") || lowerName.includes("ingles")) return "#00A8FF"; // Ciano/Azul Vibrante
+        return colors.escuta; // Default
+    };
+
+    const { data: rawReceitaAtividade, isLoading: loadingAtividade } = useQuery<ReceitaAtividade[]>({
         queryKey: ["management-receita-atividade"],
         queryFn: () => financeiroService.fetchReceitaPorAtividade(),
     });
+
+    const totalReceitaAtividade = rawReceitaAtividade ? rawReceitaAtividade.reduce((acc, item) => acc + Number(item.valor), 0) : 0;
+
+    const receitaPorAtividadeData = rawReceitaAtividade ? rawReceitaAtividade.map((item) => {
+        const val = Number(item.valor);
+        const pct = totalReceitaAtividade > 0 ? ((val / totalReceitaAtividade) * 100).toFixed(1) : "0.0";
+        return {
+            name: item.nome || "Outros",
+            value: val,
+            percentage: pct,
+            color: getActivityColor(item.nome)
+        };
+    }) : [];
 
     const { data: inadimplentes, isLoading: loadingInadimplentes } = useQuery({
         queryKey: ["management-inadimplentes"],
@@ -108,15 +173,46 @@ const ManagementDashboard = () => {
                             Dashboard <span className="text-[#E8004F] transition-colors duration-300">Diretoria</span>
                         </h1>
                         <p className="text-muted-foreground/60 text-sm font-medium uppercase tracking-[0.2em] mt-1">
-                            Visão Geral · {format(new Date(), "MMMM yyyy", { locale: ptBR })}
+                            Visão Geral · {months.find(m => m.value === selectedMonth)?.label || ""} {selectedYear}
                         </p>
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <Button variant="outline" className="bg-card/50 border-border hover:bg-card/80 gap-2 transition-all">
-                            <Filter className="h-4 w-4" /> Todas as Unidades
-                        </Button>
-                        <Button className="bg-[#E8004F] hover:bg-[#E8004F]/90 text-white gap-2 shadow-lg shadow-[#E8004F]/20 transition-all active:scale-95">
+                        <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                            <SelectTrigger className="w-[140px] bg-card border-border/50 hover:border-primary/30 transition-all font-bold shadow-lg">
+                                <SelectValue placeholder="Mês" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-background/95 backdrop-blur-xl border-primary/20 shadow-2xl">
+                                {months.map((m) => (
+                                    <SelectItem
+                                        key={m.value}
+                                        value={m.value.toString()}
+                                        className="font-bold uppercase text-[10px] text-foreground/70 focus:text-foreground focus:bg-primary/20 transition-colors"
+                                    >
+                                        {m.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                            <SelectTrigger className="w-[100px] bg-card border-border/50 hover:border-primary/30 transition-all font-bold shadow-lg">
+                                <SelectValue placeholder="Ano" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-background/95 backdrop-blur-xl border-primary/20 shadow-2xl">
+                                {years.map((y) => (
+                                    <SelectItem
+                                        key={y}
+                                        value={y.toString()}
+                                        className="font-bold text-[10px] text-foreground/70 focus:text-foreground focus:bg-primary/20 transition-colors"
+                                    >
+                                        {y}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <Button className="bg-[#E8004F] hover:bg-[#E8004F]/90 text-white gap-2 shadow-lg shadow-[#E8004F]/20 transition-all active:scale-95 ml-2">
                             <Download className="h-4 w-4" /> Exportar
                         </Button>
                     </div>
@@ -134,19 +230,19 @@ const ManagementDashboard = () => {
                         isLoading={loadingAlunos}
                     />
                     <GlassCard
-                        title="Receita Mensal"
-                        value={kpis?.receita?.total ? `R$ ${(kpis.receita.total / 1000).toFixed(1)}k` : "R$ 0.0k"}
+                        title="Receita Líquida (ONG)"
+                        value={kpis?.receita?.liquida ? `R$ ${kpis.receita.liquida.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (kpis?.receita?.total ? `R$ ${kpis.receita.total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00")}
                         icon={<DollarSign className="h-5 w-5" />}
-                        description="Mensalidade"
+                        description={`Repasse Prof: R$ ${kpis?.receita?.repasse_professores?.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0,00"}`}
                         trend={{ value: 0, isPositive: true }}
                         color={colors.atividade}
                         isLoading={loadingKpis}
                     />
                     <GlassCard
                         title="Inadimplência"
-                        value={kpis?.inadimplencia?.total ? `R$ ${(kpis.inadimplencia.total / 1000).toFixed(1)}k` : "R$ 0.0k"}
+                        value={kpis?.inadimplencia?.total ? `R$ ${kpis.inadimplencia.total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "R$ 0,00"}
                         icon={<AlertCircle className="h-5 w-5" />}
-                        description="vencidos"
+                        description={`${kpis?.inadimplencia?.vencidos || 0} vencidos`}
                         trend={{ value: 0, isPositive: false }}
                         color={colors.conversa}
                         isLoading={loadingKpis}
@@ -196,7 +292,7 @@ const ManagementDashboard = () => {
                                         axisLine={false}
                                         tickLine={false}
                                         tick={{ fill: "currentColor", opacity: 0.4, fontSize: 10, fontWeight: 700 }}
-                                        tickFormatter={(value) => `R$ ${value / 1000}k`}
+                                        tickFormatter={(value) => `R$ ${value.toLocaleString("pt-BR")}`}
                                         dx={-10}
                                     />
                                     <Tooltip
@@ -237,59 +333,71 @@ const ManagementDashboard = () => {
                         color={colors.conversa}
                         icon={<Activity className="h-4 w-4" />}
                     >
-                        <div className="flex flex-col gap-6 mt-4">
-                            <div className="w-full h-[160px] relative flex items-center justify-center">
+                        <div className="flex flex-col items-center justify-center py-6 relative">
+                            <div className="relative h-[180px] w-[180px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={receitaAtividade || []}
+                                            data={receitaPorAtividadeData}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={70}
-                                            paddingAngle={4}
-                                            dataKey="valor"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={8}
+                                            dataKey="value"
                                             stroke="none"
                                         >
-                                            {(receitaAtividade || []).map((_, index) => (
-                                                <Cell
-                                                    key={`cell-${index}`}
-                                                    fill={chartColors[index % chartColors.length]}
-                                                    className="hover:opacity-80 transition-opacity"
-                                                />
+                                            {receitaPorAtividadeData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
                                             ))}
                                         </Pie>
                                         <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: "hsl(var(--card))",
-                                                border: "1px solid hsl(var(--border))",
-                                                borderRadius: "12px"
+                                            content={({ active, payload }) => {
+                                                if (active && payload && payload.length) {
+                                                    return (
+                                                        <div className="bg-background/95 backdrop-blur-md border border-border p-2 rounded-lg shadow-xl outline-none">
+                                                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                                                                {payload[0].name}
+                                                            </p>
+                                                            <div className="flex items-baseline justify-between gap-4">
+                                                                <p className="text-sm font-black text-foreground">
+                                                                    R$ {Number(payload[0].value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                                                </p>
+                                                                <p className="text-[10px] font-black" style={{ color: payload[0].payload.color }}>
+                                                                    {payload[0].payload.percentage}%
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
                                             }}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Total</span>
                                     <span className="text-xl font-black text-foreground">
-                                        R$ {((kpis?.receita?.total || 0) / 1000).toFixed(1)}k
+                                        R$ {kpis?.receita?.total?.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0,00"}
                                     </span>
-                                    <span className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.1em] opacity-40">Total</span>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="w-full space-y-2">
-                                {(receitaAtividade || []).slice(0, 5).map((item: any, index: number) => (
-                                    <div key={item.nome} className="flex items-center justify-between group cursor-default py-1 px-2 rounded-lg hover:bg-foreground/[0.03] transition-colors">
-                                        <div className="flex items-center gap-2">
-                                            <div
-                                                className="h-2 w-2 rounded-full"
-                                                style={{ backgroundColor: chartColors[index % chartColors.length] }}
-                                            />
-                                            <span className="text-[10px] text-foreground/80 font-bold tracking-tight truncate max-w-[90px]">{item.nome}</span>
-                                        </div>
-                                        <span className="text-[10px] font-black text-foreground">R$ {(item.valor / 1000).toFixed(1)}k</span>
+                        {/* Pie Chart Legend */}
+                        <div className="flex flex-col gap-2 mt-4 pb-2 max-h-[160px] overflow-y-auto w-full px-2">
+                            {receitaPorAtividadeData.map((item, index) => (
+                                <div key={`legend-${item.name}-${index}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-foreground/[0.03] border border-border/50">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.color }} />
+                                        <span className="text-[10px] font-black text-muted-foreground uppercase truncate tracking-widest">{item.name}</span>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[11px] font-bold text-foreground">R$ {item.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                                        <span className="text-[9px] font-black" style={{ color: item.color }}>{item.percentage}%</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </GlassCard>
                 </div>
@@ -401,19 +509,25 @@ const ManagementDashboard = () => {
                                 turmas.map((turma: any) => {
                                     const mCount = turma.matriculas?.[0]?.count || 0;
                                     const pct = turma.capacidade_maxima > 0 ? (mCount / turma.capacidade_maxima) * 100 : 0;
+                                    const activityColor = getActivityColor(turma.nome);
+                                    const barColor = activityColor; // Mantém a cor fixa da modalidade, independente de lotação
+
                                     return (
                                         <div key={turma.id} className="space-y-2">
                                             <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter">
-                                                <span className="text-foreground/70 truncate max-w-[120px]">{turma.nome}</span>
-                                                <span style={{ color: pct > 80 ? colors.atividade : colors.escuta }}>{pct.toFixed(0)}%</span>
+                                                <span className="text-foreground/70 truncate max-w-[150px]">{turma.nome}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-muted-foreground/60">{mCount}/{turma.capacidade_maxima}</span>
+                                                    <span style={{ color: barColor }}>{pct.toFixed(0)}%</span>
+                                                </div>
                                             </div>
                                             <div className="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden">
                                                 <div
                                                     className="h-full rounded-full transition-all duration-1000 ease-out"
                                                     style={{
                                                         width: `${pct}%`,
-                                                        backgroundColor: pct > 80 ? colors.atividade : colors.escuta,
-                                                        boxShadow: `0 0 8px ${pct > 80 ? colors.atividade : colors.escuta}44`
+                                                        backgroundColor: barColor,
+                                                        boxShadow: `0 0 8px ${barColor}44`
                                                     }}
                                                 />
                                             </div>

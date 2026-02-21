@@ -41,10 +41,23 @@ const CadastrarAluno = () => {
     nomeCompleto: "",
     dataNascimento: "",
     cpf: "",
+    rg: "",
     telefone: "",
     endereco: "",
+    bairro: "",
+    escola: "",
+    serieAno: "",
+    profissao: "",
+    grauParentesco: "",
+    // Health
+    isPne: false,
+    pneDescricao: "",
+    doencaCronica: "",
     alergias: "",
     medicamentos: "",
+    // Authorizations
+    autorizaImagem: false,
+    declaracaoAssinada: false,
     observacoes: "",
   });
 
@@ -119,19 +132,39 @@ const CadastrarAluno = () => {
         cpf: cleanCpf || null,
         telefone: formData.telefone || null,
         endereco: formData.endereco || null,
-        // New fields would go here if schema supported them directly, or in JSONB/Notes
-        // For now we map health info to notes if no specific columns exist, 
-        // OR assuming we only persist what connects to DB.
-        // Let's allow saving core data first.
         foto_url: fotoUrl,
+        rg: formData.rg || null,
+        bairro: formData.bairro || null,
+        escola: formData.escola || null,
+        serie_ano: formData.serieAno || null,
+        profissao: formData.profissao || null,
+        grau_parentesco: formData.grauParentesco || null,
+        autoriza_imagem: formData.autorizaImagem,
+        declaracao_assinada: formData.declaracaoAssinada,
         ...(currentUnidade?.id ? { unidade_id: currentUnidade.id } : {}),
       });
 
-      if (error) {
-        if (error.message?.includes("idx_alunos_cpf_unique") || error.message?.includes("alunos_cpf_key")) {
-          throw new Error("Já existe um aluno cadastrado com este CPF.");
-        }
-        throw error;
+      if (error) throw error;
+
+      // Save health info in Anamneses table
+      const { data: newAluno } = await supabase
+        .from("alunos")
+        .select("id")
+        .eq("cpf", cleanCpf)
+        .eq("nome_completo", formData.nomeCompleto)
+        .maybeSingle();
+
+      if (newAluno) {
+        await supabase.from("anamneses").upsert({
+          aluno_id: newAluno.id,
+          tipo_sanguineo: null,
+          alergias: formData.alergias || null,
+          medicamentos: formData.medicamentos || null,
+          is_pne: formData.isPne,
+          pne_descricao: formData.pneDescricao || null,
+          doenca_cronica: formData.doencaCronica || null,
+          observacoes: formData.observacoes || null,
+        });
       }
     },
     onSuccess: async () => {
@@ -143,7 +176,7 @@ const CadastrarAluno = () => {
               to: user.email,
               type: "welcome",
               data: {
-                nomeResponsavel: user.user_metadata?.nome_completo || "Responsável",
+                nomeResponsavel: (user as any).user_metadata?.nome_completo || "Responsável",
                 nomeAluno: formData.nomeCompleto,
               },
             },
@@ -160,9 +193,9 @@ const CadastrarAluno = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["alunos"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-alunos"] });
-      navigate("/responsavel/nova-matricula");
+      setShowSuccessDialog(true);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao cadastrar",
         description: error.message,
@@ -291,6 +324,29 @@ const CadastrarAluno = () => {
                         )}
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="rg">RG do Aluno</Label>
+                        <Input
+                          id="rg"
+                          value={formData.rg}
+                          onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
+                          placeholder="Digite o RG"
+                          className="h-11"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bairro">Bairro</Label>
+                        <Input
+                          id="bairro"
+                          value={formData.bairro}
+                          onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
+                          placeholder="Ex: Lindóia"
+                          className="h-11"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -315,31 +371,116 @@ const CadastrarAluno = () => {
                         id="endereco"
                         value={formData.endereco}
                         onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                        placeholder="Rua, Número, Bairro, Cidade..."
+                        placeholder="Rua, Número..."
                         rows={2}
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="alergias">Alergias (Opcional)</Label>
+                        <Label htmlFor="escola">Colégio que estuda</Label>
                         <Input
-                          id="alergias"
-                          value={formData.alergias}
-                          onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
-                          placeholder="Ex: Amendoim, Dipirona..."
+                          id="escola"
+                          value={formData.escola}
+                          onChange={(e) => setFormData({ ...formData, escola: e.target.value })}
+                          placeholder="Nome da escola"
                           className="h-11"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="medicamentos">Medicamentos (Opcional)</Label>
+                        <Label htmlFor="serieAno">Série e Ano</Label>
                         <Input
-                          id="medicamentos"
-                          value={formData.medicamentos}
-                          onChange={(e) => setFormData({ ...formData, medicamentos: e.target.value })}
-                          placeholder="Uso contínuo..."
+                          id="serieAno"
+                          value={formData.serieAno}
+                          onChange={(e) => setFormData({ ...formData, serieAno: e.target.value })}
+                          placeholder="Ex: 4º ano"
                           className="h-11"
                         />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="profissao">Profissão (se for estudante, coloque 'Estudante')</Label>
+                        <Input
+                          id="profissao"
+                          value={formData.profissao}
+                          onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
+                          placeholder="Profissão"
+                          className="h-11"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="grauParentesco">Grau de Parentesco do Responsável</Label>
+                        <Input
+                          id="grauParentesco"
+                          value={formData.grauParentesco}
+                          onChange={(e) => setFormData({ ...formData, grauParentesco: e.target.value })}
+                          placeholder="Ex: Avó, Pai, Mãe..."
+                          className="h-11"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t">
+                      <div className="flex items-center gap-2 text-primary font-semibold text-sm uppercase">
+                        <AlertCircle className="h-4 w-4" /> Informações de Saúde
+                      </div>
+
+                      <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-lg border">
+                        <Checkbox
+                          id="isPne"
+                          checked={formData.isPne}
+                          onCheckedChange={(checked) => setFormData({ ...formData, isPne: checked === true })}
+                        />
+                        <Label htmlFor="isPne" className="font-medium cursor-pointer">Possui necessidade especial? (PNE)</Label>
+                      </div>
+
+                      {formData.isPne && (
+                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <Label htmlFor="pneDescricao">Descreva a necessidade especial</Label>
+                          <Textarea
+                            id="pneDescricao"
+                            value={formData.pneDescricao}
+                            onChange={(e) => setFormData({ ...formData, pneDescricao: e.target.value })}
+                            placeholder="Descreva aqui..."
+                            rows={2}
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label htmlFor="doencaCronica">Possui alguma doença crônica? Se sim, descreva:</Label>
+                        <Textarea
+                          id="doencaCronica"
+                          value={formData.doencaCronica}
+                          onChange={(e) => setFormData({ ...formData, doencaCronica: e.target.value })}
+                          placeholder="Descreva ou deixe em branco..."
+                          rows={2}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="alergias">Alergias (Opcional)</Label>
+                          <Input
+                            id="alergias"
+                            value={formData.alergias}
+                            onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
+                            placeholder="Ex: Amendoim, Dipirona..."
+                            className="h-11"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="medicamentos">Medicamentos (Opcional)</Label>
+                          <Input
+                            id="medicamentos"
+                            value={formData.medicamentos}
+                            onChange={(e) => setFormData({ ...formData, medicamentos: e.target.value })}
+                            placeholder="Uso contínuo..."
+                            className="h-11"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -380,9 +521,33 @@ const CadastrarAluno = () => {
                     </div>
 
                     <div className="bg-muted/50 p-4 rounded-lg text-sm text-left w-full max-w-sm space-y-2">
-                      <p><strong>CPF:</strong> {formData.cpf || "Não informado"}</p>
-                      <p><strong>Contato:</strong> {formData.telefone || "Não informado"}</p>
-                      <p><strong>Saúde:</strong> {[formData.alergias, formData.medicamentos].filter(Boolean).join(", ") || "Nenhuma observação"}</p>
+                      <p><strong>CPF/RG:</strong> {formData.cpf || "Não inf."} / {formData.rg || "Não inf."}</p>
+                      <p><strong>Bairro:</strong> {formData.bairro || "Não inf."}</p>
+                      <p><strong>Saúde:</strong> {formData.isPne ? "Possui PNE" : "Sem PNE inf."}</p>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t w-full text-left">
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Ao finalizar, você concorda com a política de matrícula e autorizações abaixo:
+                      </p>
+
+                      <div className="flex items-center space-x-2 bg-primary/5 p-3 rounded-lg border border-primary/10">
+                        <Checkbox
+                          id="autorizaImagem"
+                          checked={formData.autorizaImagem}
+                          onCheckedChange={(checked) => setFormData({ ...formData, autorizaImagem: checked === true })}
+                        />
+                        <Label htmlFor="autorizaImagem" className="text-sm cursor-pointer leading-tight">Autorizo o uso de imagem para divulgação das nossas atividades.</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2 bg-primary/5 p-3 rounded-lg border border-primary/10">
+                        <Checkbox
+                          id="declaracaoAssinada"
+                          checked={formData.declaracaoAssinada}
+                          onCheckedChange={(checked) => setFormData({ ...formData, declaracaoAssinada: checked === true })}
+                        />
+                        <Label htmlFor="declaracaoAssinada" className="text-sm cursor-pointer leading-tight">Declaro que as informações são verdadeiras e aceito os termos.</Label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -436,10 +601,21 @@ const CadastrarAluno = () => {
                   nomeCompleto: "",
                   dataNascimento: "",
                   cpf: "",
+                  rg: "",
                   telefone: "",
                   endereco: "",
+                  bairro: "",
+                  escola: "",
+                  serieAno: "",
+                  profissao: "",
+                  grauParentesco: "",
+                  isPne: false,
+                  pneDescricao: "",
+                  doencaCronica: "",
                   alergias: "",
                   medicamentos: "",
+                  autorizaImagem: false,
+                  declaracaoAssinada: false,
                   observacoes: "",
                 });
                 setFotoUrl(null);

@@ -65,6 +65,7 @@ const getNavigationByRole = (role: string) => {
         group: "Acadêmico",
         items: [
           { name: "Atividades", href: "/atividades", icon: Dumbbell },
+          { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
           { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
           { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: ClipboardList },
         ]

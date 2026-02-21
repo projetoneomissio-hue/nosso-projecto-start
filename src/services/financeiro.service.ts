@@ -12,11 +12,18 @@ export const financeiroService = {
         return Number(data?.receita?.total) || 0;
     },
 
-    /** Busca KPIs financeiros com comparação ao mês anterior */
-    async fetchFinanceiroKPIs() {
-        const hoje = new Date().toISOString().split("T")[0];
-        const { data, error } = await supabase.rpc("get_financial_kpis", { month_ref: hoje });
+    /** Busca KPIs financeiros com filtro de mês/ano opcional */
+    async fetchFinanceiroKPIs(params?: { month?: number; year?: number }) {
+        let referenceDate: string;
 
+        if (params?.month && params?.year) {
+            // Se passar mês/ano, cria data no dia 10 (vencimento padrão)
+            referenceDate = new Date(params.year, params.month - 1, 10).toISOString().split("T")[0];
+        } else {
+            referenceDate = new Date().toISOString().split("T")[0];
+        }
+
+        const { data, error } = await supabase.rpc("get_financial_kpis", { month_ref: referenceDate });
         if (error) throw error;
 
         // @ts-ignore
@@ -44,11 +51,10 @@ export const financeiroService = {
         };
     },
 
-    /** Fluxo de Caixa (Receita x Despesas) dos últimos meses (Ano Corrente) */
-    async fetchFluxoCaixaMeses(meses = 12) {
-        // Ignora parametro 'meses' e pega o ano atual, pois a RPC é otimizada por ano
-        const year = new Date().getFullYear();
-        const { data, error } = await supabase.rpc("get_monthly_revenue", { year_ref: year });
+    /** Fluxo de Caixa (Receita x Despesas) filtrado por ano */
+    async fetchFluxoCaixaMeses(year?: number) {
+        const yearRef = year || new Date().getFullYear();
+        const { data, error } = await supabase.rpc("get_monthly_revenue", { year_ref: yearRef });
 
         if (error) throw error;
 
@@ -96,7 +102,7 @@ export const financeiroService = {
                 matricula:matriculas(
                     aluno:alunos(
                         nome_completo,
-                        responsavel:profiles!responsavel_id(id, nome_completo, email, telefone)
+                        responsavel:profiles(id, nome_completo, email, telefone)
                     ),
                     turma:turmas(
                         id,
@@ -134,12 +140,11 @@ export const financeiroService = {
                 valor,
                 data_vencimento,
                 status,
-                gateway_url,
                 matricula:matriculas(
                     aluno:alunos(
                         id,
                         nome_completo,
-                        responsavel:profiles!responsavel_id(id, nome_completo, email, telefone)
+                        responsavel:profiles(id, nome_completo, email, telefone)
                     ),
                     turma:turmas(
                         id,

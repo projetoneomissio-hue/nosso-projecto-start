@@ -11,6 +11,15 @@ export function useTurmas() {
     });
 }
 
+/** Hook para listar alunos de uma turma específica */
+export function useTurmaAlunos(turmaId: string | null) {
+    return useQuery({
+        queryKey: ["turma-alunos", turmaId],
+        queryFn: () => turmaId ? turmasService.fetchAlunosDaTurma(turmaId) : Promise.resolve([]),
+        enabled: !!turmaId,
+    });
+}
+
 /** Hook para selects de atividades ativas */
 export function useAtividades() {
     return useQuery({

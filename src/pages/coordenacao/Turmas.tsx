@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Clock, Calendar, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Users, Clock, Calendar, Plus, Pencil, Trash2, Loader2, Award, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
 import {
@@ -14,8 +14,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Info, HelpCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { pdf } from "@react-pdf/renderer";
 import { ListaAlunosPDF } from "@/components/reports/ListaAlunosPDF";
+import { GerarCertificadosDialog } from "@/components/certificates/GerarCertificadosDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +54,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useTurmas, useAtividades, useProfessores, useTurmaMutations } from "@/hooks/useTurmas";
+import { useTurmas, useAtividades, useProfessores, useTurmaMutations, useTurmaAlunos } from "@/hooks/useTurmas";
 import { turmasService } from "@/services/turmas.service";
 import { useToast } from "@/hooks/use-toast";
 import { handleError } from "@/utils/error-handler";
@@ -63,6 +87,7 @@ const Turmas = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTurmaCertificados, setSelectedTurmaCertificados] = useState<any>(null);
   const [editingTurma, setEditingTurma] = useState<any>(null);
+  const [viewingTurmaAlunos, setViewingTurmaAlunos] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TurmaFormData>({
     nome: "",
@@ -98,6 +123,8 @@ const Turmas = () => {
       { onSuccess: () => handleCloseDialog() }
     );
   };
+
+  const { data: listAlunos, isLoading: isLoadingAlunos } = useTurmaAlunos(viewingTurmaAlunos?.id);
 
   const confirmDelete = () => {
     if (deletingId) {
@@ -323,20 +350,29 @@ const Turmas = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleExportAlunos(turma)}
+                        onClick={() => setViewingTurmaAlunos(turma)}
                         className="gap-2"
                       >
                         <Users className="h-3 w-3" />
-                        Lista PDF
+                        Ver Alunos
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExportAlunos(turma)}
+                        className="gap-2"
+                        title="Exportar Lista PDF"
+                      >
+                        <FileText className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedTurmaCertificados(turma)}
                         className="gap-2"
+                        title="Certificados"
                       >
                         <Award className="h-3 w-3" />
-                        Certificados
                       </Button>
                       <Button
                         variant="outline"
@@ -512,12 +548,12 @@ const Turmas = () => {
               <Button
                 variant="outline"
                 onClick={handleCloseDialog}
-                disabled={saveMutation.isPending}
+                disabled={turmaSaveMutation.isPending}
               >
                 Cancelar
               </Button>
-              <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
-                {saveMutation.isPending && (
+              <Button onClick={handleSubmit} disabled={turmaSaveMutation.isPending}>
+                {turmaSaveMutation.isPending && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
                 {editingTurma ? "Atualizar" : "Criar"}
@@ -537,15 +573,15 @@ const Turmas = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleteMutation.isPending}>
+              <AlertDialogCancel disabled={turmaDeleteMutation.isPending}>
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDelete}
-                disabled={deleteMutation.isPending}
+                disabled={turmaDeleteMutation.isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {deleteMutation.isPending && (
+                {turmaDeleteMutation.isPending && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
                 Excluir
@@ -561,8 +597,100 @@ const Turmas = () => {
             turma={selectedTurmaCertificados}
           />
         )}
+
+        {/* Sheet de Listagem de Alunos */}
+        <Sheet open={!!viewingTurmaAlunos} onOpenChange={(open) => !open && setViewingTurmaAlunos(null)}>
+          <SheetContent className="sm:max-w-[540px] w-full">
+            <SheetHeader className="mb-6">
+              <SheetTitle className="text-2xl font-bold flex items-center gap-2">
+                <Users className="h-6 w-6 text-primary" />
+                Alunos da Turma
+              </SheetTitle>
+              <SheetDescription className="text-lg font-medium text-foreground">
+                {viewingTurmaAlunos?.nome} — {viewingTurmaAlunos?.atividade?.nome}
+              </SheetDescription>
+            </SheetHeader>
+
+            {isLoadingAlunos ? (
+              <div className="space-y-4 py-8">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : listAlunos && listAlunos.length > 0 ? (
+              <ScrollArea className="h-[calc(100vh-200px)] pr-4">
+                <div className="space-y-6">
+                  <div className="bg-muted/30 p-4 rounded-lg border border-border flex items-start gap-3">
+                    <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-foreground mb-1">Dica de Gestão</p>
+                      Alunos importados via planilha podem aparecer com um "Responsável Temporário".
+                      Isso é normal até que o responsável real realize o cadastro no sistema.
+                    </div>
+                  </div>
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome do Aluno</TableHead>
+                        <TableHead className="w-[100px]">Idade</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {listAlunos.map((aluno: any) => (
+                        <TableRow key={aluno.id}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <p>{aluno.nome_completo}</p>
+                              {aluno.responsavel?.profiles?.tipo === 'placeholder' && (
+                                <Badge variant="outline" className="text-[10px] h-4 font-normal mt-1 opacity-70">
+                                  Importado
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {aluno.data_nascimento ?
+                              Math.floor((new Date().getTime() - new Date(aluno.data_nascimento).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) + ' anos'
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {/* Futuras ações rápidas podem ser adicionadas aqui */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <HelpCircle className="h-4 w-4 opacity-50" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Ver detalhes do aluno em breve
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="py-20 text-center space-y-3">
+                <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg">Nenhum aluno matriculado</h3>
+                <p className="text-muted-foreground max-w-[300px] mx-auto">
+                  Esta turma ainda não possui alunos. Comece a matricular novos alunos para vê-los aqui.
+                </p>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </div>
-    </DashboardLayout>
+    </DashboardLayout >
   );
 };
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Camera, Loader2, Save } from "lucide-react";
+import { Camera, Loader2, Save, AlertCircle, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -10,11 +10,13 @@ interface ObservacaoAlunoProps {
     alunoId: string;
     alunoNome: string;
     turmaId: string;
+    initialText?: string;
+    onSave?: (text: string, photoUrl?: string) => void;
 }
 
-export const ObservacaoAluno = ({ alunoId, alunoNome, turmaId }: ObservacaoAlunoProps) => {
+export const ObservacaoAluno = ({ alunoId, alunoNome, turmaId, initialText = "", onSave }: ObservacaoAlunoProps) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [observacao, setObservacao] = useState("");
+    const [observacao, setObservacao] = useState(initialText);
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const { toast } = useToast();
@@ -53,9 +55,12 @@ export const ObservacaoAluno = ({ alunoId, alunoNome, turmaId }: ObservacaoAluno
             // Mock DB save
             await new Promise(resolve => setTimeout(resolve, 500));
 
+            if (onSave) {
+                onSave(observacao, photoUrl || undefined);
+            }
+
             toast({ title: "Observação salva!", description: "Dados registrados com sucesso." });
             setIsOpen(false);
-            setObservacao("");
             setFile(null);
         } catch (error) {
             console.error(error);
@@ -105,7 +110,9 @@ export const ObservacaoAluno = ({ alunoId, alunoNome, turmaId }: ObservacaoAluno
                     {file && (
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
                             <span className="truncate max-w-[200px]">{file.name}</span>
-                            <Button variant="ghost" size="xs" onClick={() => setFile(null)} className="h-6 w-6 p-0 text-red-500">x</Button>
+                            <Button variant="ghost" size="icon" onClick={() => setFile(null)} className="h-6 w-6 p-0 text-red-500">
+                                <X className="h-4 w-4" />
+                            </Button>
                         </div>
                     )}
 

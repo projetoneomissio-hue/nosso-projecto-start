@@ -66,6 +66,9 @@ CREATE TABLE public.professores (
   user_id UUID NOT NULL UNIQUE REFERENCES public.profiles(id),
   especialidade TEXT,
   percentual_comissao NUMERIC NOT NULL DEFAULT 15.00,
+  tipo_contrato TEXT DEFAULT 'parceiro',
+  valor_fixo NUMERIC DEFAULT 0,
+  is_volunteer BOOLEAN DEFAULT false,
   ativo BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()

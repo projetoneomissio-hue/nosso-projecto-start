@@ -10,7 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Calendar } from "lucide-react";
+import { Loader2, Save, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ObservacaoAluno } from "@/components/professor/ObservacaoAluno";
@@ -62,7 +63,11 @@ const Chamada = () => {
                 .select(`
                     id,
                     aluno_id,
-                    alunos(id, nome_completo)
+                    alunos(
+                      id, 
+                      nome_completo,
+                      anamneses(is_pne, pne_descricao, doenca_cronica, alergias)
+                    )
                 `)
                 .eq("turma_id", selectedTurmaId)
                 .eq("status", "ativa");
@@ -286,8 +291,8 @@ const Chamada = () => {
                                             <Card
                                                 key={m.id}
                                                 className={`transition-all duration-200 cursor-pointer active:scale-[0.99] border-l-4 ${attendance[m.id]
-                                                        ? "border-l-green-500 bg-green-50/30 hover:bg-green-50/50"
-                                                        : "border-l-red-500 bg-red-50/30 hover:bg-red-50/50"
+                                                    ? "border-l-green-500 bg-green-50/30 hover:bg-green-50/50"
+                                                    : "border-l-red-500 bg-red-50/30 hover:bg-red-50/50"
                                                     }`}
                                                 onClick={() => togglePresence(m.id)}
                                             >
@@ -301,21 +306,55 @@ const Chamada = () => {
                                                             {m.alunos?.nome_completo?.charAt(0) || "?"}
                                                         </div>
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="font-semibold truncate text-foreground text-base">
-                                                                {m.alunos?.nome_completo}
-                                                            </p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-semibold truncate text-foreground text-base">
+                                                                    {m.alunos?.nome_completo}
+                                                                </p>
+                                                                {m.alunos?.anamneses?.[0]?.is_pne && (
+                                                                    <div
+                                                                        className="h-5 w-5 bg-red-500 rounded-full flex items-center justify-center animate-pulse"
+                                                                        title={`PNE: ${m.alunos?.anamneses?.[0]?.pne_descricao || "Ver ficha"}`}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toast({
+                                                                                title: "Alerta PNE",
+                                                                                description: m.alunos?.anamneses?.[0]?.pne_descricao || "Este aluno possui necessidades especiais.",
+                                                                                variant: "destructive"
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <AlertCircle className="h-3 w-3 text-white" />
+                                                                    </div>
+                                                                )}
+                                                                {(m.alunos?.anamneses?.[0]?.doenca_cronica || m.alunos?.anamneses?.[0]?.alergias) && (
+                                                                    <div
+                                                                        className="h-5 w-5 bg-orange-500 rounded-full flex items-center justify-center"
+                                                                        title="Saúde / Alergia"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toast({
+                                                                                title: "Alergia/Saúde",
+                                                                                description: `${m.alunos?.anamneses?.[0]?.alergias ? "Alergias: " + m.alunos?.anamneses?.[0]?.alergias : ""} ${m.alunos?.anamneses?.[0]?.doenca_cronica ? "\nDoença: " + m.alunos?.anamneses?.[0]?.doenca_cronica : ""}`,
+                                                                            });
+                                                                        }}
+                                                                    >
+                                                                        <AlertCircle className="h-3 w-3 text-white" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                             <div
                                                                 className="flex gap-2 mt-1"
                                                                 onClick={(e) => e.stopPropagation()}
                                                             >
                                                                 <ObservacaoAluno
-                                                                    alunoId={m.alunos?.id}
+                                                                    alunoId={m.aluno_id}
                                                                     alunoNome={m.alunos?.nome_completo}
                                                                     turmaId={selectedTurmaId}
-                                                                    initialText={observations[m.id]?.split(" | Foto: ")[0] || ""}
                                                                     onSave={(text, photoUrl) => {
-                                                                        const finalObs = photoUrl ? `${text} | Foto: ${photoUrl}` : text;
-                                                                        updateObservation(m.id, finalObs);
+                                                                        setObservations((prev) => ({
+                                                                            ...prev,
+                                                                            [m.aluno_id]: text,
+                                                                        }));
                                                                     }}
                                                                 />
                                                             </div>
@@ -324,8 +363,8 @@ const Chamada = () => {
 
                                                     <div className="shrink-0">
                                                         <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${attendance[m.id]
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-red-100 text-red-700"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : "bg-red-100 text-red-700"
                                                             }`}>
                                                             {attendance[m.id] ? "Presente" : "Ausente"}
                                                         </span>

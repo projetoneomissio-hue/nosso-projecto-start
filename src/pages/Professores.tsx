@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { handleError } from "@/utils/error-handler";
 import { z } from "zod";
 import { PendingUsersAlert } from "@/components/PendingUsersAlert";
+import { turmasService } from "@/services/turmas.service";
 
 const professorSchema = z.object({
   user_id: z.string().uuid("Selecione um usuário"),
@@ -72,6 +73,9 @@ const Professores = () => {
         .from("professores")
         .select(`
           *,
+          tipo_contrato,
+          valor_fixo,
+          is_volunteer,
           user:profiles(nome_completo, email),
           turmas(
             id,
@@ -111,6 +115,11 @@ const Professores = () => {
         .map(ur => ur.profiles)
         .filter(Boolean) || [];
     },
+  });
+
+  const { data: atividades } = useQuery({
+    queryKey: ["atividades-list"],
+    queryFn: () => turmasService.fetchAtividades(),
   });
 
   // Create/Update mutation
@@ -244,13 +253,19 @@ const Professores = () => {
   };
 
   const calculateComissao = (professor: any) => {
+    if (professor.tipo_contrato === "fixo") {
+      return Number(professor.valor_fixo) || 0;
+    }
+    if (professor.is_volunteer || professor.tipo_contrato === "voluntario") {
+      return 0;
+    }
+
     const totalAlunos = professor.turmas?.reduce(
       (acc: number, t: any) => acc + (t.matriculas?.[0]?.count || 0),
       0
     ) || 0;
 
     // Busca valor médio das atividades das turmas (simplificado)
-    // Na prática, deveria buscar o valor específico de cada matrícula
     const valorMedioPorAluno = 150; // Valor exemplo
     const comissao = (totalAlunos * valorMedioPorAluno * parseFloat(professor.percentual_comissao.toString())) / 100;
 
@@ -343,16 +358,24 @@ const Professores = () => {
                         {prof.especialidade && (
                           <p className="text-sm text-muted-foreground">{prof.especialidade}</p>
                         )}
-                        <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                        <div className="flex gap-4 text-xs text-muted-foreground mt-1 font-medium">
                           <span>{totalAlunos} alunos</span>
                           <span>{prof.turmas?.length || 0} turmas</span>
-                          <span>Comissão: {parseFloat(prof.percentual_comissao.toString())}%</span>
+                          {prof.tipo_contrato === "fixo" ? (
+                            <span className="text-pink-500 font-bold">Fixo: R$ {Number(prof.valor_fixo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                          ) : prof.tipo_contrato === "voluntario" || prof.is_volunteer ? (
+                            <span className="text-emerald-500 font-bold">Voluntário</span>
+                          ) : (
+                            <span>Comissão: {parseFloat(prof.percentual_comissao.toString())}%</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Comissão Estimada</p>
-                          <p className="text-lg font-bold flex items-center gap-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">
+                            {prof.tipo_contrato === "fixo" ? "Salário Mensal" : prof.tipo_contrato === "voluntario" || prof.is_volunteer ? "Remuneração" : "Comissão Estim."}
+                          </p>
+                          <p className={`text-lg font-black flex items-center justify-end gap-1 ${prof.tipo_contrato === "fixo" ? "text-pink-500" : ""}`}>
                             <DollarSign className="h-4 w-4" />
                             {comissaoEstimada.toLocaleString("pt-BR", {
                               minimumFractionDigits: 2,
@@ -435,15 +458,24 @@ const Professores = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="especialidade">Especialidade</Label>
-                <Input
-                  id="especialidade"
+                <Label htmlFor="especialidade">Especialidade (Vínculo à Atividade)</Label>
+                <Select
                   value={formData.especialidade || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, especialidade: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, especialidade: value })
                   }
-                  placeholder="Ex: Artes Marciais, Dança, Música"
-                />
+                >
+                  <SelectTrigger id="especialidade">
+                    <SelectValue placeholder="Selecione a atividade correspondente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {atividades?.map((ativ: any) => (
+                      <SelectItem key={ativ.id} value={ativ.nome}>
+                        {ativ.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {formErrors.especialidade && (
                   <p className="text-sm text-destructive">{formErrors.especialidade}</p>
                 )}
