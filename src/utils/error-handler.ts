@@ -20,6 +20,8 @@ const ERROR_MAPPING: Record<string, string> = {
     "user_already_exists": "Já existe um usuário cadastrado com este e-mail.",
     "invalid_grant": "Credenciais inválidas.",
     "too_many_requests": "Muitas tentativas. Por favor, aguarde um momento.",
+    "email rate limit exceeded": "O limite de envios de e-mail gratuitos do sistema foi atingido. Por segurança, aguarde cerca de uma hora para tentar novamente ou contate a direção.",
+    "over_email_send_rate_limit": "Limites de envio de e-mail atingidos. Aguarde um momento.",
 
     // Erros de Banco de Dados (PostgreSQL / PostgREST)
     "23505": "Este registro já existe no sistema.",

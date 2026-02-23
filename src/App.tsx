@@ -41,6 +41,7 @@ import Coordenadores from "./pages/direcao/Coordenadores";
 import Comunicados from "./pages/direcao/Comunicados";
 
 // Coordenação
+import DashboardCoordenacao from "./pages/coordenacao/DashboardCoordenacao";
 import TurmasCoordenacao from "./pages/coordenacao/Turmas";
 import MatriculasPendentes from "./pages/coordenacao/MatriculasPendentes";
 import Inadimplentes from "./pages/coordenacao/Inadimplentes";
@@ -52,6 +53,7 @@ import RelatorioVoluntarios from "./pages/coordenacao/RelatorioVoluntarios";
 // Professores
 import Turmas from "./pages/professor/Turmas";
 import Chamada from "./pages/professor/Chamada";
+import GradeAvaliacao from "./pages/professor/GradeAvaliacao";
 import AlunosProfessor from "./pages/professor/Alunos";
 import Presenca from "./pages/professor/Presenca";
 import Observacoes from "./pages/professor/Observacoes";
@@ -111,6 +113,7 @@ export const AppRoutes = () => {
       <Route path="/direcao/comunicados" element={<ProtectedRoute allowedRoles={["direcao"]}><Comunicados /></ProtectedRoute>} />
 
       {/* Coordenação */}
+      <Route path="/coordenacao/dashboard" element={<ProtectedRoute allowedRoles={["coordenacao"]}><DashboardCoordenacao /></ProtectedRoute>} />
       <Route path="/coordenacao/turmas" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><TurmasCoordenacao /></ProtectedRoute>} />
       <Route path="/coordenacao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><MatriculasPendentes /></ProtectedRoute>} />
       <Route path="/coordenacao/inadimplentes" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Inadimplentes /></ProtectedRoute>} />
@@ -122,6 +125,7 @@ export const AppRoutes = () => {
       {/* Professores */}
       <Route path="/professor/turmas" element={<ProtectedRoute allowedRoles={["professor"]}><Turmas /></ProtectedRoute>} />
       <Route path="/professor/chamada" element={<ProtectedRoute allowedRoles={["professor"]}><Chamada /></ProtectedRoute>} />
+      <Route path="/professor/avaliacoes" element={<ProtectedRoute allowedRoles={["professor"]}><GradeAvaliacao /></ProtectedRoute>} />
       <Route path="/professor/alunos" element={<ProtectedRoute allowedRoles={["professor"]}><AlunosProfessor /></ProtectedRoute>} />
       <Route path="/professor/presenca" element={<ProtectedRoute allowedRoles={["professor"]}><Presenca /></ProtectedRoute>} />
       <Route path="/professor/observacoes" element={<ProtectedRoute allowedRoles={["professor"]}><Observacoes /></ProtectedRoute>} />
@@ -155,7 +159,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <RealtimeNotifications />
-                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <BrowserRouter>
                   <AppRoutes />
                 </BrowserRouter>
               </PostHogProvider>

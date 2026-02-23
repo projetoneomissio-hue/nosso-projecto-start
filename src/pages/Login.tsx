@@ -130,7 +130,7 @@ const Login = () => {
           ['direcao', 'coordenacao', 'professor'].includes(r.role)
         );
 
-        if (isAdmin) {
+        if (isAdmin && import.meta.env.PROD) {
           toast({
             title: "Configuração MFA Necessária",
             description: "Como administrador, você precisa configurar a autenticação de dois fatores.",
@@ -242,11 +242,7 @@ const Login = () => {
         );
 
         if (error) {
-          toast({
-            title: "Erro ao criar conta",
-            description: error.message,
-            variant: "destructive",
-          });
+          handleError(error, "Erro ao criar conta");
         } else {
           toast({
             title: "Conta criada com sucesso!",

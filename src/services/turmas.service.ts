@@ -77,7 +77,7 @@ export const turmasService = {
         return data;
     },
 
-    /** Buscar alunos de uma turma (para PDF) */
+    /** Buscar alunos de uma turma (para PDF e Avaliações) */
     async fetchAlunosDaTurma(turmaId: string) {
         const { data, error } = await supabase
             .from("matriculas")
@@ -88,10 +88,13 @@ export const turmasService = {
           id,
           nome_completo,
           data_nascimento,
-          responsavel:profiles!alunos_responsavel_id_fkey(nome_completo)
+          responsavel:profiles!alunos_responsavel_id_fkey(nome_completo),
+          saude_pne,
+          saude_alergias
         )
       `)
-            .eq("turma_id", turmaId);
+            .eq("turma_id", turmaId)
+            .eq("status", "ativa");
 
         if (error) throw error;
 
@@ -102,6 +105,51 @@ export const turmasService = {
             data_nascimento: m.aluno.data_nascimento,
             responsavel_nome: m.aluno.responsavel?.nome_completo,
             status_matricula: m.status,
+            saude_pne: m.aluno.saude_pne,
+            saude_alergias: m.aluno.saude_alergias
         }));
+    },
+
+    /** Buscar avaliações de uma turma */
+    async fetchAvaliacoes(turmaId: string) {
+        const { data, error } = await supabase
+            .from("avaliacoes")
+            .select(`
+                *,
+                notas (*)
+            `)
+            .eq("turma_id", turmaId)
+            .order("data_realizacao");
+
+        if (error) throw error;
+        return data;
+    },
+
+    /** Upsert de nota */
+    async upsertNota(payload: {
+        avaliacao_id: string;
+        aluno_id: string;
+        valor_numerico?: number;
+        conceito?: string;
+        observacoes?: string;
+    }) {
+        const { error } = await supabase
+            .from("notas")
+            .upsert([payload], { onConflict: "avaliacao_id,aluno_id" });
+
+        if (error) throw error;
+    },
+
+    /** Criar avaliação */
+    async createAvaliacao(payload: {
+        turma_id: string;
+        titulo: string;
+        tipo: string;
+        bimestre: number;
+        peso: number;
+        data_realizacao: string;
+    }) {
+        const { error } = await supabase.from("avaliacoes").insert([payload]);
+        if (error) throw error;
     },
 };

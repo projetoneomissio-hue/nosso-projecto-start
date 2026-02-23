@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Fetch profile and role in parallel
         const [profileRes, roleRes] = await Promise.all([
           supabase.from("profiles").select("nome_completo").eq("id", supabaseUser.id).single(),
-          supabase.from("user_roles").select("role").eq("user_id", supabaseUser.id).single()
+          supabase.from("user_roles").select("role").eq("user_id", supabaseUser.id).limit(1).maybeSingle()
         ]);
 
         if (profileRes.error || roleRes.error) {

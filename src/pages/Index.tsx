@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Heart, Users, Trophy } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowRight, Heart, Users, CheckCircle2, Star, MessageSquare, ChevronRight, Sparkles, Shield, Zap, Trophy } from "lucide-react";
+import { Link, Navigate } from "react-router-dom";
 import { SeoHead } from "@/components/SeoHead";
 import { useUTMTracking } from "@/hooks/useUTMTracking";
+import { useAuth } from "@/contexts/AuthContext";
 import { activities, testimonials } from "@/data/landing-data";
 import { ActivitiesSection } from "@/components/landing/ActivitiesSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
@@ -15,6 +16,11 @@ import heroImage from "@/assets/hero-neo-missio.jpg";
 
 const Index = () => {
   useUTMTracking();
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,9 +43,9 @@ const Index = () => {
             <a href="#terapia" className="text-sm font-medium hover:text-primary transition-colors">
               Aconselhamento
             </a>
-            <Link to="/login">
-              <Button size="sm">Acessar Sistema</Button>
-            </Link>
+            <Button size="sm" asChild>
+              <Link to="/login">Acessar Sistema</Link>
+            </Button>
           </div>
         </div>
       </nav>

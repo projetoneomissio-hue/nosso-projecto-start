@@ -2,7 +2,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, DollarSign, AlertCircle, CreditCard, Wallet } from "lucide-react";
+import { Download, Loader2, DollarSign, AlertCircle, CreditCard, Wallet, Calendar, CheckCircle2, Clock } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -132,13 +132,13 @@ const Pagamentos = () => {
     const vencimento = new Date(dataVencimento);
 
     if (status === "pago") {
-      return <Badge variant="default">Pago</Badge>;
+      return <Badge className="bg-green-500/10 text-green-600 border-green-500/20 shadow-sm"><CheckCircle2 className="w-3 h-3 mr-1" /> Pago</Badge>;
     } else if (status === "cancelado") {
-      return <Badge variant="secondary">Cancelado</Badge>;
+      return <Badge variant="secondary" className="bg-muted text-muted-foreground"><AlertCircle className="w-3 h-3 mr-1" /> Cancelado</Badge>;
     } else if (vencimento < hoje) {
-      return <Badge variant="destructive">Atrasado</Badge>;
+      return <Badge variant="destructive" className="animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"><AlertCircle className="w-3 h-3 mr-1" /> Atrasado</Badge>;
     } else {
-      return <Badge variant="outline">Pendente</Badge>;
+      return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 shadow-sm"><Clock className="w-3 h-3 mr-1" /> Pendente</Badge>;
     }
   };
 
@@ -171,33 +171,37 @@ const Pagamentos = () => {
         </div>
 
         {/* Resumo */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="border-t-4 border-t-destructive shadow-lg bg-red-50/30 dark:bg-red-950/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valor Pendente</CardTitle>
-              <AlertCircle className="h-4 w-4 text-destructive" />
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-destructive/80">Valor Pendente</CardTitle>
+              <div className="p-2 bg-destructive/10 rounded-full">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-destructive">
+              <div className="text-3xl font-black text-destructive tracking-tight">
                 R$ {totalPendente.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {pagamentos?.filter((p) => p.status === "pendente" || p.status === "atrasado").length || 0} mensalidades
+              <p className="text-sm font-medium text-destructive/70 mt-1">
+                {pagamentos?.filter((p) => p.status === "pendente" || p.status === "atrasado").length || 0} mensalidades aguardando
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-t-4 border-t-success shadow-lg bg-green-50/30 dark:bg-green-950/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
-              <DollarSign className="h-4 w-4 text-success" />
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-success/80">Total Pago</CardTitle>
+              <div className="p-2 bg-success/10 rounded-full">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-success">
+              <div className="text-3xl font-black text-success tracking-tight">
                 R$ {totalPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {pagamentos?.filter((p) => p.status === "pago").length || 0} mensalidades pagas
+              <p className="text-sm font-medium text-success/70 mt-1">
+                {pagamentos?.filter((p) => p.status === "pago").length || 0} mensalidades quitadas
               </p>
             </CardContent>
           </Card>
@@ -208,79 +212,92 @@ const Pagamentos = () => {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : pagamentos && pagamentos.length > 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Mensalidades</CardTitle>
+          <Card className="shadow-md border-primary/20">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                Histórico de Mensalidades
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <div className="space-y-4">
                 {pagamentos.map((pagamento) => (
                   <Card
                     key={pagamento.id}
-                    className={
-                      isDueOrOverdue(pagamento.status, pagamento.data_vencimento)
-                        ? "border-destructive"
-                        : ""
-                    }
+                    className={`overflow-hidden transition-all hover:shadow-md ${isDueOrOverdue(pagamento.status, pagamento.data_vencimento)
+                      ? "border-destructive/50 bg-destructive/5"
+                      : "border-border/50 bg-card/50"
+                      }`}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold">
+                    <CardContent className="p-5">
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+                        <div className="flex-1 w-full">
+                          <div className="flex items-center justify-between md:justify-start gap-3 mb-2">
+                            <h3 className="font-bold text-lg text-foreground">
                               {pagamento.matricula?.alunos?.nome_completo || "N/A"}
                             </h3>
                             {getStatusBadge(pagamento.status, pagamento.data_vencimento)}
                           </div>
-                          <p className="text-sm text-muted-foreground">
+
+                          <div className="flex items-center gap-2 text-sm text-foreground/80 font-medium bg-muted/50 w-fit px-3 py-1 rounded-md mb-3">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
                             {pagamento.matricula?.turmas?.atividades?.nome || "N/A"} -{" "}
                             {pagamento.matricula?.turmas?.nome || "N/A"}
-                          </p>
-                          <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                            <p>
-                              Vencimento:{" "}
-                              {format(new Date(pagamento.data_vencimento), "dd/MM/yyyy", {
-                                locale: ptBR,
-                              })}
-                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-y-2 gap-x-8 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              <span>Vencimento:</span>
+                              <span className="font-semibold text-foreground">
+                                {format(new Date(pagamento.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            </div>
+
                             {pagamento.data_pagamento && (
-                              <p>
-                                Pago em:{" "}
-                                {format(new Date(pagamento.data_pagamento), "dd/MM/yyyy", {
-                                  locale: ptBR,
-                                })}
-                              </p>
+                              <div className="flex items-center gap-1.5 text-success">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                <span>Pago em:</span>
+                                <span className="font-semibold">
+                                  {format(new Date(pagamento.data_pagamento), "dd/MM/yyyy", { locale: ptBR })}
+                                </span>
+                              </div>
                             )}
                             {pagamento.forma_pagamento && (
-                              <p>Forma: {pagamento.forma_pagamento}</p>
+                              <div className="flex items-center gap-1.5 col-span-2">
+                                <CreditCard className="h-3.5 w-3.5" />
+                                <span>Forma: {pagamento.forma_pagamento}</span>
+                              </div>
                             )}
                           </div>
                           {pagamento.observacoes && (
-                            <p className="text-xs text-muted-foreground mt-2 italic">
+                            <p className="text-xs text-muted-foreground mt-3 italic bg-muted/30 p-2 rounded-md border-l-2 border-l-primary">
                               Obs: {pagamento.observacoes}
                             </p>
                           )}
                         </div>
-                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
-                          <div className="text-right">
-                            <p className="text-lg font-bold">
-                              R${" "}
-                              {parseFloat(pagamento.valor.toString()).toLocaleString("pt-BR", {
+
+                        <div className="flex flex-col md:items-end justify-between self-stretch pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-border/50 md:pl-5 min-w-[200px]">
+                          <div className="text-left md:text-right mb-4 border-l-4 md:border-l-0 border-primary md:border-transparent pl-3 md:pl-0">
+                            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Valor da Parcela</p>
+                            <p className="text-3xl font-black text-foreground tracking-tight">
+                              R$ {parseFloat(pagamento.valor.toString()).toLocaleString("pt-BR", {
                                 minimumFractionDigits: 2,
                               })}
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex w-full md:w-auto gap-2">
                             {(pagamento.status === "pendente" || pagamento.status === "atrasado") && (
                               <Button
                                 onClick={() => handlePagarOnline(pagamento.id)}
                                 disabled={payingId === pagamento.id}
-                                size="sm"
+                                className="w-full md:w-auto shadow-md hover:shadow-primary/20 relative overflow-hidden group"
                               >
+                                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[100%] group-hover:animate-[shimmer_1.5s_infinite]"></span>
                                 {payingId === pagamento.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                 ) : (
-                                  <Wallet className="h-4 w-4 mr-1" />
+                                  <CreditCard className="h-4 w-4 mr-2" />
                                 )}
                                 Pagar Online
                               </Button>

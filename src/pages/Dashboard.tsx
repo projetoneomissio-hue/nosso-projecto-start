@@ -15,13 +15,21 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Redireciona responsáveis para seu dashboard específico
+  // Redirecionamento por Papel (Role)
   if (user?.role === "responsavel") {
     return <Navigate to="/responsavel/dashboard" replace />;
   }
 
-  if (user?.role === "direcao" || user?.role === "coordenacao") {
+  if (user?.role === "direcao") {
     return <Navigate to="/direcao/dashboard" replace />;
+  }
+
+  if (user?.role === "coordenacao") {
+    return <Navigate to="/coordenacao/dashboard" replace />;
+  }
+
+  if (user?.role === "professor") {
+    return <Navigate to="/professor/turmas" replace />;
   }
 
   // Fetch total de alunos

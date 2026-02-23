@@ -266,8 +266,15 @@ const DashboardResponsavel = () => {
           />
         </div>
 
-        {/* Mural de Avisos */}
-        <MuralAvisos />
+        {/* Mural de Avisos e Frequência */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <MuralAvisos />
+          </div>
+          <div className="space-y-6">
+            <FrequenciaCard />
+          </div>
+        </div>
 
         {/* Ações Rápidas */}
         {totalAlunos === 0 && (
@@ -294,69 +301,91 @@ const DashboardResponsavel = () => {
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Meus Alunos */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Meus Alunos</CardTitle>
-              <Button variant="outline" size="sm" asChild>
+          <Card className="border-t-4 border-t-primary/80 lg:col-span-2 overflow-hidden bg-background/50 backdrop-blur-xl shadow-lg border-primary/10">
+            <CardHeader className="flex flex-row items-center justify-between bg-primary/5 pb-6">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2 text-primary">
+                  <Users className="h-5 w-5" />
+                  Meus Alunos
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">Gerencie os dependentes vinculados a você</p>
+              </div>
+              <Button variant="default" className="shadow-lg hover:shadow-primary/20 transition-all font-semibold" asChild>
                 <Link to="/responsavel/cadastrar-aluno">
                   <UserPlus className="mr-2 h-4 w-4" />
                   Novo Aluno
                 </Link>
               </Button>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="pt-6">
               {alunos && alunos.length > 0 ? (
-                alunos.map((aluno) => (
-                  <div key={aluno.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10">
-                          <Users className="h-5 w-5 text-primary" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{aluno.nome_completo}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Nascimento: {format(new Date(aluno.data_nascimento), "dd/MM/yyyy")}
-                        </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {alunos.map((aluno) => (
+                    <div key={aluno.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-900/50 border border-border/50 hover:border-primary/30 transition-all hover:shadow-md group">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-14 w-14 border-2 border-primary/20 group-hover:border-primary transition-colors">
+                          {aluno.foto_url ? (
+                            <AvatarImage src={aluno.foto_url} className="object-cover" />
+                          ) : (
+                            <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
+                              {aluno.nome_completo.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div>
+                          <p className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">{aluno.nome_completo}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium bg-muted px-2 py-0.5 rounded-full">
+                              Nascimento: {format(new Date(aluno.data_nascimento), "dd/MM/yyyy")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
+                          onClick={() => {
+                            setEditingAluno(aluno);
+                            setFormData({
+                              nome: aluno.nome_completo,
+                              data_nascimento: aluno.data_nascimento,
+                              cpf: formatCPF(aluno.cpf || ""),
+                              telefone: aluno.telefone || "",
+                              endereco: aluno.endereco || "",
+                              alergias: (aluno as any).alergias || "",
+                              medicamentos: (aluno as any).medicamentos || "",
+                              observacoes: (aluno as any).observacoes || "",
+                              foto_url: (aluno as any).foto_url || null,
+                            });
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1.5" /> Editar
+                        </Button>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditingAluno(aluno);
-                        setFormData({
-                          nome: aluno.nome_completo,
-                          data_nascimento: aluno.data_nascimento,
-                          cpf: formatCPF(aluno.cpf || ""),
-                          telefone: aluno.telefone || "",
-                          endereco: aluno.endereco || "",
-                          alergias: (aluno as any).alergias || "",
-                          medicamentos: (aluno as any).medicamentos || "",
-                          observacoes: (aluno as any).observacoes || "",
-                          foto_url: (aluno as any).foto_url || null,
-                        });
-                        setIsDialogOpen(true);
-                      }}
-                    >
-                      <Edit2 className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                    </Button>
-
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum aluno cadastrado
-                </p>
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">Nenhum aluno cadastrado</p>
+                </div>
               )}
             </CardContent>
           </Card>
 
           {/* Matrículas Recentes */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Matrículas</CardTitle>
+          <Card className="shadow-md border-t-4 border-t-primary/50 flex flex-col h-full bg-background/50 backdrop-blur-xl">
+            <CardHeader className="flex flex-row items-center justify-between bg-muted/20 border-b pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  <ClipboardList className="h-4 w-4 text-primary" />
+                </div>
+                Matrículas
+              </CardTitle>
               {totalAlunos > 0 && (
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/responsavel/nova-matricula">
@@ -391,70 +420,75 @@ const DashboardResponsavel = () => {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Próximos Pagamentos */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Próximos Pagamentos</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/responsavel/pagamentos">Ver Todos</Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {pagamentos && pagamentos.length > 0 ? (
-              <div className="space-y-3">
-                {pagamentos.map((pag) => {
-                  const vencido = isBefore(new Date(pag.data_vencimento), new Date());
-                  const proximo = isVencidoOuProximo(pag.data_vencimento);
+          {/* Próximos Pagamentos */}
+          <Card className="shadow-md border-t-4 border-t-destructive/50 flex flex-col h-full bg-background/50 backdrop-blur-xl">
+            <CardHeader className="flex flex-row items-center justify-between bg-muted/20 border-b pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <div className="p-1.5 bg-destructive/10 rounded-lg">
+                  <DollarSign className="h-4 w-4 text-destructive" />
+                </div>
+                Próximos Pagamentos
+              </CardTitle>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/responsavel/pagamentos">Ver Todos</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {pagamentos && pagamentos.length > 0 ? (
+                <div className="space-y-3">
+                  {pagamentos.map((pag) => {
+                    const vencido = isBefore(new Date(pag.data_vencimento), new Date());
+                    const proximo = isVencidoOuProximo(pag.data_vencimento);
 
-                  return (
-                    <div key={pag.id} className={`flex items-center justify-between p-4 rounded-lg ${vencido ? 'bg-destructive/10 border border-destructive/20' : proximo ? 'bg-warning/10 border border-warning/20' : 'bg-muted/50'}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${vencido ? 'bg-destructive/20' : proximo ? 'bg-warning/20' : 'bg-muted'}`}>
-                          {vencido ? (
-                            <AlertCircle className="h-5 w-5 text-destructive" />
-                          ) : (
-                            <Calendar className="h-5 w-5 text-muted-foreground" />
-                          )}
+                    return (
+                      <div key={pag.id} className={`flex items-center justify-between p-4 rounded-lg ${vencido ? 'bg-destructive/10 border border-destructive/20' : proximo ? 'bg-warning/10 border border-warning/20' : 'bg-muted/50'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${vencido ? 'bg-destructive/20' : proximo ? 'bg-warning/20' : 'bg-muted'}`}>
+                            {vencido ? (
+                              <AlertCircle className="h-5 w-5 text-destructive" />
+                            ) : (
+                              <Calendar className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium">{pag.matricula?.aluno?.nome_completo}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {pag.matricula?.turma?.atividade?.nome}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{pag.matricula?.aluno?.nome_completo}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {pag.matricula?.turma?.atividade?.nome}
+                        <div className="text-right">
+                          <p className="font-semibold">
+                            R$ {parseFloat(pag.valor.toString()).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className={`text-sm ${vencido ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                            {vencido ? 'Vencido em ' : 'Vence em '}
+                            {format(new Date(pag.data_vencimento), "dd/MM/yyyy")}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">
-                          R$ {parseFloat(pag.valor.toString()).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className={`text-sm ${vencido ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                          {vencido ? 'Vencido em ' : 'Vence em '}
-                          {format(new Date(pag.data_vencimento), "dd/MM/yyyy")}
-                        </p>
-                      </div>
+                    );
+                  })}
+                  {totalPagamentosPendentes > 0 && (
+                    <div className="pt-2">
+                      <Button className="w-full" asChild>
+                        <Link to="/responsavel/registrar-pagamento">
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          Registrar Pagamento
+                        </Link>
+                      </Button>
                     </div>
-                  );
-                })}
-                {totalPagamentosPendentes > 0 && (
-                  <div className="pt-2">
-                    <Button className="w-full" asChild>
-                      <Link to="/responsavel/registrar-pagamento">
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        Registrar Pagamento
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum pagamento pendente
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum pagamento pendente
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -627,45 +661,84 @@ const MuralAvisos = () => {
   }
 
   if (comunicados.length === 0) {
-    return null;
+    return (
+      <Card className="border-t-4 border-t-primary/30 shadow-lg lg:col-span-2 h-full">
+        <CardHeader className="border-b bg-muted/20 pb-4">
+          <CardTitle className="text-lg flex items-center justify-between">
+            <div className="flex items-center gap-2 font-bold uppercase tracking-tight text-muted-foreground/50">
+              <div className="p-2 bg-muted rounded-lg">
+                <Megaphone className="h-5 w-5" />
+              </div>
+              Mural de Avisos
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center p-8 text-center h-[200px]">
+          <Megaphone className="h-12 w-12 text-muted-foreground/20 mb-4" />
+          <h3 className="text-lg font-semibold text-foreground">Nenhum aviso no momento</h3>
+          <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+            Tudo tranquilo por aqui. Quando houver novidades, elas aparecerão no seu mural.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Megaphone className="h-5 w-5 text-primary" />
-          Mural de Avisos
+    <Card className="border-t-4 border-t-primary shadow-lg lg:col-span-2">
+      <CardHeader className="border-b bg-muted/20 pb-4">
+        <CardTitle className="text-lg flex items-center justify-between">
+          <div className="flex items-center gap-2 font-bold uppercase tracking-tight">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Megaphone className="h-5 w-5 text-primary" />
+            </div>
+            Mural de Avisos
+            {comunicados.length > 0 && (
+              <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse ml-2" title="Novos Recados"></span>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {comunicados.map((comunicado: any) => (
-          <div
-            key={comunicado.id}
-            className="p-4 rounded-lg bg-background border shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-semibold text-foreground truncate">
+      <CardContent className="p-0">
+        <div className="divide-y divide-border/50">
+          {comunicados.map((comunicado: any) => (
+            <div
+              key={comunicado.id}
+              className="p-5 hover:bg-muted/30 transition-colors flex gap-4"
+            >
+              <div className="hidden sm:flex flex-col items-center gap-2 min-w-[60px]">
+                <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Megaphone className="h-4 w-4 text-primary" />
+                </div>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center">
+                  {format(new Date(comunicado.created_at), "dd MMM", { locale: ptBR })}
+                </div>
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <h4 className="font-bold text-lg text-foreground leading-tight">
                     {comunicado.titulo}
                   </h4>
-                  {comunicado.tipo === "turma" && comunicado.turmas?.nome && (
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      {comunicado.turmas.nome}
+                  {comunicado.tipo === "turma" && comunicado.turmas?.nome ? (
+                    <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/20 w-fit">
+                      Turma: {comunicado.turmas.nome}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground w-fit">
+                      Geral
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-2">
+                <p className="text-sm text-foreground/80 leading-relaxed font-medium">
                   {comunicado.mensagem}
                 </p>
+                <div className="sm:hidden text-xs font-semibold text-muted-foreground mt-2">
+                  {format(new Date(comunicado.created_at), "dd MMM HH:mm", { locale: ptBR })}
+                </div>
               </div>
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {format(new Date(comunicado.created_at), "dd/MM", { locale: ptBR })}
-              </span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
@@ -714,35 +787,49 @@ const FrequenciaCard = () => {
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <ClipboardList className="h-5 w-5" />
+    <Card className="shadow-md border-t-4 border-t-green-500 h-full">
+      <CardHeader className="bg-green-50/50 dark:bg-green-900/10 border-b pb-4">
+        <CardTitle className="text-lg flex items-center gap-2 text-green-700 dark:text-green-400 font-bold uppercase tracking-tight">
+          <div className="p-1.5 bg-green-100 dark:bg-green-800 rounded-lg">
+            <ClipboardList className="h-4 w-4" />
+          </div>
           Últimas Presenças
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="p-0">
         {presencas && presencas.length > 0 ? (
-          presencas.map((p, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(p.data), "dd/MM/yyyy", { locale: ptBR })}
-                </p>
+          <div className="divide-y divide-border/50">
+            {presencas.map((p, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center ${p.presente ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    {p.presente ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">
+                      {format(new Date(p.data), "dd/MM/yyyy", { locale: ptBR })}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                      Registro de sala
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  {p.presente ? (
+                    <span className="text-sm font-bold text-green-600 dark:text-green-400">Presente</span>
+                  ) : (
+                    <Badge variant="destructive" className="font-bold uppercase tracking-wider text-[10px]">Falta</Badge>
+                  )}
+                </div>
               </div>
-              <div>
-                {p.presente ? (
-                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Presente</Badge>
-                ) : (
-                  <Badge variant="destructive">Falta</Badge>
-                )}
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Nenhum registro recente.
-          </p>
+          <div className="flex flex-col items-center justify-center py-8 text-center px-4">
+            <ClipboardList className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Nenhum registro verificado.</p>
+            <p className="text-xs text-muted-foreground mt-1">A frequência será atualizada após as aulas.</p>
+          </div>
         )}
       </CardContent>
     </Card>
