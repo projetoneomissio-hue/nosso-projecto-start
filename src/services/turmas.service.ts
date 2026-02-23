@@ -89,8 +89,7 @@ export const turmasService = {
           nome_completo,
           data_nascimento,
           responsavel:profiles!alunos_responsavel_id_fkey(nome_completo),
-          saude_pne,
-          saude_alergias
+          anamneses(is_pne, doenca_cronica, alergias)
         )
       `)
             .eq("turma_id", turmaId)
@@ -105,8 +104,8 @@ export const turmasService = {
             data_nascimento: m.aluno.data_nascimento,
             responsavel_nome: m.aluno.responsavel?.nome_completo,
             status_matricula: m.status,
-            saude_pne: m.aluno.saude_pne,
-            saude_alergias: m.aluno.saude_alergias
+            saude_pne: m.aluno.anamneses?.[0]?.is_pne || false,
+            saude_alergias: m.aluno.anamneses?.[0]?.alergias || null
         }));
     },
 
