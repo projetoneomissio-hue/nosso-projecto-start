@@ -48,6 +48,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ProfileSwitcher } from "@/components/ProfileSwitcher";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -193,7 +194,7 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const navigation = user ? getNavigationByRole(user.role) : [];
+  const navigation = user && user.activeRole ? getNavigationByRole(user.activeRole) : [];
 
   const handleLogout = () => {
     logout();
@@ -302,15 +303,17 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
       </nav>
 
       <div className={cn("p-4 mt-auto transition-all duration-500", isCollapsed && "p-2")}>
-        <div className="space-y-2">
+        <div className="space-y-4">
+          <ProfileSwitcher isCollapsed={isCollapsed} />
+
           {!isCollapsed && user && (
-            <div className="mb-4 p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3 backdrop-blur-sm">
+            <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3 backdrop-blur-sm">
               <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-black text-xs shadow-lg shadow-primary/20">
                 {user.name?.[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-black text-foreground truncate uppercase tracking-widest">{user.name}</p>
-                <p className="text-[8px] font-bold text-muted-foreground truncate uppercase opacity-50">{user.role}</p>
+                <p className="text-[8px] font-bold text-muted-foreground truncate uppercase opacity-50">{user.activeRole}</p>
               </div>
             </div>
           )}
@@ -366,7 +369,7 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
       >
         {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
       </button>
-    </div>
+    </div >
   );
 };
 

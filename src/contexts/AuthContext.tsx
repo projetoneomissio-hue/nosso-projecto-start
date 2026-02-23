@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -6,11 +6,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type UserRole = "direcao" | "coordenacao" | "professor" | "responsavel";
 
+const ACTIVE_ROLE_KEY = "neo-missio-active-role";
+
 interface User {
   id: string;
   name: string;
   email: string;
+  /** @deprecated Use activeRole instead. Kept for backward compatibility. */
   role: UserRole;
+  roles: UserRole[];
+  activeRole: UserRole;
 }
 
 interface AuthContextType {
@@ -19,6 +24,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ error: Error | null }>;
   signup: (email: string, password: string, name: string, role: UserRole, inviteToken?: string, referralCode?: string) => Promise<{ error: Error | null }>;
   logout: () => Promise<void>;
+  setActiveRole: (role: UserRole) => void;
   isAuthenticated: boolean;
   loading: boolean;
 }
@@ -36,6 +42,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [activeRoleOverride, setActiveRoleOverride] = useState<UserRole | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -54,6 +61,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (event === 'SIGNED_OUT') {
           queryClient.clear();
+          localStorage.removeItem(ACTIVE_ROLE_KEY);
+          setActiveRoleOverride(null);
         } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           queryClient.invalidateQueries({ queryKey: ["user-profile"] });
         }
@@ -63,37 +72,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  const { data: user, isLoading: isProfileLoading } = useQuery({
+  const { data: userProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ["user-profile", session?.user?.id],
     enabled: !!session?.user,
-    queryFn: async (): Promise<User | null> => {
+    queryFn: async (): Promise<{ name: string; email: string; id: string; roles: UserRole[] } | null> => {
       const supabaseUser = session!.user;
 
       try {
-        // Fetch profile and role in parallel
-        const [profileRes, roleRes] = await Promise.all([
+        // Fetch profile and ALL roles in parallel
+        const [profileRes, rolesRes] = await Promise.all([
           supabase.from("profiles").select("nome_completo").eq("id", supabaseUser.id).single(),
-          supabase.from("user_roles").select("role").eq("user_id", supabaseUser.id).limit(1).maybeSingle()
+          supabase.from("user_roles").select("role").eq("user_id", supabaseUser.id)
         ]);
 
-        if (profileRes.error || roleRes.error) {
-          console.error("Erro ao buscar dados do usuário:", profileRes.error || roleRes.error);
+        if (profileRes.error || rolesRes.error) {
+          console.error("Erro ao buscar dados do usuário:", profileRes.error || rolesRes.error);
           return null;
         }
+
+        const roles = (rolesRes.data || []).map((r: any) => r.role as UserRole);
 
         return {
           id: supabaseUser.id,
           name: profileRes.data.nome_completo,
           email: supabaseUser.email || "",
-          role: roleRes.data.role as UserRole,
+          roles,
         };
       } catch (error) {
         console.error("Error in user queryFn:", error);
         return null;
       }
     },
-    staleTime: Infinity, // Profile data doesn't change often
+    staleTime: Infinity,
   });
+
+  // Compute the final user object with activeRole
+  const user: User | null = userProfile && userProfile.roles.length > 0
+    ? (() => {
+      const savedRole = localStorage.getItem(ACTIVE_ROLE_KEY) as UserRole | null;
+      const activeRole = activeRoleOverride && userProfile.roles.includes(activeRoleOverride)
+        ? activeRoleOverride
+        : savedRole && userProfile.roles.includes(savedRole)
+          ? savedRole
+          : userProfile.roles[0];
+
+      return {
+        id: userProfile.id,
+        name: userProfile.name,
+        email: userProfile.email,
+        roles: userProfile.roles,
+        activeRole,
+        role: activeRole, // backward compat
+      };
+    })()
+    : null;
+
+  const setActiveRole = useCallback((role: UserRole) => {
+    if (userProfile?.roles.includes(role)) {
+      localStorage.setItem(ACTIVE_ROLE_KEY, role);
+      setActiveRoleOverride(role);
+    }
+  }, [userProfile?.roles]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -138,6 +177,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setSession(null);
     queryClient.clear();
+    localStorage.removeItem(ACTIVE_ROLE_KEY);
+    setActiveRoleOverride(null);
   };
 
   return (
@@ -148,6 +189,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         signup,
         logout,
+        setActiveRole,
         isAuthenticated: !!user,
         loading: isAuthLoading || (!!session?.user && isProfileLoading),
       }}

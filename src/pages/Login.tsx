@@ -121,26 +121,31 @@ const Login = () => {
           return;
         }
 
-        const { data: roles } = await supabase
+        const { data: rolesData } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
 
-        const isAdmin = roles?.some(r =>
-          ['direcao', 'coordenacao', 'professor'].includes(r.role)
+        const roles = rolesData?.map(r => r.role) || [];
+        const isAdmin = roles.some(r =>
+          ['direcao', 'coordenacao', 'professor'].includes(r)
         );
 
         /* 
         // Optional: Enforce MFA for admins in production
-        if (isAdmin && import.meta.env.PROD) {
-          toast({
-            title: "Configuração MFA Recomendada",
-            description: "Como administrador, recomendamos configurar a autenticação de dois fatores pela tela de Perfil.",
-          });
-          // navigate("/mfa-setup"); // Removed forced redirect
-          // return;
-        }
+        // ...
         */
+
+        // Determine redirect based on roles
+        const savedRole = localStorage.getItem("neo-missio-active-role") as UserRole | null;
+        const activeRole = savedRole && roles.includes(savedRole)
+          ? savedRole
+          : roles[0];
+
+        if (activeRole === 'responsavel') {
+          navigate("/responsavel/dashboard");
+          return;
+        }
       }
 
       navigate("/dashboard");
@@ -241,7 +246,7 @@ const Login = () => {
           validation.data.name,
           "responsavel",
           undefined,
-          validation.data.referralCode
+          referralCode
         );
 
         if (error) {

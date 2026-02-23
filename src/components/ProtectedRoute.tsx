@@ -60,7 +60,8 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
 
   // UX: Redirect to home if user doesn't have required role
   // NOTE: This is UX only. Real security is in RLS policies.
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  // Check ALL assigned roles (not just activeRole) so multi-role users can access all their routes
+  if (allowedRoles && user && !user.roles.some(r => allowedRoles.includes(r))) {
     return <Navigate to="/" replace />;
   }
 

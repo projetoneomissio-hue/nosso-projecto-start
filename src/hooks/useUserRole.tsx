@@ -10,45 +10,14 @@
  * - Navigation menu customization
  * - Client-side route protection
  * 
- * HOWEVER, this is NOT a security measure. All functions in this hook
- * check roles from client-side state, which can be manipulated.
+ * MULTI-ROLE SUPPORT:
+ * - Users can have multiple roles (e.g., coordenacao + responsavel)
+ * - `hasRole()` checks against the ACTIVE role (for UI layout)
+ * - `hasAnyAssignedRole()` checks against ALL assigned roles (for route access)
+ * - `activeRole` is the currently selected role
+ * - `setActiveRole()` switches the active profile
  * 
- * ACTUAL SECURITY is enforced at the DATABASE level through:
- * 
- * 1. ROW LEVEL SECURITY (RLS) POLICIES
- *    - Every table has policies checking has_role(auth.uid(), 'role_name')
- *    - Policies prevent unauthorized data access regardless of client state
- *    - Example: "Professores podem ver matrículas de suas turmas"
- * 
- * 2. SECURITY DEFINER FUNCTIONS  
- *    - has_role(): Checks user_roles table with elevated privileges
- *    - is_coordenador_atividade(): Validates coordinator permissions
- *    - is_professor_turma(): Validates professor permissions
- *    - is_responsavel_aluno(): Validates parent/guardian permissions
- * 
- * 3. INVITE-BASED ADMIN REGISTRATION
- *    - Public signup restricted to 'responsavel' role only
- *    - Admin roles require valid invitation token
- *    - Tokens validated server-side before role assignment
- * 
- * USAGE EXAMPLE:
- * ```tsx
- * const { isDirecao, canManageAll } = useUserRole();
- * 
- * // ✅ CORRECT: Use for UI rendering
- * {isDirecao() && <AdminPanel />}
- * 
- * // ❌ WRONG: Never use for data access decisions
- * if (isDirecao()) {
- *   // Don't make security decisions here!
- *   // Use RLS-protected queries instead
- * }
- * ```
- * 
- * REMEMBER:
- * - Client-side checks = Better UX
- * - Server-side RLS = Actual security
- * - Never trust client-side role validation for security
+ * ACTUAL SECURITY is enforced at the DATABASE level through RLS policies.
  * 
  * See also:
  * - src/components/ProtectedRoute.tsx
@@ -59,14 +28,21 @@
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 
 export const useUserRole = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, setActiveRole } = useAuth();
 
+  /** Checks if the ACTIVE role matches */
   const hasRole = (role: UserRole) => {
-    return user?.role === role;
+    return user?.activeRole === role;
   };
 
+  /** Checks if the ACTIVE role is in the list */
   const hasAnyRole = (roles: UserRole[]) => {
-    return user?.role && roles.includes(user.role);
+    return user?.activeRole && roles.includes(user.activeRole);
+  };
+
+  /** Checks if the user has ANY of these roles assigned (not just active) */
+  const hasAnyAssignedRole = (roles: UserRole[]) => {
+    return user?.roles?.some(r => roles.includes(r)) ?? false;
   };
 
   const isDirecao = () => hasRole("direcao");
@@ -83,6 +59,7 @@ export const useUserRole = () => {
     isAuthenticated,
     hasRole,
     hasAnyRole,
+    hasAnyAssignedRole,
     isDirecao,
     isCoordenacao,
     isProfessor,
@@ -90,5 +67,9 @@ export const useUserRole = () => {
     canManageAll,
     canManageActivities,
     canViewFinancial,
+    roles: user?.roles || [],
+    activeRole: user?.activeRole,
+    setActiveRole,
+    hasMultipleRoles: (user?.roles?.length ?? 0) > 1,
   };
 };

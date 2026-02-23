@@ -8,13 +8,7 @@ import { handleError } from "@/utils/error-handler";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, UserCog } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
 type AppRole = "direcao" | "coordenacao" | "professor" | "responsavel";
@@ -23,8 +17,17 @@ interface UserData {
   id: string;
   name: string;
   email: string;
-  role: AppRole | "sem_role";
+  roles: AppRole[];
 }
+
+const roleLabels: Record<AppRole, string> = {
+  direcao: "Direção",
+  coordenacao: "Coordenação",
+  professor: "Professor",
+  responsavel: "Responsável",
+};
+
+const allRoles: AppRole[] = ["direcao", "coordenacao", "professor", "responsavel"];
 
 const Usuarios = () => {
   const { toast } = useToast();
@@ -49,58 +52,80 @@ const Usuarios = () => {
         id: u.id,
         name: u.nome_completo,
         email: u.email,
-        role: u.user_roles?.[0]?.role as AppRole || "sem_role",
+        roles: (u.user_roles || []).map((r: any) => r.role as AppRole),
       })) as UserData[];
     },
   });
 
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // Check if user already has a role
-      const { data: existingRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
+    mutationFn: async ({ userId, newRoles, oldRoles }: { userId: string; newRoles: AppRole[], oldRoles: AppRole[] }) => {
+      if (newRoles.length === 0) {
+        throw new Error("O usuário deve ter pelo menos um papel de acesso.");
+      }
 
-      if (existingRoles && existingRoles.length > 0) {
-        // Update existing
-        const { error } = await supabase
+      const rolesToAdd = newRoles.filter(r => !oldRoles.includes(r));
+      const rolesToRemove = oldRoles.filter(r => !newRoles.includes(r));
+
+      if (rolesToRemove.length > 0) {
+        const { error: deleteError } = await supabase
           .from("user_roles")
-          .update({ role: newRole })
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        // Insert new
-        const { error } = await supabase
+          .delete()
+          .eq("user_id", userId)
+          .in("role", rolesToRemove);
+
+        if (deleteError) throw deleteError;
+      }
+
+      if (rolesToAdd.length > 0) {
+        const insertData = rolesToAdd.map(role => ({ user_id: userId, role }));
+        const { error: insertError } = await supabase
           .from("user_roles")
-          .insert({ user_id: userId, role: newRole });
-        if (error) throw error;
+          .insert(insertData);
+
+        if (insertError) throw insertError;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-users"] });
       toast({
         title: "Sucesso",
-        description: "Papel do usuário atualizado com sucesso.",
+        description: "Papéis do usuário atualizados com sucesso.",
       });
     },
     onError: (error) => {
-      handleError(error, "Erro ao atualizar papel");
+      handleError(error, "Erro ao atualizar papéis");
     },
   });
+
+  const handleRoleToggle = (user: UserData, role: AppRole, isChecked: boolean) => {
+    let newRoles = [...user.roles];
+
+    if (isChecked && !newRoles.includes(role)) {
+      newRoles.push(role);
+    } else if (!isChecked && newRoles.includes(role)) {
+      newRoles = newRoles.filter(r => r !== role);
+    }
+
+    if (newRoles.length === 0) {
+      toast({
+        title: "Operação não permitida",
+        description: "Um usuário não pode ficar sem nenhum papel de acesso.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    updateRoleMutation.mutate({
+      userId: user.id,
+      newRoles,
+      oldRoles: user.roles
+    });
+  };
 
   const filteredUsers = usuarios?.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const roleLabels: Record<string, string> = {
-    direcao: "Direção",
-    coordenacao: "Coordenação",
-    professor: "Professor",
-    responsavel: "Responsável",
-    sem_role: "Sem Perfil",
-  };
 
   return (
     <DashboardLayout>
@@ -137,12 +162,12 @@ const Usuarios = () => {
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-4 border rounded-lg flex justify-between items-center">
+                  <div key={i} className="p-4 border rounded-lg flex flex-col gap-4">
                     <div className="space-y-2">
                       <Skeleton className="h-5 w-48" />
                       <Skeleton className="h-4 w-64" />
                     </div>
-                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-8 w-full max-w-md" />
                   </div>
                 ))}
               </div>
@@ -158,37 +183,46 @@ const Usuarios = () => {
                 {filteredUsers.map((user) => (
                   <div
                     key={user.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors gap-4"
+                    className="flex flex-col md:flex-row md:items-start justify-between p-5 border rounded-xl hover:bg-accent/5 transition-colors gap-6"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="font-semibold text-lg">{user.name}</h3>
-                        {user.role === "sem_role" && (
-                          <Badge variant="destructive">Sem Acesso</Badge>
-                        )}
+                        <div className="flex gap-1.5 flex-wrap">
+                          {user.roles.length === 0 ? (
+                            <Badge variant="destructive">Sem Acesso</Badge>
+                          ) : (
+                            user.roles.map(role => (
+                              <Badge key={`badge-${role}`} variant="secondary" className="text-[10px] uppercase tracking-wider font-bold">
+                                {roleLabels[role]}
+                              </Badge>
+                            ))
+                          )}
+                        </div>
                       </div>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-muted-foreground hidden lg:block">Nível de Acesso:</span>
-                      <Select
-                        value={user.role}
-                        onValueChange={(value) =>
-                          updateRoleMutation.mutate({ userId: user.id, newRole: value as AppRole })
-                        }
-                        disabled={updateRoleMutation.isPending}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Selecione um papel" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="direcao">Direção</SelectItem>
-                          <SelectItem value="coordenacao">Coordenação</SelectItem>
-                          <SelectItem value="professor">Professor</SelectItem>
-                          <SelectItem value="responsavel">Responsável</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="flex flex-col gap-3 min-w-[200px] p-4 bg-background/50 rounded-lg border border-white/5">
+                      <span className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Papéis Atribuídos</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {allRoles.map(role => (
+                          <div key={`check-${role}`} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`role-${user.id}-${role}`}
+                              checked={user.roles.includes(role)}
+                              onCheckedChange={(checked) => handleRoleToggle(user, role, checked === true)}
+                              disabled={updateRoleMutation.isPending}
+                            />
+                            <label
+                              htmlFor={`role-${user.id}-${role}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {roleLabels[role]}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
