@@ -130,14 +130,17 @@ const Login = () => {
           ['direcao', 'coordenacao', 'professor'].includes(r.role)
         );
 
+        /* 
+        // Optional: Enforce MFA for admins in production
         if (isAdmin && import.meta.env.PROD) {
           toast({
-            title: "Configuração MFA Necessária",
-            description: "Como administrador, você precisa configurar a autenticação de dois fatores.",
+            title: "Configuração MFA Recomendada",
+            description: "Como administrador, recomendamos configurar a autenticação de dois fatores pela tela de Perfil.",
           });
-          navigate("/mfa-setup");
-          return;
+          // navigate("/mfa-setup"); // Removed forced redirect
+          // return;
         }
+        */
       }
 
       navigate("/dashboard");
