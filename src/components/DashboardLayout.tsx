@@ -28,9 +28,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -140,9 +141,9 @@ const getNavigationByRole = (role: string) => {
         group: "Acadêmico",
         items: [
           { name: "Minhas Turmas", href: "/professor/turmas", icon: Users },
-          { name: "Chamada / Frequência", href: "/professor/chamada", icon: ClipboardList },
+          { name: "Grade de Notas", href: "/professor/turmas", icon: Trophy, search: "?mode=grade" },
+          { name: "Chamada / Frequência", href: "/professor/turmas", icon: FileText, search: "?mode=chamada" },
           { name: "Meus Alunos", href: "/professor/alunos", icon: Users },
-          { name: "Presença", href: "/professor/presenca", icon: Calendar },
           { name: "Observações", href: "/professor/observacoes", icon: FileText },
         ]
       },
@@ -394,7 +395,11 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] p-0 bg-transparent border-none shadow-none">
+          <SheetContent side="left" className="w-[300px] p-0 bg-transparent border-none shadow-none" aria-describedby={undefined}>
+            <SheetHeader className="sr-only">
+              <SheetTitle>Menu de Navegação</SheetTitle>
+              <SheetDescription>Acesso rápido às áreas do sistema</SheetDescription>
+            </SheetHeader>
             <Sidebar isCollapsed={false} toggleCollapsed={() => { }} />
           </SheetContent>
         </Sheet>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,31 +6,110 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, parseISO, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Save, WifiOff, Wifi, AlertCircle, CalendarIcon, ChevronLeft, Check, X, RefreshCw, LayoutGrid, List } from "lucide-react";
 import { ObservacaoAluno } from "@/components/professor/ObservacaoAluno";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 const Chamada = () => {
     const { user } = useAuth();
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
 
-    const [selectedTurmaId, setSelectedTurmaId] = useState<string>("");
-    const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
+    const [selectedTurmaId, setSelectedTurmaId] = useState<string>(searchParams.get("turma") || "");
+    const [rawDate, setDate] = useState<Date | string>(new Date());
+    const date = rawDate instanceof Date ? rawDate : parseISO(rawDate as string) || new Date();
     const [attendance, setAttendance] = useState<Record<string, boolean>>({});
     const [observations, setObservations] = useState<Record<string, string>>({});
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    const [pendingSyncs, setPendingSyncs] = useState<any[]>([]);
+    const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+        return (localStorage.getItem("chamada_view_mode") as "grid" | "list") || "grid";
+    });
 
-    // 1. Fetch Turmas assigned to this professor
+    useEffect(() => {
+        localStorage.setItem("chamada_view_mode", viewMode);
+    }, [viewMode]);
+
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOffline(false);
+            syncOfflineData();
+        };
+        const handleOffline = () => setIsOffline(true);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        checkPendingSyncs();
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
+    const checkPendingSyncs = () => {
+        try {
+            const queue = JSON.parse(localStorage.getItem("offline_chamadas") || "[]");
+            setPendingSyncs(queue);
+        } catch (e) {
+            setPendingSyncs([]);
+        }
+    };
+
+    const syncOfflineData = async () => {
+        const queue = JSON.parse(localStorage.getItem("offline_chamadas") || "[]");
+        if (queue.length === 0) return;
+
+        toast({
+            title: "Sincronizando...",
+            description: `Enviando ${queue.length} chamada(s) offline para o servidor.`,
+            variant: "default",
+        });
+
+        let successCount = 0;
+        const remainingQueue = [];
+
+        for (const item of queue) {
+            try {
+                const matriculaIds = item.data.map((d: any) => d.matricula_id);
+                await supabase.from("presencas").delete().in("matricula_id", matriculaIds).eq("data", item.date);
+
+                const { error } = await supabase.from("presencas").insert(item.data);
+                if (error) throw error;
+                successCount++;
+            } catch (error) {
+                console.error("Falha ao sincronizar item da fila", error);
+                remainingQueue.push(item);
+            }
+        }
+
+        localStorage.setItem("offline_chamadas", JSON.stringify(remainingQueue));
+        checkPendingSyncs();
+
+        if (successCount > 0) {
+            toast({
+                title: "Sincronização Concluída",
+                description: `${successCount} chamada(s) registradas online com sucesso.`,
+                className: "bg-green-600 text-white",
+            });
+            queryClient.invalidateQueries({ queryKey: ["chamada-students"] });
+        }
+    };
+
     const { data: turmas, isLoading: loadingTurmas } = useQuery({
         queryKey: ["professor-turmas", user?.id],
         queryFn: async () => {
-            // Find professor record linked to user
             const { data: profData } = await supabase
                 .from("professores")
                 .select("id")
@@ -51,13 +130,13 @@ const Chamada = () => {
         enabled: !!user,
     });
 
-    // 2. Fetch Students + Existing Attendance for selected Class & Date
     const { data: studentsData, isLoading: loadingStudents } = useQuery({
         queryKey: ["chamada-students", selectedTurmaId, date],
         queryFn: async () => {
-            if (!selectedTurmaId) return { matriculas: [] };
+            if (!selectedTurmaId) return { matriculas: [], nomeTurma: "" };
 
-            // Get Students
+            console.log("Fetching students for turma:", selectedTurmaId, "date:", format(date, "yyyy-MM-dd"));
+
             const { data: matriculas, error: matError } = await supabase
                 .from("matriculas")
                 .select(`
@@ -72,26 +151,39 @@ const Chamada = () => {
                 .eq("turma_id", selectedTurmaId)
                 .eq("status", "ativa");
 
-            if (matError) throw matError;
+            if (matError) {
+                console.error("Error fetching matriculas:", matError);
+                throw matError;
+            }
 
-            // Get Existing Attendance using presencas table
-            const { data: presencas, error: presError } = await supabase
-                .from("presencas")
-                .select("*")
-                .in("matricula_id", matriculas?.map(m => m.id) || [])
-                .eq("data", date);
+            const queryDateStr = format(date, "yyyy-MM-dd");
 
-            if (presError) throw presError;
+            let presencas: any[] = [];
+            if (navigator.onLine) {
+                const { data, error: presError } = await supabase
+                    .from("presencas")
+                    .select("*")
+                    .in("matricula_id", matriculas?.map(m => m.id) || [])
+                    .eq("data", queryDateStr);
+                if (!presError) presencas = data || [];
+            }
 
-            // Initialize state from DB or Default to True (Present)
+            const offlineQueue = JSON.parse(localStorage.getItem("offline_chamadas") || "[]");
+            const offlineMatch = offlineQueue.find((q: any) => q.turmaId === selectedTurmaId && q.date === queryDateStr);
+
             const initialAttendance: Record<string, boolean> = {};
             const initialObs: Record<string, string> = {};
 
             matriculas?.forEach(m => {
-                const record = presencas?.find(p => p.matricula_id === m.id);
-                // If record exists, use it. If not, default to TRUE (Assuming presence)
-                initialAttendance[m.id] = record ? record.presente : true;
-                initialObs[m.id] = record?.observacao || "";
+                if (offlineMatch) {
+                    const rec = offlineMatch.data.find((d: any) => d.matricula_id === m.id);
+                    initialAttendance[m.id] = rec ? rec.presente : true;
+                    initialObs[m.id] = rec?.observacao || "";
+                } else {
+                    const record = presencas?.find(p => p.matricula_id === m.id);
+                    initialAttendance[m.id] = record ? record.presente : true;
+                    initialObs[m.id] = record?.observacao || "";
+                }
             });
 
             setAttendance(initialAttendance);
@@ -102,46 +194,44 @@ const Chamada = () => {
         enabled: !!selectedTurmaId && !!date,
     });
 
-    // 3. Save Mutation
+    const currentTurma = turmas?.find(t => t.id === selectedTurmaId);
+
+    const isClassDay = (day: Date) => {
+        if (!currentTurma?.dias_semana) return false;
+        const dayMap: Record<number, string> = {
+            0: "domingo",
+            1: "segunda",
+            2: "terça",
+            3: "quarta",
+            4: "quinta",
+            5: "sexta",
+            6: "sábado"
+        };
+        const dayName = dayMap[getDay(day)];
+        return currentTurma.dias_semana.includes(dayName);
+    };
+
     const saveMutation = useMutation({
         mutationFn: async () => {
             if (!studentsData?.matriculas) return;
+            const queryDateStr = format(date, "yyyy-MM-dd");
 
             const upsertData = studentsData.matriculas.map(m => ({
                 matricula_id: m.id,
-                data: date,
+                data: queryDateStr,
                 presente: attendance[m.id] ?? true,
                 observacao: observations[m.id] || null
             }));
 
             const matriculaIds = studentsData.matriculas.map(m => m.id);
 
-            try {
-                // Delete existing
-                await supabase.from("presencas")
-                    .delete()
-                    .in("matricula_id", matriculaIds)
-                    .eq("data", date);
-
-                // Insert new
-                const { error } = await supabase.from("presencas").insert(upsertData);
-                if (error) throw error;
-            } catch (error) {
-                // FALLBACK OFFLINE
-                console.warn("Erro ao salvar online. Salvando offline...", error);
-
-                const offlineQueue = JSON.parse(localStorage.getItem("offline_chamadas") || "[]");
-                offlineQueue.push({
-                    date,
-                    turmaId: selectedTurmaId,
-                    data: upsertData,
-                    timestamp: Date.now()
-                });
-                localStorage.setItem("offline_chamadas", JSON.stringify(offlineQueue));
-
-                // Throw error to trigger onError context, but specialized message
-                throw new Error("Sem conexão. Dados salvos no dispositivo.");
+            if (!navigator.onLine) {
+                throw new Error("offline");
             }
+
+            await supabase.from("presencas").delete().in("matricula_id", matriculaIds).eq("data", queryDateStr);
+            const { error } = await supabase.from("presencas").insert(upsertData);
+            if (error) throw error;
         },
         onSuccess: () => {
             toast({
@@ -151,254 +241,388 @@ const Chamada = () => {
             queryClient.invalidateQueries({ queryKey: ["chamada-students"] });
         },
         onError: (err) => {
-            if (err.message.includes("Sem conexão")) {
-                toast({
-                    title: "Salvo Offline",
-                    description: "Sem internet. Sincronizaremos quando retomar a conexão.",
-                    variant: "default", // Or warning
-                    className: "bg-yellow-500 text-white"
-                });
-            } else {
-                toast({
-                    title: "Erro ao salvar",
-                    description: err.message,
-                    variant: "destructive"
-                });
-            }
+            const queryDateStr = format(date, "yyyy-MM-dd");
+            const upsertData = studentsData?.matriculas.map(m => ({
+                matricula_id: m.id,
+                data: queryDateStr,
+                presente: attendance[m.id] ?? true,
+                observacao: observations[m.id] || null
+            })) || [];
+
+            const offlineQueue = JSON.parse(localStorage.getItem("offline_chamadas") || "[]");
+            const filteredQueue = offlineQueue.filter((q: any) => !(q.turmaId === selectedTurmaId && q.date === queryDateStr));
+
+            filteredQueue.push({
+                date: queryDateStr,
+                turmaId: selectedTurmaId,
+                data: upsertData,
+                timestamp: Date.now()
+            });
+            localStorage.setItem("offline_chamadas", JSON.stringify(filteredQueue));
+            checkPendingSyncs();
+
+            toast({
+                title: "Salvo Offline",
+                description: "Sem internet. Os dados foram salvos no dispositivo e serão enviados automaticamente.",
+                className: "bg-orange-600 text-white border-none",
+            });
         }
     });
 
-    const togglePresence = (matriculaId: string) => {
+    const setPresence = (matriculaId: string, value: boolean) => {
         setAttendance(prev => ({
             ...prev,
-            [matriculaId]: !prev[matriculaId]
-        }));
-    };
-
-    const updateObservation = (matriculaId: string, obs: string) => {
-        setObservations(prev => ({
-            ...prev,
-            [matriculaId]: obs
+            [matriculaId]: value
         }));
     };
 
     return (
         <DashboardLayout>
-            <div className="space-y-4 pb-20"> {/* pb-20 for bottom action bar */}
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Chamada</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Registre a presença dos alunos
-                    </p>
-                </div>
+            <div className="flex flex-col min-h-screen">
+                {/* Premium Header - Zero Distraction Mode */}
+                <div className="bg-primary pt-3 pb-4 px-6 sticky top-0 z-[100] backdrop-blur-md border-b border-white/10 shadow-sm">
+                    <div className="flex items-center justify-between text-white max-w-5xl mx-auto w-full">
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-white h-9 w-9 hover:bg-white/20 rounded-full transition-all active:scale-90"
+                                onClick={() => navigate("/professor/turmas")}
+                            >
+                                <ChevronLeft className="h-5 w-5" />
+                            </Button>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-0 sm:gap-3">
+                                <h1 className="text-sm sm:text-base font-black uppercase tracking-widest text-white/95">Diário de Classe</h1>
+                                <span className="hidden sm:block opacity-30">|</span>
+                                <span className="text-xs sm:text-sm font-medium opacity-80 truncate max-w-[150px] sm:max-w-none">
+                                    {studentsData?.nomeTurma || "Carregando..."}
+                                </span>
+                            </div>
+                        </div>
 
-                <div className="grid lg:grid-cols-3 gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Selecione a Data</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex justify-center">
-                            <Calendar
-                                mode="single"
-                                selected={new Date(date + "T12:00:00")}
-                                onSelect={(d) => d && setDate(d.toISOString().split("T")[0])}
-                                className="rounded-md border"
-                                locale={ptBR}
-                            />
-                        </CardContent>
-                    </Card>
+                        <div className="flex items-center gap-3">
+                            <div className="hidden sm:flex flex-col items-end mr-2">
+                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest leading-none">Presença</span>
+                                <span className="text-[11px] font-bold text-white/80 mt-1">
+                                    {Object.values(attendance).filter(Boolean).length}/{studentsData?.matriculas?.length || 0}
+                                </span>
+                            </div>
 
-                    <Card className="lg:col-span-2">
-                        <CardHeader className="pb-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="space-y-1">
-                                    <CardTitle>Chamada</CardTitle>
-                                    {selectedTurmaId && (
-                                        <p className="text-sm text-muted-foreground">
-                                            {Object.values(attendance).filter(Boolean).length} presentes de {studentsData?.matriculas?.length || 0} alunos
-                                        </p>
-                                    )}
-                                </div>
-
-                                {selectedTurmaId && (studentsData?.matriculas?.length || 0) > 0 && (
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                const newState = { ...attendance };
-                                                studentsData?.matriculas?.forEach((m: any) => newState[m.id] = true);
-                                                setAttendance(newState);
-                                            }}
-                                        >
-                                            Todos Presentes
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                const newState = { ...attendance };
-                                                studentsData?.matriculas?.forEach((m: any) => newState[m.id] = false);
-                                                setAttendance(newState);
-                                            }}
-                                        >
-                                            Todos Ausentes
-                                        </Button>
+                            <Button
+                                size="sm"
+                                className="h-9 rounded-xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 group overflow-hidden px-4"
+                                onClick={() => saveMutation.mutate()}
+                                disabled={saveMutation.isPending}
+                            >
+                                {saveMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <Save className="h-4 w-4" />
+                                        <span>Salvar</span>
                                     </div>
                                 )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>Turma</Label>
-                                <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {loadingTurmas && <SelectItem value="loading" disabled>Carregando...</SelectItem>}
-                                        {turmas?.map((t: any) => (
-                                            <SelectItem key={t.id} value={t.id}>
-                                                {t.nome} - {t.atividades?.nome}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                            </Button>
+
+                            <div className="sm:hidden flex items-center justify-center bg-white/10 rounded-lg px-2 h-9 border border-white/5">
+                                <span className="text-[11px] font-black text-white">
+                                    {Object.values(attendance).filter(Boolean).length}/{studentsData?.matriculas?.length || 0}
+                                </span>
                             </div>
 
-                            {/* Mobile Date Input (visible only on small screens if needed, or stick to Calendar) */}
-                            <div className="lg:hidden">
-                                <Label>Data</Label>
-                                <Input
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) => setDate(e.target.value)}
-                                />
-                            </div>
+                            {isOffline ? (
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/20 text-red-100 text-[10px] font-black rounded-full border border-red-500/30 uppercase tracking-tighter shadow-sm">
+                                    <WifiOff className="w-3 h-3" /> Offline
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/20 text-green-100 text-[10px] font-black rounded-full border border-green-500/30 uppercase tracking-tighter shadow-sm">
+                                    <Wifi className="w-3 h-3" /> Online
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
 
-                            {selectedTurmaId && (
-                                <div className="space-y-3">
-                                    {loadingStudents ? (
-                                        <div className="flex justify-center py-8">
-                                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                                        </div>
-                                    ) : studentsData?.matriculas?.length === 0 ? (
-                                        <Card className="p-8 text-center text-muted-foreground">
-                                            Nenhum aluno nesta turma.
-                                        </Card>
-                                    ) : (
-                                        studentsData?.matriculas?.map((m: any) => (
-                                            <Card
-                                                key={m.id}
-                                                className={`transition-all duration-200 cursor-pointer active:scale-[0.99] border-l-4 ${attendance[m.id]
-                                                    ? "border-l-green-500 bg-green-50/30 hover:bg-green-50/50"
-                                                    : "border-l-red-500 bg-red-50/30 hover:bg-red-50/50"
-                                                    }`}
-                                                onClick={() => togglePresence(m.id)}
+                <main className="flex-1 px-3 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full mt-6 space-y-6 pb-12">
+                    {/* Control Card */}
+                    <Card className="glass shadow-xl border-white/20 backdrop-blur-xl rounded-[24px]">
+                        <CardContent className="p-5 sm:p-7 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-black text-muted-foreground uppercase px-1 tracking-widest">Turma Selecionada</Label>
+                                    <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
+                                        <SelectTrigger className="h-12 bg-background/40 border-input/40 backdrop-blur-sm rounded-xl">
+                                            <SelectValue placeholder="Escolha uma turma..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {loadingTurmas && <SelectItem value="loading" disabled>Carregando...</SelectItem>}
+                                            {turmas?.map((t: any) => (
+                                                <SelectItem key={t.id} value={t.id} className="font-medium">
+                                                    {t.nome} <span className="text-muted-foreground ml-1">({t.atividades?.nome})</span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-black text-muted-foreground uppercase px-1 tracking-widest">Data da Aula</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className={cn(
+                                                    "w-full h-12 justify-start text-left font-medium rounded-xl border-white/10 bg-black/20 hover:bg-black/40 text-white shadow-inner",
+                                                    !date && "text-muted-foreground"
+                                                )}
                                             >
-                                                <CardContent className="p-4 flex items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-3 overflow-hidden flex-1">
-                                                        <div
-                                                            className={`h-12 w-12 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm transition-colors
-                                                                ${attendance[m.id] ? "bg-green-500" : "bg-red-500"}
-                                                            `}
-                                                        >
-                                                            {m.alunos?.nome_completo?.charAt(0) || "?"}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <p className="font-semibold truncate text-foreground text-base">
-                                                                    {m.alunos?.nome_completo}
-                                                                </p>
-                                                                {m.alunos?.anamneses?.[0]?.is_pne && (
-                                                                    <div
-                                                                        className="h-5 w-5 bg-red-500 rounded-full flex items-center justify-center animate-pulse"
-                                                                        title={`PNE: ${m.alunos?.anamneses?.[0]?.pne_descricao || "Ver ficha"}`}
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            toast({
-                                                                                title: "Alerta PNE",
-                                                                                description: m.alunos?.anamneses?.[0]?.pne_descricao || "Este aluno possui necessidades especiais.",
-                                                                                variant: "destructive"
-                                                                            });
-                                                                        }}
-                                                                    >
-                                                                        <AlertCircle className="h-3 w-3 text-white" />
-                                                                    </div>
-                                                                )}
-                                                                {(m.alunos?.anamneses?.[0]?.doenca_cronica || m.alunos?.anamneses?.[0]?.alergias) && (
-                                                                    <div
-                                                                        className="h-5 w-5 bg-orange-500 rounded-full flex items-center justify-center"
-                                                                        title="Saúde / Alergia"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            toast({
-                                                                                title: "Alergia/Saúde",
-                                                                                description: `${m.alunos?.anamneses?.[0]?.alergias ? "Alergias: " + m.alunos?.anamneses?.[0]?.alergias : ""} ${m.alunos?.anamneses?.[0]?.doenca_cronica ? "\nDoença: " + m.alunos?.anamneses?.[0]?.doenca_cronica : ""}`,
-                                                                            });
-                                                                        }}
-                                                                    >
-                                                                        <AlertCircle className="h-3 w-3 text-white" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div
-                                                                className="flex gap-2 mt-1"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <ObservacaoAluno
-                                                                    alunoId={m.aluno_id}
-                                                                    alunoNome={m.alunos?.nome_completo}
-                                                                    turmaId={selectedTurmaId}
-                                                                    onSave={(text, photoUrl) => {
-                                                                        setObservations((prev) => ({
-                                                                            ...prev,
-                                                                            [m.aluno_id]: text,
-                                                                        }));
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                <CalendarIcon className="mr-3 h-5 w-5 text-white/50" />
+                                                {date ? format(date, "PPP", { locale: ptBR }) : <span>Selecione a data</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0 rounded-2xl border-white/10 shadow-2xl bg-zinc-950 text-white" align="end">
+                                            <CalendarUI
+                                                mode="single"
+                                                selected={date}
+                                                onSelect={(d) => d && setDate(d)}
+                                                locale={ptBR}
+                                                initialFocus
+                                                modifiers={{ classDay: (day) => isClassDay(day) }}
+                                                modifiersClassNames={{
+                                                    classDay: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full after:animate-pulse"
+                                                }}
+                                                className="p-3"
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </div>
 
-                                                    <div className="shrink-0">
-                                                        <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${attendance[m.id]
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-red-100 text-red-700"
-                                                            }`}>
-                                                            {attendance[m.id] ? "Presente" : "Ausente"}
-                                                        </span>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))
-                                    )}
+                            {selectedTurmaId && (studentsData?.matriculas?.length || 0) > 0 && (
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border/30">
+                                    <p className="text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">
+                                        {Object.values(attendance).filter(Boolean).length} presentes de {studentsData?.matriculas?.length}
+                                    </p>
+                                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                                        {/* View Mode Toggle */}
+                                        <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-xl border border-border/20">
+                                            <Button
+                                                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                                size="sm"
+                                                className={`h-9 w-9 p-0 rounded-lg transition-all ${viewMode === 'grid' ? 'shadow-md bg-background' : ''}`}
+                                                onClick={() => setViewMode('grid')}
+                                            >
+                                                <LayoutGrid className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                                                size="sm"
+                                                className={`h-9 w-9 p-0 rounded-lg transition-all ${viewMode === 'list' ? 'shadow-md bg-background' : ''}`}
+                                                onClick={() => setViewMode('list')}
+                                            >
+                                                <List className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+
+                                        <div className="flex gap-2 flex-1 sm:flex-initial">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex-1 sm:flex-initial rounded-xl text-[10px] font-black uppercase tracking-tighter border-green-500/20 text-green-600 hover:bg-green-500/5 h-9"
+                                                onClick={() => {
+                                                    const newState = { ...attendance };
+                                                    studentsData?.matriculas?.forEach((m: any) => newState[m.id] = true);
+                                                    setAttendance(newState);
+                                                }}
+                                            >
+                                                Todos Presentes
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex-1 sm:flex-initial rounded-xl text-[10px] font-black uppercase tracking-tighter border-red-500/20 text-red-600 hover:bg-red-500/5 h-9"
+                                                onClick={() => {
+                                                    const newState = { ...attendance };
+                                                    studentsData?.matriculas?.forEach((m: any) => newState[m.id] = false);
+                                                    setAttendance(newState);
+                                                }}
+                                            >
+                                                Todos Faltaram
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
-                </div>
 
+                    {/* Students List */}
+                    {selectedTurmaId && (
+                        <div className="space-y-4">
+                            {loadingStudents ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                    <Loader2 className="h-12 w-12 animate-spin text-primary opacity-30" />
+                                    <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">Aguarde...</p>
+                                </div>
+                            ) : studentsData?.matriculas?.length === 0 ? (
+                                <Card className="glass border-white/5 bg-white/5 border-dashed rounded-[24px]">
+                                    <CardContent className="p-12 text-center text-muted-foreground flex flex-col items-center">
+                                        <AlertCircle className="h-12 w-12 mb-4 opacity-10" />
+                                        <p className="font-medium tracking-tight">Nenhum aluno matriculado nesta turma para o dia de hoje.</p>
+                                    </CardContent>
+                                </Card>
+                            ) : studentsData?.matriculas ? (
+                                <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
+                                    {studentsData.matriculas.map((m: any) => {
+                                        const isPresent = attendance[m.id];
+                                        const studentInitials = m.alunos?.nome_completo?.substring(0, 2).toUpperCase() || "AL";
 
-                {/* Floating Action Bar for Mobile */}
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t flex items-center justify-between gap-4 z-50 md:pl-64">
-                    <div className="text-sm text-muted-foreground hidden sm:block">
-                        {studentsData?.matriculas?.length || 0} alunos listados
-                    </div>
-                    <Button
-                        size="lg"
-                        className="w-full sm:w-auto shadow-lg"
-                        onClick={() => saveMutation.mutate()}
-                        disabled={saveMutation.isPending || !selectedTurmaId}
-                    >
-                        {saveMutation.isPending ? (
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        ) : (
-                            <Save className="mr-2 h-5 w-5" />
-                        )}
-                        Salvar Chamada
-                    </Button>
-                </div>
+                                        if (viewMode === 'list') {
+                                            return (
+                                                <div
+                                                    key={m.id}
+                                                    className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-3 pl-4 rounded-[20px] border transition-all duration-300 ${isPresent
+                                                        ? "bg-background border-green-500/20 shadow-sm"
+                                                        : "bg-muted/40 border-red-500/20 opacity-80"
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-4 flex-1 w-full">
+                                                        <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center text-white font-black text-[11px] shadow-lg transition-transform duration-500 ${isPresent ? "bg-green-500" : "bg-red-500 rotate-12"}`}>
+                                                            {studentInitials}
+                                                        </div>
+
+                                                        <div className="min-w-0 flex-1 flex flex-col justify-center">
+                                                            <h3 className={`font-bold text-sm truncate transition-colors ${!isPresent ? "text-muted-foreground line-through decoration-red-500/30" : "text-foreground"}`}>
+                                                                {m.alunos?.nome_completo}
+                                                            </h3>
+                                                            <div className="flex gap-2.5 mt-1">
+                                                                {m.alunos?.anamneses?.[0]?.is_pne && (
+                                                                    <div className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" title="PNE" />
+                                                                )}
+                                                                {(m.alunos?.anamneses?.[0]?.doenca_cronica || m.alunos?.anamneses?.[0]?.alergias) && (
+                                                                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" title="Saúde" />
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between sm:justify-end gap-2 mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-border/10 shrink-0">
+                                                        <div className="flex items-center bg-muted/30 p-1 rounded-xl border border-border/10">
+                                                            <button
+                                                                className={`h-9 px-4 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all flex-1 sm:flex-none ${!isPresent ? "bg-red-500 text-white shadow-md shadow-red-500/30" : "text-muted-foreground hover:bg-background/40"}`}
+                                                                onClick={() => setPresence(m.id, false)}
+                                                            >
+                                                                FALTOU
+                                                            </button>
+                                                            <button
+                                                                className={`h-9 px-4 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all flex-1 sm:flex-none ${isPresent ? "bg-green-500 text-white shadow-md shadow-green-500/30" : "text-muted-foreground hover:bg-background/40"}`}
+                                                                onClick={() => setPresence(m.id, true)}
+                                                            >
+                                                                PRESENTE
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="shrink-0">
+                                                            <ObservacaoAluno
+                                                                alunoId={m.aluno_id}
+                                                                alunoNome={m.alunos?.nome_completo}
+                                                                turmaId={selectedTurmaId}
+                                                                onSave={(text) => {
+                                                                    setObservations((prev) => ({
+                                                                        ...prev,
+                                                                        [m.aluno_id]: text,
+                                                                    }));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div
+                                                key={m.id}
+                                                className={`relative overflow-hidden rounded-[24px] transition-all duration-300 border shadow-sm ${isPresent
+                                                    ? "bg-gradient-to-br from-background to-green-50/5 border-green-500/20 dark:border-green-500/10"
+                                                    : "bg-gradient-to-br from-background to-red-50/5 border-red-500/20 dark:border-red-500/10 opacity-90"
+                                                    }`}
+                                            >
+                                                <div className="p-5 flex flex-col gap-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`h-12 w-12 shrink-0 rounded-full flex items-center justify-center text-white font-black tracking-widest shadow-xl transition-all duration-500 ${isPresent ? "bg-green-500" : "bg-red-500 rotate-12"}`}>
+                                                            {studentInitials}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className={`font-black text-[15px] truncate transition-colors tracking-tight ${isPresent ? "text-foreground" : "text-muted-foreground line-through decoration-red-500/30"}`}>
+                                                                {m.alunos?.nome_completo}
+                                                            </h3>
+                                                            <div className="flex items-center gap-2 mt-1.5">
+                                                                {m.alunos?.anamneses?.[0]?.is_pne && (
+                                                                    <Badge variant="destructive" className="text-[9px] px-2 py-0 h-4 font-black uppercase tracking-tighter bg-red-500">PNE</Badge>
+                                                                )}
+                                                                {(m.alunos?.anamneses?.[0]?.doenca_cronica || m.alunos?.anamneses?.[0]?.alergias) && (
+                                                                    <Badge variant="outline" className="text-[9px] px-2 py-0 h-4 font-black uppercase tracking-tighter border-orange-500 text-orange-600 bg-orange-50/50">Saúde</Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 pt-4 border-t border-border/10">
+                                                        <div className="grid grid-cols-2 flex-1 gap-1.5 bg-muted/30 p-1 rounded-xl">
+                                                            <button
+                                                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${!isPresent ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "text-muted-foreground hover:bg-background/50 opacity-60"}`}
+                                                                onClick={(e) => { e.stopPropagation(); setPresence(m.id, false); }}
+                                                            >
+                                                                <X className="w-3 h-3" /> Faltou
+                                                            </button>
+                                                            <button
+                                                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${isPresent ? "bg-green-500 text-white shadow-lg shadow-green-500/20" : "text-muted-foreground hover:bg-background/50 opacity-60"}`}
+                                                                onClick={(e) => { e.stopPropagation(); setPresence(m.id, true); }}
+                                                            >
+                                                                <Check className="w-3 h-3" /> Presente
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="shrink-0">
+                                                            <ObservacaoAluno
+                                                                alunoId={m.aluno_id}
+                                                                alunoNome={m.alunos?.nome_completo}
+                                                                turmaId={selectedTurmaId}
+                                                                onSave={(text) => {
+                                                                    setObservations((prev) => ({
+                                                                        ...prev,
+                                                                        [m.aluno_id]: text,
+                                                                    }));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <Card className="glass border-red-500/20 bg-red-500/5 rounded-[24px]">
+                                    <CardContent className="p-10 text-center text-red-500 flex flex-col items-center">
+                                        <AlertCircle className="h-10 w-10 mb-3 opacity-80" />
+                                        <p className="font-bold">Ocorreu um erro ao carregar os dados.</p>
+                                        <p className="text-xs opacity-70 mt-1">Por favor, selecione a data novamente ou recarregue a página.</p>
+                                        <Button
+                                            variant="outline"
+                                            className="mt-4 border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl"
+                                            onClick={() => window.location.reload()}
+                                        >
+                                            <RefreshCw className="w-4 h-4 mr-2" /> Recarregar
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    )}
+                </main>
+
+                {/* Removed bottom bars to prevent overlap - Actions moved to Header */}
             </div>
         </DashboardLayout>
     );
