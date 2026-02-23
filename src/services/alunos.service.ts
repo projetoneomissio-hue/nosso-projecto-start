@@ -25,7 +25,8 @@ export const alunosService = {
         data_nascimento: string;
         cpf: string;
         telefone: string;
-        endereco: string;
+        endereco?: string;
+        responsavel_id?: string;
         alergias?: string;
         medicamentos?: string;
         observacoes?: string;
@@ -41,6 +42,7 @@ export const alunosService = {
         }
 
         const { error } = await supabase.from("alunos").insert({
+            responsavel_id: payload.responsavel_id,
             nome_completo: payload.nome,
             data_nascimento: payload.data_nascimento,
             cpf: cleanCpf || null,
@@ -63,7 +65,7 @@ export const alunosService = {
             data_nascimento: string;
             cpf: string;
             telefone: string;
-            endereco: string;
+            endereco?: string;
             alergias?: string;
             medicamentos?: string;
             observacoes?: string;

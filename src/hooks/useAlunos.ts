@@ -26,7 +26,8 @@ export function useAlunoMutations() {
                 data_nascimento: string;
                 cpf: string;
                 telefone: string;
-                endereco: string;
+                endereco?: string;
+                responsavel_id?: string;
                 alergias?: string;
                 medicamentos?: string;
                 observacoes?: string;
