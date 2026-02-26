@@ -90,7 +90,7 @@ const MatriculasPendentes = () => {
       if (erroAluno) throw new Error(`Erro ao criar aluno: ${erroAluno.message}`);
 
       // B. Criar Matrícula (Já ativa)
-      const { error: erroMatricula } = await supabase
+      const { data: novaMatricula, error: erroMatricula } = await supabase
         .from("matriculas")
         .insert({
           aluno_id: novoAluno.id,
@@ -98,11 +98,56 @@ const MatriculasPendentes = () => {
           unidade_id: currentUnidade.id,
           status: "ativa",
           data_matricula: new Date().toISOString(),
-        });
+        })
+        .select("id")
+        .single();
 
       if (erroMatricula) throw new Error(`Erro ao matricular: ${erroMatricula.message}`);
 
-      // C. Atualizar Solicitação
+      // C. Buscar valor da atividade para gerar primeiro pagamento
+      const { data: turmaInfo } = await supabase
+        .from("turmas")
+        .select("atividade_id, atividades(valor_mensal)")
+        .eq("id", selectedTurma)
+        .single();
+
+      const valorMensal = (turmaInfo as any)?.atividades?.valor_mensal || 0;
+
+      if (valorMensal > 0) {
+        // Buscar dia de vencimento configurado
+        const { data: configData } = await supabase
+          .from("configuracoes")
+          .select("valor")
+          .eq("chave", "dia_vencimento")
+          .single();
+
+        const diaVencimento = configData?.valor ? parseInt(configData.valor) : 5;
+
+        // Calcular próximo vencimento 
+        const hoje = new Date();
+        let mesVencimento = hoje.getMonth() + 1;
+        let anoVencimento = hoje.getFullYear();
+        if (mesVencimento > 11) {
+          mesVencimento = 0;
+          anoVencimento++;
+        }
+
+        const ultimoDia = new Date(anoVencimento, mesVencimento + 1, 0).getDate();
+        const diaFinal = Math.min(diaVencimento, ultimoDia);
+        const dataVencimento = new Date(anoVencimento, mesVencimento, diaFinal);
+        const referencia = `${anoVencimento}-${String(mesVencimento + 1).padStart(2, '0')}`;
+
+        await supabase.from("pagamentos").insert({
+          matricula_id: novaMatricula.id,
+          valor: valorMensal,
+          data_vencimento: dataVencimento.toISOString().split("T")[0],
+          status: "pendente",
+          referencia: referencia,
+          unidade_id: currentUnidade.id,
+        });
+      }
+
+      // D. Atualizar Solicitação
       const { error: erroSolicitacao } = await supabase
         .from("solicitacoes_matricula")
         .update({ status: "aprovada" })

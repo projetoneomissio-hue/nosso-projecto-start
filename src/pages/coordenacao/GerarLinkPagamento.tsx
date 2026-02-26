@@ -10,7 +10,7 @@ import { Loader2, Link as LinkIcon, Copy, CheckCircle, Search, ExternalLink } fr
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { asaasService } from "@/services/asaas.service";
+import { infinitePayService } from "@/services/infinitepay.service";
 
 const GerarLinkPagamento = () => {
   const { toast } = useToast();
@@ -45,26 +45,11 @@ const GerarLinkPagamento = () => {
     },
   });
 
-  // Mutation para gerar link de pagamento
+  // Mutation para gerar link de pagamento (InfinitePay)
   const gerarLinkMutation = useMutation({
     mutationFn: async (pagamentoId: string) => {
-      // Encontrar o pagamento completo nos dados carregados
-      const pagamento = pagamentos?.find((p) => p.id === pagamentoId);
-      if (!pagamento) throw new Error("Pagamento não encontrado localmente");
-
-      const matricula = pagamento.matricula as any;
-
-      // Chamar o serviço centralizado (que já trata erros 401 e validação)
-      const result = await asaasService.createCharge({
-        aluno_id: matricula.aluno.id, // O serviço busca dados do responsável internamente, mas precisamos do ID do aluno
-        valor: Number(pagamento.valor),
-        vencimento: pagamento.data_vencimento,
-        forma_pagamento: "BOLETO", // Padrão para permitir Pix/Boleto no checkout
-        external_id: pagamento.id,
-      });
-
-      // O serviço retorna { success: true, gateway_url: ... }
-      // Adaptar para o formato esperado pelo componente (que espera { url: ... } ou usa gateway_url)
+      // O serviço InfinitePay busca todos os dados no servidor (aluno, valor, etc.)
+      const result = await infinitePayService.createCheckoutLink(pagamentoId);
       return { url: result.gateway_url };
     },
     onSuccess: (data, pagamentoId) => {

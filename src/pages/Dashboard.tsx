@@ -194,23 +194,52 @@ const Dashboard = () => {
   const aprovarMatriculaMutation = useMutation({
     mutationFn: async (matricula: any) => {
       const valor = matricula.turmas?.atividades?.valor_mensal || 0;
-      const vencimento = new Date();
-      vencimento.setDate(vencimento.getDate() + 3); // +3 dias
 
+      // Buscar dia de vencimento configurado
+      const { data: configData } = await supabase
+        .from("configuracoes")
+        .select("valor")
+        .eq("chave", "dia_vencimento")
+        .single();
+
+      const diaVencimento = configData?.valor ? parseInt(configData.valor) : 5;
+
+      // Calcular próximo vencimento (próximo mês, dia configurado)
+      const hoje = new Date();
+      let mesVencimento = hoje.getMonth() + 1; // próximo mês
+      let anoVencimento = hoje.getFullYear();
+      if (mesVencimento > 11) {
+        mesVencimento = 0;
+        anoVencimento++;
+      }
+
+      // Garantir que o dia não ultrapasse o último dia do mês
+      const ultimoDia = new Date(anoVencimento, mesVencimento + 1, 0).getDate();
+      const diaFinal = Math.min(diaVencimento, ultimoDia);
+      const dataVencimento = new Date(anoVencimento, mesVencimento, diaFinal);
+      const referencia = `${anoVencimento}-${String(mesVencimento + 1).padStart(2, '0')}`;
+
+      // Atualizar status da matrícula para ativa
+      await supabase
+        .from("matriculas")
+        .update({ status: "ativa" })
+        .eq("id", matricula.id);
+
+      // Gerar primeiro pagamento
       const { error } = await supabase.from("pagamentos").insert({
         matricula_id: matricula.id,
         valor: valor,
-        data_vencimento: vencimento.toISOString().split("T")[0],
+        data_vencimento: dataVencimento.toISOString().split("T")[0],
         status: "pendente",
-        metodo_pagamento: "boleto", // Default, user can change later
+        referencia: referencia,
       });
 
       if (error) throw error;
     },
     onSuccess: () => {
       toast({
-        title: "Solicitação Aprovada",
-        description: "A cobrança foi gerada e o responsável será notificado.",
+        title: "Matrícula Aprovada!",
+        description: "Pagamento gerado automaticamente. O responsável será notificado.",
       });
       refetchSolicitacoes();
     },
@@ -218,6 +247,7 @@ const Dashboard = () => {
       handleError(error, "Erro ao aprovar");
     },
   });
+
 
   const recusarMatriculaMutation = useMutation({
     mutationFn: async (id: string) => {

@@ -21,7 +21,7 @@ const Pagamentos = () => {
   const queryClient = useQueryClient();
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  // Handle cancel from Stripe (success redirects to dedicated page)
+  // Handle cancel from InfinitePay (success redirects to dedicated page)
   useEffect(() => {
     if (searchParams.get("canceled") === "true") {
       toast({
@@ -33,10 +33,10 @@ const Pagamentos = () => {
     }
   }, [searchParams, toast, setSearchParams]);
 
-  // Mutation para pagar online
+  // Mutation para pagar online via InfinitePay
   const pagarOnlineMutation = useMutation({
     mutationFn: async (pagamentoId: string) => {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
+      const { data, error } = await supabase.functions.invoke("create-infinitepay-link", {
         body: { pagamentoId },
       });
       if (error) throw error;
@@ -44,8 +44,8 @@ const Pagamentos = () => {
       return data;
     },
     onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.gateway_url) {
+        window.location.href = data.gateway_url;
       }
     },
     onError: (error) => {

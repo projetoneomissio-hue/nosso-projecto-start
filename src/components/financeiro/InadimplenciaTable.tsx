@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useInadimplentes } from "@/hooks/useFinanceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { generateWhatsAppLink, WhatsAppTemplates } from "@/utils/whatsapp";
-import { asaasService } from "@/services/asaas.service";
+import { infinitePayService } from "@/services/infinitepay.service";
 import { contactsService } from "@/services/contacts.service";
 import {
     AlertDialog,
@@ -29,27 +29,22 @@ export const InadimplenciaTable = () => {
         try {
             setGeneratingCharge(pagamento.id);
 
-            const result = await asaasService.createCharge({
-                aluno_id: pagamento.matricula?.aluno?.id,
-                valor: parseFloat(pagamento.valor),
-                vencimento: pagamento.data_vencimento, // Ou data de hoje para já vencer
-                forma_pagamento: "PIX", // Default Pix+Boleto
-                external_id: pagamento.id
-            });
+            // InfinitePay: busca tudo no servidor, só precisa do pagamentoId
+            const result = await infinitePayService.createCheckoutLink(pagamento.id);
 
             if (result.success) {
                 // Registrar log de contato AUTOMÁTICO
                 await contactsService.create({
                     aluno_id: pagamento.matricula?.aluno?.id,
                     tipo: "cobranca",
-                    descricao: `Cobrança Asaas (Boleto/Pix) gerada automaticamente. Valor: R$ ${parseFloat(pagamento.valor).toFixed(2)}`
+                    descricao: `Cobrança InfinitePay (PIX/Cartão) gerada automaticamente. Valor: R$ ${parseFloat(pagamento.valor).toFixed(2)}`
                 });
 
                 toast({
                     title: "Cobrança Gerada!",
-                    description: "O link foi criado e o log de contato registrado.",
+                    description: "O link de pagamento InfinitePay foi criado com sucesso.",
                 });
-                // Recarregar página ou query para mostrar o link novo (simples reload por enquanto)
+                // Recarregar para mostrar o link novo
                 window.location.reload();
             }
 
@@ -57,7 +52,7 @@ export const InadimplenciaTable = () => {
             console.error("Erro ao gerar cobrança:", error);
             toast({
                 title: "Erro ao gerar",
-                description: error.message || "Falha na comunicação com Asaas.",
+                description: error.message || "Falha na comunicação com InfinitePay.",
                 variant: "destructive",
             });
         } finally {
@@ -177,7 +172,7 @@ export const InadimplenciaTable = () => {
                                     <span className="text-xs text-muted-foreground">Aluno: {pagamento.matricula?.aluno?.nome_completo}</span>
                                     {pagamento.gateway_url && (
                                         <a href={pagamento.gateway_url} target="_blank" className="text-xs text-blue-500 underline mt-1">
-                                            Ver Boleto/Pix
+                                            Ver Link de Pagamento
                                         </a>
                                     )}
                                 </div>
@@ -189,7 +184,7 @@ export const InadimplenciaTable = () => {
                                 R$ {parseFloat(pagamento.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                             </td>
                             <td className="p-4 align-middle text-right flex justify-end gap-2">
-                                {/* Botão Gerar Cobrança (Asaas) */}
+                                {/* Botão Gerar Cobrança (InfinitePay) */}
                                 {!pagamento.gateway_url && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -200,14 +195,14 @@ export const InadimplenciaTable = () => {
                                                 disabled={generatingCharge === pagamento.id}
                                             >
                                                 {generatingCharge === pagamento.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <QrCode className="h-3 w-3" />}
-                                                Gerar Boleto
+                                                Gerar Link
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Gerar Cobrança Asaas?</AlertDialogTitle>
+                                                <AlertDialogTitle>Gerar Link de Pagamento?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    Isso criará uma cobrança oficial (Boleto + Pix) no Asaas para o aluno.
+                                                    Isso criará um link de pagamento InfinitePay (PIX + Cartão) para o aluno.
                                                     O valor será de <strong>R$ {parseFloat(pagamento.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong>.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
