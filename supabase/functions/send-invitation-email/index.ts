@@ -162,7 +162,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `Zafen <${Deno.env.get("RESEND_FROM_EMAIL") ?? "onboarding@resend.dev"}>`,
+        from: `Neo Missio <${Deno.env.get("RESEND_FROM_EMAIL") ?? "sistema@neomissio.com"}>`,
         to: [to],
         subject: subject,
         html: html,

@@ -11,8 +11,9 @@ import { PostHogProvider } from "@/providers/PostHogProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import Index from "./pages/Index";
-import Planos from "./pages/Planos";
-import Checkout from "./pages/Checkout";
+// [ZAFEM-FUTURE] Planos e Checkout desativados temporariamente — serão usados na multiplataforma
+// import Planos from "./pages/Planos";
+// import Checkout from "./pages/Checkout";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import { RealtimeNotifications } from "./components/RealtimeNotifications";
@@ -90,8 +91,9 @@ export const AppRoutes = () => {
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
       <Route path="/mfa-setup" element={<MfaSetup />} />
       <Route path="/mfa-verify" element={<MfaVerify />} />
-      <Route path="/planos" element={<Planos />} />
-      <Route path="/checkout" element={<Checkout />} />
+      {/* [ZAFEM-FUTURE] Rotas de Planos/Checkout desativadas — serão reativadas na multiplataforma */}
+      {/* <Route path="/planos" element={<Planos />} /> */}
+      {/* <Route path="/checkout" element={<Checkout />} /> */}
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/matricula/:slug" element={<MatriculaOnline />} />
 

@@ -80,7 +80,7 @@ serve(async (req) => {
                     Authorization: `Bearer ${RESEND_API_KEY}`,
                 },
                 body: JSON.stringify({
-                    from: "NeoMissio <onboarding@resend.dev>", // TODO: Change to verified domain later
+                    from: "Neo Missio Financeiro <sistema@neomissio.com>", // Updated to official domain
                     to: [emailResponsavel],
                     subject: `Lembrete de Pagamento - ${nomeAluno}`,
                     html: `

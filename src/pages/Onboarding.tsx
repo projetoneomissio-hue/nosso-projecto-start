@@ -1,19 +1,96 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Building2, Users, CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useUnidade } from "@/contexts/UnidadeContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Onboarding = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const { currentUnidade } = useUnidade();
+    const { toast } = useToast();
+
     const [step, setStep] = useState(1);
+    const [schoolName, setSchoolName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [saving, setSaving] = useState(false);
+
     const totalSteps = 3;
     const progress = (step / totalSteps) * 100;
 
+    const handleSaveSchoolData = async () => {
+        if (!schoolName.trim()) {
+            toast({
+                title: "Campo obrigatório",
+                description: "Preencha o nome da instituição.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setSaving(true);
+        try {
+            // Gerar slug a partir do nome
+            const slug = schoolName
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-|-$/g, "");
+
+            if (currentUnidade?.id) {
+                // Atualizar a unidade existente (Matriz)
+                const { error } = await supabase
+                    .from("unidades")
+                    .update({ nome: schoolName.trim(), slug })
+                    .eq("id", currentUnidade.id);
+
+                if (error) throw error;
+            }
+
+            // Salvar telefone no perfil do usuário
+            if (user?.id && phone.trim()) {
+                const { error: profileError } = await supabase
+                    .from("profiles")
+                    .update({ telefone: phone.trim() })
+                    .eq("id", user.id);
+
+                if (profileError) {
+                    console.warn("Erro ao salvar telefone no perfil:", profileError);
+                }
+            }
+
+            toast({
+                title: "Dados salvos!",
+                description: `"${schoolName}" foi configurada com sucesso.`,
+            });
+
+            setStep(3);
+        } catch (error) {
+            console.error("Erro ao salvar dados da escola:", error);
+            toast({
+                title: "Erro ao salvar",
+                description: "Não foi possível salvar os dados. Tente novamente.",
+                variant: "destructive",
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleNext = () => {
+        if (step === 2) {
+            handleSaveSchoolData();
+            return;
+        }
+
         if (step < totalSteps) {
             setStep(step + 1);
         } else {
@@ -35,7 +112,7 @@ const Onboarding = () => {
             <Card className="w-full max-w-md shadow-soft border-none">
                 <CardHeader>
                     <CardTitle className="text-2xl text-center">
-                        {step === 1 && "Bem-vindo ao Zafen! 👋"}
+                        {step === 1 && "Bem-vindo ao Neo Missio! 👋"}
                         {step === 2 && "Dados da Escola 🏫"}
                         {step === 3 && "Tudo Pronto! 🚀"}
                     </CardTitle>
@@ -67,12 +144,24 @@ const Onboarding = () => {
                         {step === 2 && (
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="schoolName">Nome da Instituição</Label>
-                                    <Input id="schoolName" placeholder="Ex: Escola Girassol" />
+                                    <Label htmlFor="schoolName">Nome da Instituição *</Label>
+                                    <Input
+                                        id="schoolName"
+                                        placeholder="Ex: Neo Missio Curitiba"
+                                        value={schoolName}
+                                        onChange={(e) => setSchoolName(e.target.value)}
+                                        disabled={saving}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="phone">Telefone / WhatsApp</Label>
-                                    <Input id="phone" placeholder="(11) 99999-9999" />
+                                    <Input
+                                        id="phone"
+                                        placeholder="(41) 99999-9999"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        disabled={saving}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -83,7 +172,8 @@ const Onboarding = () => {
                                     <CheckCircle2 className="w-10 h-10 text-green-600" />
                                 </div>
                                 <p className="text-slate-600">
-                                    Já criamos seu usuário administrativo e um exemplo de turma para você testar.
+                                    <strong>{schoolName || "Sua escola"}</strong> foi configurada com sucesso.
+                                    Você já pode começar a gerenciar alunos, turmas e pagamentos.
                                 </p>
                             </div>
                         )}
@@ -91,21 +181,32 @@ const Onboarding = () => {
                 </CardContent>
 
                 <CardFooter className="flex justify-between">
-                    {step > 1 ? (
-                        <Button variant="ghost" onClick={() => setStep(step - 1)}>Voltar</Button>
+                    {step > 1 && step < 3 ? (
+                        <Button variant="ghost" onClick={() => setStep(step - 1)} disabled={saving}>
+                            Voltar
+                        </Button>
                     ) : (
-                        <div /> // Spacer
+                        <div />
                     )}
 
-                    <Button onClick={handleNext} className="gap-2">
-                        {step === totalSteps ? "Ir para Dashboard" : "Continuar"}
-                        <ArrowRight className="w-4 h-4" />
+                    <Button onClick={handleNext} className="gap-2" disabled={saving}>
+                        {saving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Salvando...
+                            </>
+                        ) : (
+                            <>
+                                {step === totalSteps ? "Ir para Dashboard" : "Continuar"}
+                                <ArrowRight className="w-4 h-4" />
+                            </>
+                        )}
                     </Button>
                 </CardFooter>
             </Card>
 
             <p className="mt-8 text-center text-sm text-slate-400">
-                Zafen &copy; 2025
+                Neo Missio &copy; {new Date().getFullYear()}
             </p>
         </div>
     );
