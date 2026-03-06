@@ -15,7 +15,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.create-infinitepay-link]
-verify_jwt = true
+verify_jwt = false
 
 [functions.infinitepay-webhook]
 verify_jwt = false

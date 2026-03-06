@@ -29,8 +29,12 @@ import {
     Edit2,
     MoreHorizontal,
     GraduationCap,
-    FileDown
+    FileDown,
+    AlertTriangle,
+    Loader2,
+    CheckSquare
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -51,7 +55,12 @@ import {
 } from "@/components/ui/select";
 
 const Alunos = () => {
-    const { saveMutation, deleteMutation } = useAlunoMutations();
+    const { saveMutation, deleteMutation, deleteManyMutation, deleteAllMutation } = useAlunoMutations();
+    const { toast } = useToast();
+
+    // State for multi-select
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
     // State for filters
     const [searchTerm, setSearchTerm] = useState("");
@@ -153,6 +162,55 @@ const Alunos = () => {
         document.body.removeChild(link);
     };
 
+    // Toggle select for one aluno
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    // Toggle select all (filtered)
+    const toggleSelectAll = () => {
+        if (!filteredAlunos) return;
+        if (selectedIds.size === filteredAlunos.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredAlunos.map(a => a.id)));
+        }
+    };
+
+    // Delete selected
+    const handleDeleteSelected = () => {
+        const count = selectedIds.size;
+        if (count === 0) return;
+        const confirmMsg = `Tem certeza que deseja EXCLUIR ${count} aluno(s)?\n\nEsta ação é IRREVERSÍVEL e apagará também matrículas e pagamentos vinculados.`;
+        if (confirm(confirmMsg)) {
+            deleteManyMutation.mutate(Array.from(selectedIds), {
+                onSuccess: () => setSelectedIds(new Set()),
+            });
+        }
+    };
+
+    // Delete ALL
+    const handleDeleteAll = () => {
+        const total = alunos?.length || 0;
+        const confirmInput = prompt(
+            `⚠️ ATENÇÃO: Você está prestes a EXCLUIR TODOS os ${total} alunos.\n\n` +
+            `Esta ação é IRREVERSÍVEL!\n\n` +
+            `Para confirmar, digite o número de alunos (${total}):`
+        );
+        if (confirmInput === String(total)) {
+            deleteAllMutation.mutate(undefined, {
+                onSuccess: () => setSelectedIds(new Set()),
+            });
+        } else if (confirmInput !== null) {
+            toast({ title: "Operação cancelada", description: "O número digitado não confere.", variant: "destructive" });
+        }
+    };
+
     return (
         <DashboardLayout>
             <div className="p-6 lg:p-8 space-y-6">
@@ -163,10 +221,20 @@ const Alunos = () => {
                             Gerencie os alunos, matrículas e históricos.
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <Button variant="outline" onClick={handleExportCSV}>
                             <FileDown className="mr-2 h-4 w-4" />
                             Exportar CSV
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteAll}
+                            disabled={!alunos || alunos.length === 0 || deleteAllMutation.isPending}
+                        >
+                            {deleteAllMutation.isPending
+                                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                : <Trash2 className="mr-2 h-4 w-4" />}
+                            Excluir Todos ({alunos?.length || 0})
                         </Button>
                         <Button onClick={() => window.location.href = '/responsavel/cadastrar-aluno'} className="bg-neomissio-primary hover:bg-neomissio-primary/90">
                             <UserPlus className="mr-2 h-4 w-4" />
@@ -224,6 +292,12 @@ const Alunos = () => {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead className="w-[40px]">
+                                                <Checkbox
+                                                    checked={filteredAlunos && filteredAlunos.length > 0 && selectedIds.size === filteredAlunos.length}
+                                                    onCheckedChange={toggleSelectAll}
+                                                />
+                                            </TableHead>
                                             <TableHead>Nome</TableHead>
                                             <TableHead className="hidden md:table-cell">CPF</TableHead>
                                             <TableHead className="hidden md:table-cell">Status</TableHead>
@@ -237,7 +311,13 @@ const Alunos = () => {
                                             const turmas = aluno.matriculas?.map((m: any) => m.turma?.nome).join(", ");
 
                                             return (
-                                                <TableRow key={aluno.id}>
+                                                <TableRow key={aluno.id} className={selectedIds.has(aluno.id) ? "bg-primary/5" : ""}>
+                                                    <TableCell>
+                                                        <Checkbox
+                                                            checked={selectedIds.has(aluno.id)}
+                                                            onCheckedChange={() => toggleSelect(aluno.id)}
+                                                        />
+                                                    </TableCell>
                                                     <TableCell className="font-medium">
                                                         <div className="flex flex-col">
                                                             <span>{aluno.nome_completo}</span>
@@ -338,6 +418,34 @@ const Alunos = () => {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Barra de ações em massa flutuante */}
+                {selectedIds.size > 0 && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-4">
+                        <CheckSquare className="h-5 w-5" />
+                        <span className="font-bold text-lg">{selectedIds.size} selecionado(s)</span>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="font-bold"
+                            onClick={() => setSelectedIds(new Set())}
+                        >
+                            Limpar
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="font-bold bg-white text-destructive hover:bg-white/90 border-white"
+                            disabled={deleteManyMutation.isPending}
+                            onClick={handleDeleteSelected}
+                        >
+                            {deleteManyMutation.isPending
+                                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                : <Trash2 className="mr-2 h-4 w-4" />}
+                            Excluir Selecionados
+                        </Button>
+                    </div>
+                )}
 
                 {/* EDIT DIALOG (Simplified for Quick Edits) */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

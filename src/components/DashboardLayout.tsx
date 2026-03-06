@@ -69,7 +69,7 @@ const getNavigationByRole = (role: string) => {
           { name: "Atividades", href: "/atividades", icon: Dumbbell },
           { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
           { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
-          { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: ClipboardList },
+          { name: "Aprovar Matrículas", href: "/direcao/matriculas-pendentes", icon: ClipboardList },
         ]
       },
       {
@@ -85,8 +85,8 @@ const getNavigationByRole = (role: string) => {
       {
         group: "Operacional",
         items: [
-          { name: "Financeiro", href: "/financeiro", icon: DollarSign },
-          { name: "Link Pagamento", href: "/coordenacao/gerar-link-pagamento", icon: LinkIcon },
+          { name: "Cobranças", href: "/direcao/cobrancas", icon: DollarSign },
+          { name: "Financeiro (Dash)", href: "/financeiro", icon: BarChart },
           { name: "Prédio", href: "/predio", icon: Building2 },
         ]
       },
@@ -111,16 +111,12 @@ const getNavigationByRole = (role: string) => {
           { name: "Minhas Atividades", href: "/atividades", icon: Dumbbell },
           { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
           { name: "Alunos", href: "/alunos", icon: Users },
-          { name: "Matrículas Pendentes", href: "/coordenacao/matriculas-pendentes", icon: FileText },
         ]
       },
       {
         group: "Operacional",
         items: [
-          { name: "Inadimplentes", href: "/coordenacao/inadimplentes", icon: AlertCircle },
-          { name: "Link Pagamento", href: "/coordenacao/gerar-link-pagamento", icon: LinkIcon },
           { name: "Voluntários", href: "/coordenacao/voluntarios", icon: UserCheck },
-          { name: "Financeiro", href: "/financeiro", icon: DollarSign },
         ]
       },
       {
@@ -225,7 +221,9 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
         )}
       </div>
 
-      <div className={cn("px-4 mt-6 transition-all duration-500", isCollapsed && "px-2")}>
+      <div className={cn("px-4 mt-6 flex flex-col gap-4 transition-all duration-500", isCollapsed && "px-2")}>
+        <ProfileSwitcher isCollapsed={isCollapsed} />
+
         {!isCollapsed ? (
           <UnidadeSwitcher />
         ) : (
@@ -233,7 +231,7 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-white/5">
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-accent hover:text-accent-foreground">
                     <Building2 className="h-5 w-5 text-primary/70" />
                   </Button>
                 </TooltipTrigger>
@@ -304,20 +302,6 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
 
       <div className={cn("p-4 mt-auto transition-all duration-500", isCollapsed && "p-2")}>
         <div className="space-y-4">
-          <ProfileSwitcher isCollapsed={isCollapsed} />
-
-          {!isCollapsed && user && (
-            <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3 backdrop-blur-sm">
-              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-black text-xs shadow-lg shadow-primary/20">
-                {user.name?.[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-foreground truncate uppercase tracking-widest">{user.name}</p>
-                <p className="text-[8px] font-bold text-muted-foreground truncate uppercase opacity-50">{user.activeRole}</p>
-              </div>
-            </div>
-          )}
-
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>

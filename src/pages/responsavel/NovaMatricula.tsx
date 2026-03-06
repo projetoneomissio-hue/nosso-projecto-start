@@ -123,11 +123,48 @@ const NovaMatricula = () => {
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
+      // Setup params for email
+      const alunoName = alunos?.find(a => a.id === variables.aluno_id)?.nome_completo || "Aluno";
+      const atividadeName = atividades?.find(a => a.id === selectedAtividadeId)?.nome || "Atividade";
+
+      try {
+        // Envia confirmação para o Responsável
+        if (user?.email) {
+          await supabase.functions.invoke('send-email', {
+            body: {
+              to: user.email,
+              type: 'matricula_solicitada',
+              data: {
+                nomeResponsavel: user.user_metadata?.full_name || 'Responsável',
+                nomeAluno: alunoName,
+                atividade: atividadeName
+              }
+            }
+          });
+        }
+
+        // Envia aviso interno para a Direção/Secretaria 
+        // (utilizando um email geral de atendimento/diretoria - mockado caso sem settings)
+        await supabase.functions.invoke('send-email', {
+          body: {
+            to: 'diretoria@neomissio.com.br', // Ideal refatorar DB admin params no futuro
+            type: 'nova_matricula_admin',
+            data: {
+              nomeAluno: alunoName,
+              atividade: atividadeName,
+              unidade: "Matriz" // Exemplo estático
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Erro silencioso enviando emails da matrícula:", e);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["matriculas-aluno"] });
       toast({
         title: "Matrícula solicitada!",
-        description: "Aguarde a aprovação da coordenação.",
+        description: "Aguarde a aprovação da direção.",
       });
       // Limpa formulário
       setSelectedAlunoId("");

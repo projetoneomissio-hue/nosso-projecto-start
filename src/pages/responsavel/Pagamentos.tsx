@@ -45,7 +45,8 @@ const Pagamentos = () => {
     },
     onSuccess: (data) => {
       if (data.gateway_url) {
-        window.location.href = data.gateway_url;
+        window.open(data.gateway_url, "_blank");
+        setPayingId(null);
       }
     },
     onError: (error) => {
@@ -58,9 +59,15 @@ const Pagamentos = () => {
     },
   });
 
-  const handlePagarOnline = (pagamentoId: string) => {
-    setPayingId(pagamentoId);
-    pagarOnlineMutation.mutate(pagamentoId);
+  const handlePagarOnline = (pagamento: any) => {
+    // Se já existe um link gerado, redireciona direto
+    if (pagamento.gateway_url) {
+      window.open(pagamento.gateway_url, "_blank");
+      return;
+    }
+    // Caso contrário, gera um novo link
+    setPayingId(pagamento.id);
+    pagarOnlineMutation.mutate(pagamento.id);
   };
 
   // Fetch pagamentos do responsável
@@ -97,12 +104,13 @@ const Pagamentos = () => {
       const matriculaIds = matriculasData?.map((m) => m.id) || [];
       if (matriculaIds.length === 0) return [];
 
-      // Busca pagamentos
+      // Busca pagamentos (pendentes primeiro, depois por vencimento)
       const { data, error } = await supabase
         .from("pagamentos")
         .select("*")
         .in("matricula_id", matriculaIds)
-        .order("data_vencimento", { ascending: false });
+        .order("status", { ascending: true })
+        .order("data_vencimento", { ascending: true });
 
       if (error) throw error;
 
@@ -155,9 +163,9 @@ const Pagamentos = () => {
       <div className="p-6 lg:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Pagamentos</h1>
-            <p className="text-muted-foreground mt-1">
-              Histórico e mensalidades dos seus alunos
+            <h1 className="text-3xl font-bold text-foreground">💳 Meus Pagamentos</h1>
+            <p className="text-base text-muted-foreground mt-1">
+              Acompanhe e pague as mensalidades dos seus alunos
             </p>
           </div>
           {totalPendente > 0 && (
@@ -289,17 +297,18 @@ const Pagamentos = () => {
                           <div className="flex w-full md:w-auto gap-2">
                             {(pagamento.status === "pendente" || pagamento.status === "atrasado") && (
                               <Button
-                                onClick={() => handlePagarOnline(pagamento.id)}
+                                onClick={() => handlePagarOnline(pagamento)}
                                 disabled={payingId === pagamento.id}
-                                className="w-full md:w-auto shadow-md hover:shadow-primary/20 relative overflow-hidden group"
+                                size="lg"
+                                className="w-full md:w-auto shadow-md hover:shadow-primary/20 relative overflow-hidden group text-base font-bold px-6 py-3"
                               >
                                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[100%] group-hover:animate-[shimmer_1.5s_infinite]"></span>
                                 {payingId === pagamento.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
                                 ) : (
-                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  <CreditCard className="h-5 w-5 mr-2" />
                                 )}
-                                Pagar Online
+                                {pagamento.gateway_url ? "Pagar Agora" : "Gerar Link de Pagamento"}
                               </Button>
                             )}
                             {pagamento.status === "pago" && (

@@ -1,5 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { GlassCard } from "@/components/dashboard/GlassCard";
+import { useNavigate } from "react-router-dom";
 import {
     Users,
     DollarSign,
@@ -9,12 +10,15 @@ import {
     Activity,
     Calendar,
     Filter,
-    Download
+    Download,
+    Phone,
+    UserMinus
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { financeiroService } from "@/services/financeiro.service";
 import { matriculasService } from "@/services/matriculas.service";
 import { turmasService } from "@/services/turmas.service";
+import { alunosService } from "@/services/alunos.service";
 import { useState } from "react";
 import {
     Select,
@@ -53,6 +57,8 @@ interface ReceitaAtividade {
 }
 
 const ManagementDashboard = () => {
+    const navigate = useNavigate();
+
     // Tokens from Design System
     const colors = {
         atividade: "#E8004F",
@@ -86,14 +92,14 @@ const ManagementDashboard = () => {
     const years = [2024, 2025, 2026];
 
     // Data Fetching
-    const { data: totalAlunos, isLoading: loadingAlunos } = useQuery({
-        queryKey: ["management-total-alunos"],
-        queryFn: async () => {
-            const { count, error } = await supabase.from("alunos").select("*", { count: "exact", head: true });
-            if (error) throw error;
-            return count;
-        },
+    const { data: todosAlunos, isLoading: loadingTodosAlunos } = useQuery({
+        queryKey: ["management-todos-alunos"],
+        queryFn: () => alunosService.fetchAll(),
     });
+
+    const totalCadastrados = todosAlunos?.length || 0;
+    const totalAlunosAtivos = todosAlunos?.filter(a => a.matriculas?.some((m: any) => m.status === 'ativa')).length || 0;
+    const alunosOrfaos = todosAlunos?.filter(a => !a.matriculas || a.matriculas.length === 0) || [];
 
     const { data: kpis, isLoading: loadingKpis } = useQuery<FinanceiroKPIs>({
         queryKey: ["management-kpis", selectedMonth, selectedYear],
@@ -222,12 +228,12 @@ const ManagementDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <GlassCard
                         title="Total de Alunos"
-                        value={totalAlunos?.toString() || "0"}
+                        value={totalAlunosAtivos?.toString() || "0"}
                         icon={<Users className="h-5 w-5" />}
-                        description="matriculados ativos"
+                        description={`${totalCadastrados} cadastros no sistema`}
                         trend={{ value: 0, isPositive: true }}
                         color={colors.escuta}
-                        isLoading={loadingAlunos}
+                        isLoading={loadingTodosAlunos}
                     />
                     <GlassCard
                         title="Receita Líquida (ONG)"
@@ -402,12 +408,104 @@ const ManagementDashboard = () => {
                     </GlassCard>
                 </div>
 
+                {/* Novo Row: Progresso Acadêmico e Recuperação */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Funil Visual (1/3) */}
+                    <GlassCard
+                        title="Funil de Alunos"
+                        description="Conversão da Base"
+                        color={colors.conhecimento}
+                        icon={<Filter className="h-4 w-4" />}
+                    >
+                        <div className="flex flex-col gap-4 mt-6">
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <span>Cadastrados</span>
+                                    <span className="text-foreground">{totalCadastrados}</span>
+                                </div>
+                                <div className="h-4 w-full bg-foreground/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-foreground/20 rounded-full" style={{ width: '100%' }} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <span>Com Matrícula Solicitada</span>
+                                    <span className="text-foreground">{totalCadastrados - alunosOrfaos.length}</span>
+                                </div>
+                                <div className="h-4 w-full bg-foreground/5 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${totalCadastrados ? ((totalCadastrados - alunosOrfaos.length) / totalCadastrados) * 100 : 0}%`, backgroundColor: colors.conversa }} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <span>Alunos Ativos</span>
+                                    <span style={{ color: colors.escuta }}>{totalAlunosAtivos}</span>
+                                </div>
+                                <div className="h-4 w-full bg-foreground/5 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${totalCadastrados ? (totalAlunosAtivos / totalCadastrados) * 100 : 0}%`, backgroundColor: colors.escuta, boxShadow: `0 0 10px ${colors.escuta}88` }} />
+                                </div>
+                            </div>
+                        </div>
+                    </GlassCard>
+
+                    {/* Alunos Sem Matrícula (2/3) */}
+                    <GlassCard
+                        title="Ações Requeridas: Alunos Órfãos"
+                        description="Cadastrados sem escolha de turma"
+                        className="lg:col-span-2"
+                        color={colors.atividade}
+                        icon={<UserMinus className="h-4 w-4" />}
+                    >
+                        <div className="flex justify-between items-center mb-4 mt-1">
+                            <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Aguardando Contato Comercial</span>
+                            <Badge variant="outline" className="bg-[#E8004F]/10 text-[#E8004F] border-[#E8004F]/20 text-[10px] px-3 font-black uppercase shadow-sm">
+                                {alunosOrfaos.length} ALUNOS PARADOS
+                            </Badge>
+                        </div>
+                        <ScrollArea className="h-[180px] pr-4">
+                            {loadingTodosAlunos ? (
+                                <div className="h-full flex items-center justify-center opacity-40"><Activity className="animate-spin" /></div>
+                            ) : alunosOrfaos.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {alunosOrfaos.map((aluno: any) => (
+                                        <div key={aluno.id} className="p-3 rounded-xl bg-card/60 border border-border/80 hover:border-[#4DD9C0]/50 transition-all flex justify-between items-center shadow-sm">
+                                            <div className="flex flex-col">
+                                                <span className="text-[11px] font-bold text-foreground truncate max-w-[140px] leading-tight">{aluno.nome_completo}</span>
+                                                <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-black mt-0.5">Criado em: {new Date(aluno.created_at).toLocaleDateString('pt-BR')}</span>
+                                            </div>
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const cleanPhone = (aluno.telefone || "").replace(/\D/g, '');
+                                                    if (cleanPhone) window.open(`https://wa.me/55${cleanPhone}?text=Olá! Vimos que você iniciou o cadastro de ${aluno.nome_completo.split(' ')[0]} no Neo Missio, mas ainda não escolheu as atividades. Podemos ajudar?`, '_blank');
+                                                }}
+                                                className="bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg shadow-[#25D366]/20 h-7 rounded-full text-[10px] font-black uppercase tracking-wider px-3"
+                                            >
+                                                <Phone className="w-3 h-3 mr-1.5" />
+                                                WhatsApp
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center opacity-30">
+                                    <UserMinus className="h-8 w-8 mb-2" />
+                                    <span className="text-[11px] font-black uppercase">Excelente! Adoção 100%.</span>
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </GlassCard>
+                </div>
+
                 {/* Row 4: 3-Column Bottom Area */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {/* Left: Funil de Matrículas */}
+                    {/* Left: Lista de Matrículas */}
                     <GlassCard
-                        title="Funil de Matrículas"
+                        title="Aprovação de Matrículas"
                         color={colors.conhecimento}
                         icon={<Activity className="h-4 w-4" />}
                     >
@@ -428,7 +526,11 @@ const ManagementDashboard = () => {
                             ) : matriculasPendentes && matriculasPendentes.length > 0 ? (
                                 <div className="space-y-3">
                                     {matriculasPendentes.map((m: any) => (
-                                        <div key={m.id} className="group p-3 rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all flex items-center justify-between shadow-sm">
+                                        <div
+                                            key={m.id}
+                                            onClick={() => navigate('/direcao/matriculas-pendentes')}
+                                            className="group p-3 rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all flex items-center justify-between shadow-sm cursor-pointer"
+                                        >
                                             <div className="flex items-center gap-3">
                                                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center font-black text-[10px] text-white uppercase">
                                                     {m.aluno?.nome_completo?.[0] || "?"}

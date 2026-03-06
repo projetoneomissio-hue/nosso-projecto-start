@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'prompt',
       filename: 'manifest.json',
-      includeAssets: ['favicon.ico', 'robots.txt', 'placeholder.svg'],
+      includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon-180x180.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'Neo Missio - Gestão Social',
         short_name: 'Neo Missio',
@@ -30,15 +30,15 @@ export default defineConfig(({ mode }) => ({
         orientation: 'portrait',
         icons: [
           {
-            src: 'favicon.ico',
-            sizes: '48x48',
-            type: 'image/x-icon',
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
           },
           {
-            src: 'logo-neo-missio.png',
-            sizes: 'any',
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
             type: 'image/png',
-            purpose: 'any',
+            purpose: 'any maskable',
           },
         ]
       },

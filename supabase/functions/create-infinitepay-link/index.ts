@@ -44,17 +44,17 @@ serve(async (req) => {
         );
 
         // 3. Check Permissions (RBAC)
-        const { data: roleData, error: roleError } = await supabaseService
+        const { data: rolesData, error: roleError } = await supabaseService
             .from("user_roles")
             .select("role")
-            .eq("user_id", user.id)
-            .maybeSingle();
+            .eq("user_id", user.id);
 
         if (roleError) console.error("[INFINITEPAY] Role check error:", roleError);
 
-        const hasPermission = roleData && ["direcao", "coordenacao"].includes(roleData.role);
+        const userRoles = (rolesData || []).map((r: any) => r.role);
+        const hasPermission = userRoles.some((role: string) => ["direcao", "coordenacao"].includes(role));
         if (!hasPermission) {
-            console.error("[INFINITEPAY] Permission denied. Role found:", roleData?.role);
+            console.error("[INFINITEPAY] Permission denied. Roles found:", userRoles);
             throw new Error("Permission denied: requires coordenacao or direcao role");
         }
 
@@ -148,11 +148,27 @@ serve(async (req) => {
 
         console.log("[INFINITEPAY] Checkout link created:", checkoutUrl);
 
-        // 10. Save gateway info to pagamentos table
+        // 10. Shorten URL via is.gd (free, no auth, direct redirect)
+        let finalUrl = checkoutUrl;
+        try {
+            const shortRes = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(checkoutUrl)}`);
+            if (shortRes.ok) {
+                const shortUrl = (await shortRes.text()).trim();
+                if (shortUrl && shortUrl.startsWith("https://")) {
+                    finalUrl = shortUrl;
+                    console.log("[INFINITEPAY] Shortened URL:", finalUrl);
+                }
+            }
+        } catch (shortenError) {
+            console.warn("[INFINITEPAY] URL shortening failed, using original:", shortenError);
+            // Non-critical: just use the original long URL
+        }
+
+        // 11. Save gateway info to pagamentos table
         const { error: updateError } = await supabaseService
             .from("pagamentos")
             .update({
-                gateway_url: checkoutUrl,
+                gateway_url: finalUrl,
                 gateway_provider: "infinitepay",
             })
             .eq("id", pagamentoId);
@@ -164,7 +180,7 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({
             success: true,
-            gateway_url: checkoutUrl,
+            gateway_url: finalUrl,
             pagamentoId,
             alunoNome: aluno.nome_completo,
             atividadeNome: atividade.nome,
@@ -177,9 +193,9 @@ serve(async (req) => {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error("[INFINITEPAY] Error:", errorMessage);
-        return new Response(JSON.stringify({ error: errorMessage }), {
+        return new Response(JSON.stringify({ error: errorMessage, success: false }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 500,
+            status: 200,
         });
     }
 });

@@ -40,15 +40,14 @@ import ManagementDashboard from "./pages/direcao/ManagementDashboard";
 
 import Coordenadores from "./pages/direcao/Coordenadores";
 import Comunicados from "./pages/direcao/Comunicados";
+import MatriculasPendentes from "./pages/direcao/MatriculasPendentes";
+import GestaoCobrancas from "./pages/direcao/GestaoCobrancas";
 
 // Coordenação
 import DashboardCoordenacao from "./pages/coordenacao/DashboardCoordenacao";
 import TurmasCoordenacao from "./pages/coordenacao/Turmas";
-import MatriculasPendentes from "./pages/coordenacao/MatriculasPendentes";
-import Inadimplentes from "./pages/coordenacao/Inadimplentes";
 import Relatorios from "./pages/coordenacao/Relatorios";
 import GerenciarNotificacoes from "./pages/coordenacao/GerenciarNotificacoes";
-import GerarLinkPagamento from "./pages/coordenacao/GerarLinkPagamento";
 import RelatorioVoluntarios from "./pages/coordenacao/RelatorioVoluntarios";
 
 // Professores
@@ -112,16 +111,15 @@ export const AppRoutes = () => {
       <Route path="/direcao/coordenadores" element={<ProtectedRoute allowedRoles={["direcao"]}><Coordenadores /></ProtectedRoute>} />
       <Route path="/convites" element={<ProtectedRoute allowedRoles={["direcao"]}><Convites /></ProtectedRoute>} />
       <Route path="/direcao/matriculas" element={<ProtectedRoute allowedRoles={["direcao"]}><Matriculas /></ProtectedRoute>} />
+      <Route path="/direcao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["direcao"]}><MatriculasPendentes /></ProtectedRoute>} />
+      <Route path="/direcao/cobrancas" element={<ProtectedRoute allowedRoles={["direcao"]}><GestaoCobrancas /></ProtectedRoute>} />
       <Route path="/direcao/comunicados" element={<ProtectedRoute allowedRoles={["direcao"]}><Comunicados /></ProtectedRoute>} />
 
       {/* Coordenação */}
       <Route path="/coordenacao/dashboard" element={<ProtectedRoute allowedRoles={["coordenacao"]}><DashboardCoordenacao /></ProtectedRoute>} />
       <Route path="/coordenacao/turmas" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><TurmasCoordenacao /></ProtectedRoute>} />
-      <Route path="/coordenacao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><MatriculasPendentes /></ProtectedRoute>} />
-      <Route path="/coordenacao/inadimplentes" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Inadimplentes /></ProtectedRoute>} />
       <Route path="/coordenacao/relatorios" element={<ProtectedRoute allowedRoles={["coordenacao"]}><Relatorios /></ProtectedRoute>} />
       <Route path="/coordenacao/notificacoes" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><GerenciarNotificacoes /></ProtectedRoute>} />
-      <Route path="/coordenacao/gerar-link-pagamento" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><GerarLinkPagamento /></ProtectedRoute>} />
       <Route path="/coordenacao/voluntarios" element={<ProtectedRoute allowedRoles={["coordenacao", "direcao"]}><RelatorioVoluntarios /></ProtectedRoute>} />
 
       {/* Professores */}

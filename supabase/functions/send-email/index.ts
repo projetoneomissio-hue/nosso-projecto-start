@@ -1,5 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { WELCOME_EMAIL_TEMPLATE } from "../_shared/email-templates.ts";
+import {
+    WELCOME_EMAIL_TEMPLATE,
+    MATRICULA_SOLICITADA_TEMPLATE,
+    MATRICULA_APROVADA_TEMPLATE,
+    NOVA_MATRICULA_ADMIN_TEMPLATE
+} from "../_shared/email-templates.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -10,12 +15,14 @@ const corsHeaders = {
 
 interface EmailRequest {
     to: string;
-    type: "welcome" | "custom";
+    type: "welcome" | "custom" | "matricula_solicitada" | "matricula_aprovada" | "nova_matricula_admin";
     subject?: string;
     html?: string;
     data?: {
-        nomeResponsavel: string;
-        nomeAluno: string;
+        nomeResponsavel?: string;
+        nomeAluno?: string;
+        atividade?: string;
+        unidade?: string;
     };
 }
 
@@ -31,9 +38,18 @@ const handler = async (req: Request): Promise<Response> => {
         let html = reqHtml;
 
         // Use functionality mapping
-        if (type === "welcome" && data) {
+        if (type === "welcome" && data?.nomeResponsavel && data?.nomeAluno) {
             subject = "Bem-vindo ao NeoMissio!";
             html = WELCOME_EMAIL_TEMPLATE(data.nomeResponsavel, data.nomeAluno);
+        } else if (type === "matricula_solicitada" && data?.nomeResponsavel && data?.nomeAluno && data?.atividade) {
+            subject = "Recebemos sua solicitação de matrícula!";
+            html = MATRICULA_SOLICITADA_TEMPLATE(data.nomeResponsavel, data.nomeAluno, data.atividade);
+        } else if (type === "matricula_aprovada" && data?.nomeResponsavel && data?.nomeAluno && data?.atividade) {
+            subject = "Matrícula Aprovada! Boas-vindas oficiais 🎉";
+            html = MATRICULA_APROVADA_TEMPLATE(data.nomeResponsavel, data.nomeAluno, data.atividade);
+        } else if (type === "nova_matricula_admin" && data?.nomeAluno && data?.atividade) {
+            subject = `[Nova Matrícula Pendente] ${data.nomeAluno} - ${data.atividade}`;
+            html = NOVA_MATRICULA_ADMIN_TEMPLATE(data.nomeAluno, data.atividade, data.unidade);
         }
 
         if (!subject || !html) {

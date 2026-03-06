@@ -1,5 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { GlassCard } from "@/components/dashboard/GlassCard";
+import { useQuery } from "@tanstack/react-query";
 import {
     Users,
     TrendingUp,
@@ -7,11 +8,12 @@ import {
     Calendar,
     ArrowUpRight,
     GraduationCap,
-    ClipboardList
+    ClipboardList,
+    Filter
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { matriculasService } from "@/services/matriculas.service";
 import { turmasService } from "@/services/turmas.service";
+import { alunosService } from "@/services/alunos.service";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -28,14 +30,14 @@ const DashboardCoordenacao = () => {
     };
 
     // Data Fetching
-    const { data: totalAlunos, isLoading: loadingAlunos } = useQuery({
-        queryKey: ["coordenacao-total-alunos"],
-        queryFn: async () => {
-            const { count, error } = await supabase.from("alunos").select("*", { count: "exact", head: true });
-            if (error) throw error;
-            return count || 0;
-        },
+    const { data: todosAlunos, isLoading: loadingTodosAlunos } = useQuery({
+        queryKey: ["coordenacao-todos-alunos"],
+        queryFn: () => alunosService.fetchAll(),
     });
+
+    const totalCadastrados = todosAlunos?.length || 0;
+    const totalAlunosAtivos = todosAlunos?.filter(a => a.matriculas?.some((m: any) => m.status === 'ativa')).length || 0;
+    const alunosOrfaos = todosAlunos?.filter(a => !a.matriculas || a.matriculas.length === 0) || [];
 
     const { data: turmas, isLoading: loadingTurmas } = useQuery({
         queryKey: ["coordenacao-turmas-ocupacao"],
@@ -80,12 +82,12 @@ const DashboardCoordenacao = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <GlassCard
                         title="Total de Alunos"
-                        value={totalAlunos?.toString() || "0"}
+                        value={totalAlunosAtivos?.toString() || "0"}
                         icon={<Users className="h-5 w-5" />}
-                        description="matriculados no sistema"
+                        description={`${totalCadastrados} cadastros totais`}
                         trend={{ value: 0, isPositive: true }}
                         color={colors.escuta}
-                        isLoading={loadingAlunos}
+                        isLoading={loadingTodosAlunos}
                     />
                     <GlassCard
                         title="Turmas Ativas"
@@ -114,10 +116,50 @@ const DashboardCoordenacao = () => {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Funil de Matrículas */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Funil Visual */}
                     <GlassCard
-                        title="Funil de Matrículas"
+                        title="Funil de Alunos"
+                        description="Conversão da Base"
+                        color={colors.conhecimento}
+                        icon={<Filter className="h-4 w-4" />}
+                    >
+                        <div className="flex flex-col gap-6 mt-6">
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <span>Cadastrados</span>
+                                    <span className="text-foreground">{totalCadastrados}</span>
+                                </div>
+                                <div className="h-4 w-full bg-foreground/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-foreground/20 rounded-full" style={{ width: '100%' }} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <span>Matrícula Solicitada</span>
+                                    <span className="text-foreground">{totalCadastrados - alunosOrfaos.length}</span>
+                                </div>
+                                <div className="h-4 w-full bg-foreground/5 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${totalCadastrados ? ((totalCadastrados - alunosOrfaos.length) / totalCadastrados) * 100 : 0}%`, backgroundColor: colors.conversa }} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <span>Ativos (Aprovados)</span>
+                                    <span style={{ color: colors.escuta }}>{totalAlunosAtivos}</span>
+                                </div>
+                                <div className="h-4 w-full bg-foreground/5 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${totalCadastrados ? (totalAlunosAtivos / totalCadastrados) * 100 : 0}%`, backgroundColor: colors.escuta, boxShadow: `0 0 10px ${colors.escuta}88` }} />
+                                </div>
+                            </div>
+                        </div>
+                    </GlassCard>
+
+                    {/* Funil de Pendências */}
+                    <GlassCard
+                        title="Aprovação de Matrículas"
                         color={colors.conversa}
                         icon={<Activity className="h-4 w-4" />}
                     >

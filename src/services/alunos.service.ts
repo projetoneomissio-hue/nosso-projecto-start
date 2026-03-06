@@ -105,6 +105,19 @@ export const alunosService = {
         if (error) throw error;
     },
 
+    /** Deletar vários alunos por IDs */
+    async deleteMany(ids: string[]) {
+        if (ids.length === 0) return;
+        const { error } = await supabase.from("alunos").delete().in("id", ids);
+        if (error) throw error;
+    },
+
+    /** Deletar TODOS os alunos (perigoso!) */
+    async deleteAll() {
+        const { error } = await supabase.from("alunos").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        if (error) throw error;
+    },
+
     /** Verifica CPF duplicado (exclui o próprio ID se for edição) */
     async _checkCpfDuplicado(cpf: string, excludeId?: string) {
         let query = supabase.from("alunos").select("id").eq("cpf", cpf);

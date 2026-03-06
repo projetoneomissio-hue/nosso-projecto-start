@@ -71,5 +71,35 @@ export function useAlunoMutations() {
         },
     });
 
-    return { saveMutation, deleteMutation };
+    const deleteManyMutation = useMutation({
+        mutationFn: alunosService.deleteMany,
+        onSuccess: (_data, ids) => {
+            toast({ title: `${ids.length} aluno(s) removido(s)` });
+            queryClient.invalidateQueries({ queryKey: ["alunos"] });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Erro ao remover alunos",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
+    const deleteAllMutation = useMutation({
+        mutationFn: alunosService.deleteAll,
+        onSuccess: () => {
+            toast({ title: "Todos os alunos foram removidos" });
+            queryClient.invalidateQueries({ queryKey: ["alunos"] });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Erro ao remover todos os alunos",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
+    return { saveMutation, deleteMutation, deleteManyMutation, deleteAllMutation };
 }

@@ -7,14 +7,17 @@ import {
     GraduationCap,
     UserCircle,
     ArrowLeftRight,
+    ChevronDown,
+    Check
 } from "lucide-react";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const roleConfig: Record<UserRole, { label: string; icon: typeof Building2; dashboardPath: string }> = {
     direcao: { label: "Direção", icon: Building2, dashboardPath: "/dashboard" },
@@ -31,10 +34,10 @@ export const ProfileSwitcher = ({ isCollapsed = false }: ProfileSwitcherProps) =
     const { user, setActiveRole } = useAuth();
     const navigate = useNavigate();
 
-    if (!user || user.roles.length <= 1) return null;
+    // Se não tiver usuário logado
+    if (!user) return null;
 
     const activeConfig = roleConfig[user.activeRole];
-    const ActiveIcon = activeConfig.icon;
 
     const handleSwitch = (role: string) => {
         const newRole = role as UserRole;
@@ -49,60 +52,81 @@ export const ProfileSwitcher = ({ isCollapsed = false }: ProfileSwitcherProps) =
         return (
             <button
                 onClick={() => {
-                    // Cycle through roles
                     const currentIndex = user.roles.indexOf(user.activeRole);
                     const nextIndex = (currentIndex + 1) % user.roles.length;
                     handleSwitch(user.roles[nextIndex]);
                 }}
-                className="flex items-center justify-center w-full p-2 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all duration-300 group"
+                className="flex items-center justify-center w-full p-2 rounded-xl bg-card border border-border/50 shadow-sm hover:scale-105 transition-all duration-300 group"
                 title={`Trocar perfil (${activeConfig.label})`}
             >
-                <ArrowLeftRight className="h-4 w-4 text-primary group-hover:rotate-180 transition-transform duration-500" />
+                <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-[11px] uppercase shadow-sm group-hover:shadow-primary/20 transition-all">
+                    {user.name?.[0] || "?"}
+                </div>
             </button>
         );
     }
 
-    return (
-        <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 backdrop-blur-sm space-y-2">
-            <div className="flex items-center gap-2 px-1">
-                <ArrowLeftRight className="h-3 w-3 text-primary/70" />
-                <span className="text-[9px] font-black text-primary/70 uppercase tracking-[0.2em]">
-                    Trocar Perfil
-                </span>
+    // Se ele só tem 1 role, exibe só as info sem dropdown
+    if (user.roles.length <= 1) {
+        return (
+            <div className="p-3 rounded-2xl bg-card border border-border/50 flex items-center gap-3 shadow-sm cursor-default">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-xs shadow-lg shadow-primary/20 uppercase">
+                    {user.name?.[0] || "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-black text-foreground truncate uppercase tracking-widest">{user.name}</p>
+                    <p className="text-[9px] font-bold text-muted-foreground truncate uppercase opacity-70 mt-0.5">{activeConfig.label}</p>
+                </div>
             </div>
+        );
+    }
 
-            <Select value={user.activeRole} onValueChange={handleSwitch}>
-                <SelectTrigger
-                    className={cn(
-                        "w-full bg-background/50 border-white/10 rounded-xl text-xs font-bold uppercase tracking-wider",
-                        "hover:bg-background/80 transition-all duration-300",
-                        "focus:ring-primary/30"
-                    )}
-                >
-                    <div className="flex items-center gap-2">
-                        <ActiveIcon className="h-3.5 w-3.5 text-primary" />
-                        <SelectValue />
+    // Se tem mais de 1 role, exibe c/ dropdown
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <div className="p-2.5 rounded-2xl bg-card border border-border/50 flex items-center gap-3 cursor-pointer hover:bg-accent hover:border-accent transition-all shadow-sm group outline-none">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-xs shadow-lg shadow-primary/20 uppercase transition-transform group-hover:scale-105">
+                        {user.name?.[0] || "?"}
                     </div>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-white/10 bg-background/95 backdrop-blur-xl">
-                    {user.roles.map((role) => {
-                        const config = roleConfig[role];
-                        const Icon = config.icon;
-                        return (
-                            <SelectItem
-                                key={role}
-                                value={role}
-                                className="rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Icon className="h-3.5 w-3.5 text-primary/70" />
-                                    {config.label}
-                                </div>
-                            </SelectItem>
-                        );
-                    })}
-                </SelectContent>
-            </Select>
-        </div>
+                    <div className="flex-1 min-w-0 flex flex-col items-start text-left">
+                        <p className="text-[11px] w-full font-black text-foreground truncate uppercase tracking-widest leading-tight">{user.name}</p>
+                        <p className="text-[9px] font-bold text-muted-foreground truncate uppercase flex items-center gap-1 mt-0.5">
+                            <ArrowLeftRight className="h-3 w-3 inline text-primary/70" /> {activeConfig.label}
+                        </p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 opacity-50 group-hover:opacity-100 transition-transform" />
+                </div>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent className="w-[240px] rounded-xl border border-border/50 bg-popover shadow-2xl p-2 mt-2" align="center" side="bottom">
+                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Alternar Visão</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border/50" />
+
+                {user.roles.map((role) => {
+                    const config = roleConfig[role];
+                    const Icon = config.icon;
+                    const isActive = role === user.activeRole;
+                    return (
+                        <DropdownMenuItem
+                            key={role}
+                            onClick={() => handleSwitch(role)}
+                            className={cn(
+                                "flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer transition-all outline-none mt-1",
+                                isActive ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                            )}
+                        >
+                            <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm", isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                                <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 text-[11px] font-bold uppercase tracking-wide">
+                                {config.label}
+                            </div>
+                            {isActive && <Check className="h-4 w-4 shrink-0" />}
+                        </DropdownMenuItem>
+                    );
+                })}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 };
