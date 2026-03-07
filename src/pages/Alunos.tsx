@@ -1,17 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Loader2, Search, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -85,37 +79,7 @@ import { useToast } from "@/hooks/use-toast";
 import { handleError } from "@/utils/error-handler";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-
-const alunoSchema = z.object({
-  nome_completo: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(200, "Nome muito longo"),
-  data_nascimento: z.string().min(1, "Data de nascimento é obrigatória"),
-  cpf: z.string().trim().optional().nullable().or(z.literal("")).refine(
-    (val) => {
-      if (!val || val === "") return true;
-      const clean = val.replace(/\D/g, "");
-      if (clean.length === 0) return true;
-      if (clean.length !== 11) return false;
-      return validateCPF(clean);
-    },
-    { message: "CPF inválido. Verifique os dígitos." }
-  ),
-  telefone: z.string().trim().max(20, "Telefone muito longo").optional().nullable().or(z.literal("")),
-  endereco: z.string().trim().max(500, "Endereço muito longo").optional().nullable().or(z.literal("")),
-  responsavel_id: z.string().uuid("ID do responsável inválido"),
-});
-
-type AlunoFormData = z.infer<typeof alunoSchema>;
+import { AlunoFormModal } from "@/components/alunos/AlunoFormModal";
 
 const Alunos = () => {
   // Helper para renderizar valores pendentes com estilo
@@ -147,18 +111,6 @@ const Alunos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-
-  const form = useForm<AlunoFormData>({
-    resolver: zodResolver(alunoSchema),
-    defaultValues: {
-      nome_completo: "",
-      data_nascimento: "",
-      cpf: "",
-      telefone: "",
-      endereco: "",
-      responsavel_id: "",
-    },
-  });
 
   // Fetch alunos
   const { data: alunos, isLoading } = useQuery({
@@ -193,74 +145,6 @@ const Alunos = () => {
     enabled: user?.role === "direcao" || user?.role === "coordenacao",
   });
 
-  // Create/Update mutation
-  const saveMutation = useMutation({
-    mutationFn: async (values: AlunoFormData) => {
-      const cleanCpf = values.cpf ? unmaskCPF(values.cpf) : null;
-
-      // Check for duplicate CPF if provided
-      if (cleanCpf && cleanCpf.length === 11) {
-        const { data: existing, error: checkError } = await supabase
-          .from("alunos")
-          .select("id, nome_completo")
-          .eq("cpf", cleanCpf)
-          .maybeSingle();
-
-        if (checkError) throw checkError;
-        if (existing && existing.id !== editingAluno?.id) {
-          throw new Error(
-            `Já existe um aluno cadastrado com este CPF: ${existing.nome_completo}`
-          );
-        }
-      }
-
-      const payload = {
-        nome_completo: values.nome_completo,
-        data_nascimento: values.data_nascimento,
-        cpf: cleanCpf || null,
-        telefone: values.telefone || null,
-        endereco: values.endereco || null,
-        responsavel_id: values.responsavel_id,
-      };
-
-      if (editingAluno) {
-        const { error } = await supabase
-          .from("alunos")
-          .update(payload)
-          .eq("id", editingAluno.id);
-        if (error) {
-          if (error.message?.includes("idx_alunos_cpf_unique")) {
-            throw new Error("Já existe um aluno cadastrado com este CPF.");
-          }
-          throw error;
-        }
-      } else {
-        const { error } = await supabase
-          .from("alunos")
-          .insert([payload]);
-        if (error) {
-          if (error.message?.includes("idx_alunos_cpf_unique")) {
-            throw new Error("Já existe um aluno cadastrado com este CPF.");
-          }
-          throw error;
-        }
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["alunos"] });
-      toast({
-        title: editingAluno ? "Aluno atualizado" : "Aluno cadastrado",
-        description: editingAluno
-          ? "Os dados do aluno foram atualizados com sucesso."
-          : "O aluno foi cadastrado com sucesso.",
-      });
-      handleCloseDialog();
-    },
-    onError: (error: any) => {
-      handleError(error, "Erro ao salvar aluno");
-    },
-  });
-
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -287,46 +171,30 @@ const Alunos = () => {
   const handleOpenDialog = (aluno?: any) => {
     if (aluno) {
       setEditingAluno(aluno);
-      form.reset({
-        nome_completo: aluno.nome_completo,
-        data_nascimento: aluno.data_nascimento,
-        cpf: aluno.cpf || "",
-        telefone: aluno.telefone || "",
-        endereco: aluno.endereco || "",
-        responsavel_id: aluno.responsavel_id,
-      });
     } else {
       setEditingAluno(null);
-      form.reset({
-        nome_completo: "",
-        data_nascimento: "",
-        cpf: "",
-        telefone: "",
-        endereco: "",
-        responsavel_id: user?.id || "",
-      });
     }
     setDialogOpen(true);
   };
 
+  // Mantém o aluno sendo editado atualizado com os dados mais recentes da query
+  useEffect(() => {
+    if (dialogOpen && editingAluno && alunos) {
+      const updatedAluno = alunos.find((a: any) => a.id === editingAluno.id);
+      if (updatedAluno && JSON.stringify(updatedAluno) !== JSON.stringify(editingAluno)) {
+        setEditingAluno(updatedAluno);
+      }
+    }
+  }, [alunos, dialogOpen, editingAluno]);
+
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingAluno(null);
-    form.reset();
-  };
-
-  const onSubmit = (values: AlunoFormData) => {
-    saveMutation.mutate(values);
   };
 
   const handleDelete = (id: string) => {
     setDeletingId(id);
     setDeleteDialogOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    // This seems to be missing in the original Alunos.tsx or maybe it was onSubmit.
-    // The previous Alunos.tsx used onSubmit from useForm.
   };
 
   const handleOpenTimeline = (aluno: any) => {
@@ -492,17 +360,28 @@ const Alunos = () => {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             <div className="relative shrink-0">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border-2 border-primary/20">
-                                {aluno.nome_completo.charAt(0)}
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border-2 border-primary/20 overflow-hidden">
+                                {aluno.foto_url ? (
+                                  <img src={aluno.foto_url} alt={aluno.nome_completo} className="w-full h-full object-cover" />
+                                ) : (
+                                  aluno.nome_completo.charAt(0)
+                                )}
                               </div>
                               {aluno.anamneses?.[0]?.is_pne && (
                                 <div className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-red-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold border-2 border-background animate-pulse" title="PNE">
                                   !
                                 </div>
                               )}
+
                             </div>
                             <div className="flex flex-col">
-                              <span className="font-bold text-foreground">{aluno.nome_completo}</span>
+                              <button
+                                onClick={() => handleOpenDialog(aluno)}
+                                className="font-bold text-foreground hover:text-primary transition-colors text-left focus:outline-none"
+                                title="Editar cadastro do aluno"
+                              >
+                                {aluno.nome_completo}
+                              </button>
                               <span className="text-xs text-muted-foreground uppercase tracking-wider">
                                 {aluno.serie_ano || "Série não inf."}
                               </span>
@@ -583,268 +462,15 @@ const Alunos = () => {
             onAction={!searchTerm ? () => handleOpenDialog() : undefined}
           />
         )}
-
-        {/* Dialog para criar/editar - Premium Redesign */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-[650px] max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border border-primary/10 shadow-2xl overflow-hidden flex flex-col">
-            <div className="relative shrink-0 h-24 bg-gradient-to-r from-neomissio-primary/10 to-primary/5 flex items-center px-8 z-10">
-              <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
-              <div className="relative">
-                <DialogTitle className="text-2xl font-bold text-white tracking-tight">
-                  {editingAluno ? "Editar Aluno" : "Novo Aluno"}
-                </DialogTitle>
-                <DialogDescription className="text-muted-foreground text-xs mt-1">
-                  {editingAluno
-                    ? "Atualize as informações oficiais deste registro."
-                    : "Preencha os dados necessários para o novo cadastro acadêmico."}
-                </DialogDescription>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              <Form {...form}>
-                <form id="aluno-form" onSubmit={form.handleSubmit(onSubmit)} className="px-8 py-8 space-y-10">
-                  {/* Seção: Dados Pessoais */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
-                      <User className="h-4 w-4 text-primary" />
-                      <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary/70">
-                        Identificação Pessoal
-                      </h3>
-                    </div>
-
-                    <div className="grid gap-6">
-                      <FormField
-                        control={form.control}
-                        name="nome_completo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                              <User className="h-3 w-3" /> Nome Completo *
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Digite o nome completo"
-                                {...field}
-                                className="h-11 bg-muted/20 border-white/5 focus:border-primary/30 transition-all rounded-xl shadow-inner-sm"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="data_nascimento"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                                <Calendar className="h-3 w-3" /> Nascimento *
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="date"
-                                  {...field}
-                                  className="h-11 bg-muted/20 border-white/5 focus:border-primary/30 transition-all rounded-xl"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="cpf"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                                <IdCard className="h-3 w-3" /> CPF
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="000.000.000-00"
-                                  maxLength={14}
-                                  {...field}
-                                  value={field.value ? formatCPF(field.value) : ""}
-                                  onChange={(e) => {
-                                    const formatted = formatCPF(e.target.value);
-                                    field.onChange(unmaskCPF(formatted));
-                                  }}
-                                  className="h-11 bg-muted/20 border-white/5 focus:border-primary/30 transition-all rounded-xl"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seção: Contato */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
-                      <Phone className="h-4 w-4 text-primary" />
-                      <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary/70">
-                        Contato & Endereço
-                      </h3>
-                    </div>
-
-                    <div className="grid gap-6">
-                      <FormField
-                        control={form.control}
-                        name="telefone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                              <Phone className="h-3 w-3" /> Telefone
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="(00) 00000-0000"
-                                {...field}
-                                value={field.value || ""}
-                                className="h-11 bg-muted/20 border-white/5 focus:border-primary/30 transition-all rounded-xl"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="endereco"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                              <MapPin className="h-3 w-3" /> Endereço Completo
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Rua, Número, Complemento"
-                                {...field}
-                                value={field.value || ""}
-                                className="h-11 bg-muted/20 border-white/5 focus:border-primary/30 transition-all rounded-xl"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Seção: Vínculo (Apenas Diretoria/Coordenação) */}
-                  {(user?.role === "direcao" || user?.role === "coordenacao") && (
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-2 pb-2 border-b border-primary/10">
-                        <Users className="h-4 w-4 text-primary" />
-                        <h3 className="font-bold text-xs uppercase tracking-[0.2em] text-primary/70">
-                          Vínculo Institucional
-                        </h3>
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="responsavel_id"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">
-                              <User className="h-3 w-3" /> Responsável Legal *
-                            </FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className={cn(
-                                      "w-full h-11 justify-between font-normal bg-muted/20 border-white/5 rounded-xl hover:bg-muted/30 transition-all",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value
-                                      ? profiles?.find(
-                                        (profile) => profile.id === field.value
-                                      )?.nome_completo || "Responsável selecionado"
-                                      : "Buscar ou selecionar responsável..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-primary" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-background/95 backdrop-blur-xl border-primary/10" align="start">
-                                <Command>
-                                  <CommandInput placeholder="Digite o nome..." className="h-11 border-none focus:ring-0" />
-                                  <CommandList className="max-h-64">
-                                    <CommandEmpty>Nenhum perfil encontrado.</CommandEmpty>
-                                    <CommandGroup>
-                                      {profiles?.map((profile) => (
-                                        <CommandItem
-                                          value={profile.nome_completo}
-                                          key={profile.id}
-                                          onSelect={() => {
-                                            form.setValue("responsavel_id", profile.id);
-                                          }}
-                                          className="py-3 px-4 flex items-center gap-3 cursor-pointer hover:bg-primary/10"
-                                        >
-                                          <div className={cn(
-                                            "flex items-center justify-center h-5 w-5 rounded-full border border-primary/20",
-                                            profile.id === field.value ? "bg-primary text-primary-foreground" : "bg-transparent"
-                                          )}>
-                                            {profile.id === field.value && <Check className="h-3 w-3" />}
-                                          </div>
-                                          <div className="flex flex-col min-w-0">
-                                            <span className="font-medium truncate">{profile.nome_completo}</span>
-                                            <span className="text-[10px] text-muted-foreground truncate uppercase tracking-widest">{profile.email}</span>
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
-                </form>
-              </Form>
-            </div>
-            {/* Sticky Footer */}
-            <div className="shrink-0 flex justify-end gap-3 px-8 py-4 border-t shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.5)] border-primary/10 bg-background z-20">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleCloseDialog}
-                disabled={saveMutation.isPending}
-                className="px-6 rounded-xl text-muted-foreground hover:text-foreground"
-              >
-                Descartar
-              </Button>
-              <Button
-                type="submit"
-                form="aluno-form"
-                disabled={saveMutation.isPending}
-                className="px-10 h-11 bg-neomissio-primary hover:bg-neomissio-primary/90 rounded-xl shadow-lg shadow-neomissio-primary/20 transition-all hover:scale-105 active:scale-95 font-bold text-white"
-              >
-                {saveMutation.isPending && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                {editingAluno ? "Atualizar Aluno" : "Cadastrar Aluno"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Modal de Cadastro/Edição de Aluno */}
+        <AlunoFormModal
+          open={dialogOpen}
+          onOpenChange={(open) => { if (!open) handleCloseDialog(); }}
+          alunoToEdit={editingAluno}
+        />
 
         {/* Dialog de confirmação para deletar */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        < AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
@@ -869,10 +495,10 @@ const Alunos = () => {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+        </AlertDialog >
 
         {/* Sheet do Histórico de Contatos */}
-        <Sheet open={timelineOpen} onOpenChange={setTimelineOpen}>
+        < Sheet open={timelineOpen} onOpenChange={setTimelineOpen} >
           <SheetContent className="sm:max-w-[400px] w-full">
             <SheetHeader className="mb-4">
               <SheetTitle>Histórico de Contatos</SheetTitle>
@@ -884,10 +510,10 @@ const Alunos = () => {
               <ContactTimeline alunoId={selectedAlunoForTimeline.id} />
             )}
           </SheetContent>
-        </Sheet>
+        </Sheet >
 
         {/* Dialog da Ficha Digital do Aluno (Audit 3.0+) - Premium Redesign */}
-        <Dialog open={fichaOpen} onOpenChange={setFichaOpen}>
+        < Dialog open={fichaOpen} onOpenChange={setFichaOpen} >
           <DialogContent className="sm:max-w-[650px] max-h-[90vh] p-0 flex flex-col bg-background/95 backdrop-blur-xl border-primary/10 overflow-hidden shadow-2xl">
             {/* Header com Gradiente e Foto */}
             <div className="relative shrink-0 h-48 bg-gradient-to-br from-neomissio-primary/20 via-background to-background border-b border-primary/10">
@@ -1099,7 +725,7 @@ const Alunos = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout >
+    </DashboardLayout>
   );
 };
 

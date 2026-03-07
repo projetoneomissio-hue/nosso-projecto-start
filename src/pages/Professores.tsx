@@ -418,19 +418,22 @@ const Professores = () => {
 
         {/* Dialog para criar/editar */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingProfessor ? "Editar Professor" : "Novo Professor"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingProfessor
-                  ? "Atualize as informações do professor."
-                  : "Cadastre um novo professor no sistema."}
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border border-primary/10 shadow-2xl overflow-hidden flex flex-col">
+            <div className="relative shrink-0 h-20 bg-gradient-to-r from-neomissio-primary/10 to-primary/5 flex items-center px-6 z-10 border-b border-white/5">
+              <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
+              <div className="relative">
+                <DialogTitle className="text-2xl font-bold text-white tracking-tight">
+                  {editingProfessor ? "Editar Professor" : "Novo Professor"}
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground text-xs mt-1">
+                  {editingProfessor
+                    ? "Atualize as informações do professor."
+                    : "Cadastre um novo professor no sistema."}
+                </DialogDescription>
+              </div>
+            </div>
 
-            <div className="space-y-4 py-4">
+            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col space-y-4">
               {!editingProfessor && (
                 <div className="space-y-2">
                   <Label htmlFor="user_id">Usuário *</Label>
@@ -548,7 +551,7 @@ const Professores = () => {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="px-6 py-4 border-t border-primary/10 bg-muted/20 shrink-0">
               <Button
                 variant="outline"
                 onClick={handleCloseDialog}
@@ -594,7 +597,7 @@ const Professores = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </DashboardLayout>
+    </DashboardLayout >
   );
 };
 

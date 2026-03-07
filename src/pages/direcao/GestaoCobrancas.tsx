@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, Link as LinkIcon, CheckCircle2, MessageCircle, AlertCircle, DollarSign, Filter, X, Copy, Mail, Phone, Clock } from "lucide-react";
+import { Search, Loader2, Link as LinkIcon, CheckCircle2, MessageCircle, AlertCircle, DollarSign, Filter, X, Copy, Mail, Phone, Clock, Pencil, Download } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useUnidade } from "@/contexts/UnidadeContext";
@@ -12,6 +12,8 @@ import { ptBR } from "date-fns/locale";
 import { infinitePayService } from "@/services/infinitepay.service";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { handleError } from "@/utils/error-handler";
+import { AlunoFormModal } from "@/components/alunos/AlunoFormModal";
 import {
     Dialog,
     DialogContent,
@@ -41,6 +43,10 @@ const GestaoCobrancas = () => {
     const [baixaManualOpen, setBaixaManualOpen] = useState(false);
     const [selectedPagamento, setSelectedPagamento] = useState<any>(null);
     const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+
+    // Estado do modal de edição de alunos
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [alunoToEdit, setAlunoToEdit] = useState<any>(null);
 
     // Buscar pagamentos com dados completos
     const { data: pagamentos, isLoading } = useQuery({
@@ -243,15 +249,68 @@ const GestaoCobrancas = () => {
 
     const hasActiveFilters = searchTerm || statusFilter !== "todos" || atividadeFilter !== "todas" || turmaFilter !== "todas";
 
+    const handleExportCSV = () => {
+        if (!filteredPagamentos || filteredPagamentos.length === 0) {
+            toast({ title: "Aviso", description: "Nenhum dado para exportar com os filtros atuais." });
+            return;
+        }
+
+        // Bom character to ensure Excel reads UTF-8 correctly
+        const BOM = '\uFEFF';
+
+        // CSV Headers
+        const headers = [
+            'ID/Referência', 'Aluno', 'CPF', 'Responsável',
+            'Telefone Responsável', 'Atividade', 'Turma',
+            'Vencimento', 'Data de Pagamento', 'Valor (R$)', 'Status', 'Gateway'
+        ];
+
+        // Mapear dados
+        const rows = filteredPagamentos.map(pag => [
+            pag.referencia || pag.id.slice(0, 8),
+            pag.matricula?.aluno?.nome_completo || 'N/A',
+            pag.matricula?.aluno?.cpf || 'N/A',
+            pag.matricula?.aluno?.responsavel?.nome_completo || 'N/A',
+            pag.matricula?.aluno?.responsavel?.telefone || 'N/A',
+            pag.matricula?.turma?.atividade?.nome || 'N/A',
+            pag.matricula?.turma?.nome || 'N/A',
+            format(new Date(pag.data_vencimento), "dd/MM/yyyy"),
+            pag.data_pagamento ? format(new Date(pag.data_pagamento), "dd/MM/yyyy") : 'N/A',
+            Number(pag.valor).toFixed(2).replace('.', ','),
+            pag.status,
+            pag.gateway_url ? 'Link Gerado' : 'Sem Link'
+        ]);
+
+        const csvContent = [
+            headers.join(';'),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+        ].join('\n');
+
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Cobrancas_${format(new Date(), "dd-MM-yyyy")}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <DashboardLayout>
             <div className="p-4 lg:p-6 space-y-5">
                 {/* Título */}
-                <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Gestão de Cobranças</h1>
-                    <p className="text-base text-muted-foreground mt-1">
-                        Controle de Faturas, Links da InfinitePay e Recebimentos
-                    </p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Gestão de Cobranças</h1>
+                        <p className="text-base text-muted-foreground mt-1">
+                            Controle de Faturas, Links da InfinitePay e Recebimentos
+                        </p>
+                    </div>
+                    <Button variant="outline" onClick={handleExportCSV} className="border-primary/20 hover:bg-primary/5 transition-colors font-medium">
+                        <Download className="mr-2 h-4 w-4 text-primary" />
+                        Exportar Relatório (CSV)
+                    </Button>
                 </div>
 
                 {/* Resumo */}
@@ -380,6 +439,13 @@ const GestaoCobrancas = () => {
                     </div>
                 </div>
 
+                {/* Modal de Edição de Alunos */}
+                <AlunoFormModal
+                    open={editModalOpen}
+                    onOpenChange={setEditModalOpen}
+                    alunoToEdit={alunoToEdit}
+                />
+
                 {/* Tabela */}
                 <div className="border rounded-xl overflow-hidden bg-card">
                     <div className="overflow-x-auto">
@@ -423,7 +489,19 @@ const GestaoCobrancas = () => {
                                                 )}
                                             >
                                                 <td className="px-4 py-3">
-                                                    <span className="font-semibold text-foreground">{nomeAluno}</span>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (pag.matricula?.aluno) {
+                                                                setAlunoToEdit(pag.matricula.aluno);
+                                                                setEditModalOpen(true);
+                                                            }
+                                                        }}
+                                                        className="font-semibold text-foreground hover:text-primary transition-colors text-left flex items-center gap-1.5 focus:outline-none"
+                                                        title="Editar Cadastro do Aluno"
+                                                    >
+                                                        {nomeAluno}
+                                                        <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-primary" />
+                                                    </button>
                                                 </td>
                                                 <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">{nomeAtividade}</td>
                                                 <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{nomeTurma}</td>

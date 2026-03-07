@@ -242,120 +242,131 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
         )}
       </div>
 
-      <nav className="flex flex-1 flex-col px-4 overflow-y-auto mt-6 custom-scrollbar scrollbar-hide">
-        <TooltipProvider delayDuration={0}>
-          <ul role="list" className="flex flex-1 flex-col gap-y-6">
-            {navigation.map((group) => (
-              <li key={group.group}>
-                {!isCollapsed && (
-                  <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-2 opacity-50">
-                    {group.group}
-                  </h3>
-                )}
-                <ul className="space-y-1">
-                  {group.items.map((item: any) => {
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <li key={item.name}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link
-                              to={item.href}
-                              className={cn(
-                                "group relative flex gap-x-3 rounded-xl p-2.5 transition-all duration-300",
-                                isActive
-                                  ? "bg-primary text-white shadow-[0_8px_16px_-4px_hsl(var(--primary)/0.4)]"
-                                  : "text-foreground/60 hover:bg-white/5 hover:text-foreground",
-                                isCollapsed && "justify-center p-3"
-                              )}
-                            >
-                              <item.icon className={cn(
-                                "shrink-0 transition-transform duration-300 group-hover:scale-110",
-                                isCollapsed ? "h-5 w-5" : "h-4 w-4",
-                                isActive ? "text-white" : "text-primary/70"
-                              )} />
-                              {!isCollapsed && (
-                                <span className="text-[11px] font-black uppercase tracking-widest truncate">
-                                  {item.name}
-                                </span>
-                              )}
-                              {isActive && !isCollapsed && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white rounded-r-full shadow-[0_0_10px_white]" />
-                              )}
-                            </Link>
-                          </TooltipTrigger>
-                          {isCollapsed && (
-                            <TooltipContent side="right" className="font-black text-[10px] uppercase tracking-widest bg-primary text-white border-none">
-                              {item.name}
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </TooltipProvider>
-      </nav>
-
-      <div className={cn("p-4 mt-auto transition-all duration-500", isCollapsed && "p-2")}>
-        <div className="space-y-4">
+      <div className="relative flex flex-col flex-1 min-h-0 mt-6">
+        {/* Fade indicator at bottom to signal more items */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background/80 to-transparent z-10" />
+        <nav className="flex flex-1 flex-col px-4 overflow-y-auto custom-scrollbar pb-8">
+          <style>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.3); border-radius: 999px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.6); }
+        `}</style>
           <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  to="/configuracoes"
-                  className={cn(
-                    "group flex gap-x-3 rounded-xl p-2.5 text-xs font-black uppercase tracking-widest transition-all duration-300",
-                    isCollapsed ? "justify-center" : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
+            <ul role="list" className="flex flex-1 flex-col gap-y-6">
+              {navigation.map((group) => (
+                <li key={group.group}>
+                  {!isCollapsed && (
+                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-2 opacity-50">
+                      {group.group}
+                    </h3>
                   )}
-                >
-                  <Settings className={cn("shrink-0 text-primary/70", isCollapsed ? "h-5 w-5" : "h-4 w-4")} />
-                  {!isCollapsed && "Configurações"}
-                </Link>
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">Configurações</TooltipContent>}
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-x-3 rounded-xl p-2.5 text-xs font-black uppercase tracking-widest text-primary hover:bg-primary/10 hover:text-primary",
-                    isCollapsed && "justify-center"
-                  )}
-                  onClick={handleLogout}
-                >
-                  <LogOut className={cn("shrink-0", isCollapsed ? "h-5 w-5" : "h-4 w-4")} />
-                  {!isCollapsed && "Sair"}
-                </Button>
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">Sair</TooltipContent>}
-            </Tooltip>
+                  <ul className="space-y-1">
+                    {group.items.map((item: any) => {
+                      const isActive = location.pathname === item.href;
+                      return (
+                        <li key={item.name}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link
+                                to={item.href}
+                                className={cn(
+                                  "group relative flex gap-x-3 rounded-xl p-2.5 transition-all duration-300",
+                                  isActive
+                                    ? "bg-primary text-white shadow-[0_8px_16px_-4px_hsl(var(--primary)/0.4)]"
+                                    : "text-foreground/60 hover:bg-white/5 hover:text-foreground",
+                                  isCollapsed && "justify-center p-3"
+                                )}
+                              >
+                                <item.icon className={cn(
+                                  "shrink-0 transition-transform duration-300 group-hover:scale-110",
+                                  isCollapsed ? "h-5 w-5" : "h-4 w-4",
+                                  isActive ? "text-white" : "text-primary/70"
+                                )} />
+                                {!isCollapsed && (
+                                  <span className="text-[11px] font-black uppercase tracking-widest truncate">
+                                    {item.name}
+                                  </span>
+                                )}
+                                {isActive && !isCollapsed && (
+                                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white rounded-r-full shadow-[0_0_10px_white]" />
+                                )}
+                              </Link>
+                            </TooltipTrigger>
+                            {isCollapsed && (
+                              <TooltipContent side="right" className="font-black text-[10px] uppercase tracking-widest bg-primary text-white border-none">
+                                {item.name}
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
           </TooltipProvider>
-        </div>
+        </nav>
 
-        <div className={cn("mt-4 transition-all duration-500", isCollapsed && "scale-0 h-0 overflow-hidden")}>
-          <InstallPWA />
-          <div className="mt-4 flex justify-center">
-            <ModeToggle />
+        <div className={cn("p-4 mt-auto transition-all duration-500", isCollapsed && "p-2")}>
+          <div className="space-y-4">
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to="/configuracoes"
+                    className={cn(
+                      "group flex gap-x-3 rounded-xl p-2.5 text-xs font-black uppercase tracking-widest transition-all duration-300",
+                      isCollapsed ? "justify-center" : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
+                    )}
+                  >
+                    <Settings className={cn("shrink-0 text-primary/70", isCollapsed ? "h-5 w-5" : "h-4 w-4")} />
+                    {!isCollapsed && "Configurações"}
+                  </Link>
+                </TooltipTrigger>
+                {isCollapsed && <TooltipContent side="right">Configurações</TooltipContent>}
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start gap-x-3 rounded-xl p-2.5 text-xs font-black uppercase tracking-widest text-primary hover:bg-primary/10 hover:text-primary",
+                      isCollapsed && "justify-center"
+                    )}
+                    onClick={handleLogout}
+                  >
+                    <LogOut className={cn("shrink-0", isCollapsed ? "h-5 w-5" : "h-4 w-4")} />
+                    {!isCollapsed && "Sair"}
+                  </Button>
+                </TooltipTrigger>
+                {isCollapsed && <TooltipContent side="right">Sair</TooltipContent>}
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          <div className={cn("mt-4 transition-all duration-500", isCollapsed && "scale-0 h-0 overflow-hidden")}>
+            <InstallPWA />
+            <div className="mt-4 flex justify-center">
+              <ModeToggle />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Toggle Button (Desktop Only) */}
-      <button
-        onClick={toggleCollapsed}
-        className="hidden lg:flex absolute -right-3 top-24 h-6 w-6 items-center justify-center rounded-full bg-primary text-white border border-white/20 shadow-lg hover:scale-110 transition-all z-[100]"
-      >
-        {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-      </button>
-    </div >
+        {/* Toggle Button (Desktop Only) */}
+        <button
+          onClick={toggleCollapsed}
+          className="hidden lg:flex absolute -right-3 top-24 h-6 w-6 items-center justify-center rounded-full bg-primary text-white border border-white/20 shadow-lg hover:scale-110 transition-all z-[100]"
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
   );
 };
+
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);

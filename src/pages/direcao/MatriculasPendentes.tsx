@@ -236,41 +236,50 @@ const MatriculasPendentes = () => {
 
         {/* Dialog Aprovar */}
         <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Confirmar Matrícula</DialogTitle>
-              <DialogDescription>
-                Tem certeza que deseja aprovar e ativar a matrícula de <strong>{selectedMatricula?.aluno?.nome_completo}</strong> na turma <strong>{selectedMatricula?.turma?.nome}</strong>?
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-2 text-sm text-muted-foreground">
-              Essa ação irá mudar o status do aluno para ativo, alocar a vaga na turma e emitir a primeira fatura/mensalidade (se houver valor configurado).
-            </div>
-
-            <div className="py-4 border-t border-border mt-2 space-y-3">
-              <Label className="text-foreground font-bold">Taxa de Matrícula (R$)</Label>
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border border-primary/10 shadow-2xl overflow-hidden flex flex-col">
+            <div className="relative shrink-0 h-20 bg-gradient-to-r from-neomissio-primary/10 to-primary/5 flex items-center px-6 z-10 border-b border-white/5">
+              <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">R$</span>
-                <Input
-                  value={taxaMatricula}
-                  onChange={(e) => {
-                    // Aceitar apenas números e vírgula
-                    const val = e.target.value.replace(/[^0-9,]/g, "");
-                    setTaxaMatricula(val);
-                  }}
-                  className="pl-8 bg-background font-bold"
-                  placeholder="0,00"
-                />
+                <DialogTitle className="text-2xl font-bold text-white tracking-tight">Confirmar Matrícula</DialogTitle>
+                <DialogDescription className="text-muted-foreground text-xs mt-1">
+                  Tem certeza que deseja aprovar e ativar a matrícula de <strong>{selectedMatricula?.aluno?.nome_completo}</strong> na turma <strong>{selectedMatricula?.turma?.nome}</strong>?
+                </DialogDescription>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                Mantenha 0,00 caso não deseje cobrar taxa na entrada deste aluno.
-              </p>
             </div>
 
-            <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={() => aprovarMutation.mutate()} disabled={aprovarMutation.isPending} className="bg-primary text-primary-foreground font-black">
-                {aprovarMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col">
+              <div className="py-2 text-sm text-muted-foreground">
+                Essa ação irá mudar o status do aluno para ativo, alocar a vaga na turma e emitir a primeira fatura/mensalidade (se houver valor configurado).
+              </div>
+
+              <div className="py-4 border-t border-border mt-2 space-y-3">
+                <Label className="text-foreground font-bold">Taxa de Matrícula (R$)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">R$</span>
+                  <Input
+                    value={taxaMatricula}
+                    onChange={(e) => {
+                      // Aceitar apenas números e vírgula
+                      const val = e.target.value.replace(/[^0-9,]/g, "");
+                      setTaxaMatricula(val);
+                    }}
+                    className="pl-8 bg-background font-bold"
+                    placeholder="0,00"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Mantenha 0,00 caso não deseje cobrar taxa na entrada deste aluno.
+                </p>
+              </div>
+
+            </div>
+
+            <DialogFooter className="px-6 py-4 border-t border-primary/10 bg-muted/20 shrink-0">
+              <Button variant="outline" onClick={() => setApproveDialogOpen(false)} disabled={aprovarMutation.isPending}>
+                Cancelar
+              </Button>
+              <Button onClick={() => aprovarMutation.mutate()} disabled={aprovarMutation.isPending} className="bg-[#E8004F] hover:bg-[#E8004F]/90 text-white font-black px-6">
+                {aprovarMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                 Confirmar e Ativar
               </Button>
             </DialogFooter>
@@ -279,18 +288,27 @@ const MatriculasPendentes = () => {
 
         {/* Dialog Rejeitar */}
         <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Cancelar Matrícula</DialogTitle>
-              <DialogDescription>
-                Tem certeza? A solicitação será movida para o status cancelado.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Voltar</Button>
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border border-primary/10 shadow-2xl overflow-hidden flex flex-col">
+            <div className="relative shrink-0 h-20 bg-gradient-to-r from-destructive/20 to-destructive/5 flex items-center px-6 z-10 border-b border-white/5">
+              <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
+              <div className="relative">
+                <DialogTitle className="text-2xl font-bold text-white tracking-tight">Recusar Matrícula</DialogTitle>
+                <DialogDescription className="text-muted-foreground text-xs mt-1">
+                  Tem certeza que deseja recusar a solicitação de <strong>{selectedMatricula?.aluno?.nome_completo}</strong>?
+                </DialogDescription>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col">
+            </div>
+
+            <DialogFooter className="px-6 py-4 border-t border-primary/10 bg-muted/20 shrink-0">
+              <Button variant="outline" onClick={() => setRejectDialogOpen(false)} disabled={rejeitarMutation.isPending}>
+                Cancelar
+              </Button>
               <Button variant="destructive" onClick={() => rejeitarMutation.mutate()} disabled={rejeitarMutation.isPending}>
-                {rejeitarMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sim, Cancelar
+                {rejeitarMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Sim, Recusar
               </Button>
             </DialogFooter>
           </DialogContent>
