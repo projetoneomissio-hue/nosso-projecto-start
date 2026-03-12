@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, FileText, Wallet, Calendar, CreditCard as CardIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -51,8 +51,8 @@ const RegistrarPagamento = () => {
         .from("pagamentos")
         .select(`
           *,
-          matricula:matriculas(
-            aluno:alunos(nome_completo),
+          matricula:matriculas!inner(
+            aluno:alunos!inner(nome_completo, responsavel_id),
             turma:turmas(
               nome,
               atividade:atividades(nome)
@@ -60,15 +60,11 @@ const RegistrarPagamento = () => {
           )
         `)
         .eq("status", "pendente")
+        .eq("matricula.aluno.responsavel_id", user.id)
         .order("data_vencimento", { ascending: true });
 
       if (error) throw error;
-
-      // Filtrar apenas pagamentos dos alunos deste responsável
-      return data.filter((p: any) => {
-        // Verifica se o responsável do aluno da matrícula é o usuário logado
-        return true; // A RLS já filtra isso automaticamente
-      });
+      return data || [];
     },
     enabled: !!user,
   });
@@ -155,11 +151,11 @@ const RegistrarPagamento = () => {
     const diffDias = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDias < 0) {
-      return <Badge variant="destructive">Atrasado</Badge>;
+      return <Badge variant="destructive" className="animate-pulse shadow-sm shadow-destructive/20 font-bold px-3">Atrasado</Badge>;
     } else if (diffDias <= 7) {
-      return <Badge className="bg-yellow-500">Vence em breve</Badge>;
+      return <Badge className="bg-orange-500 text-white border-none font-bold px-3">Vence em breve</Badge>;
     }
-    return <Badge variant="secondary">Pendente</Badge>;
+    return <Badge variant="secondary" className="bg-muted-foreground/10 text-muted-foreground border-none font-bold px-3">Pendente</Badge>;
   };
 
   return (
@@ -173,63 +169,88 @@ const RegistrarPagamento = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-24">
+            <div className="relative">
+              <div className="h-12 w-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-primary animate-pulse" />
+              </div>
+            </div>
           </div>
         ) : pagamentosPendentes && pagamentosPendentes.length > 0 ? (
-          <div className="grid gap-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {pagamentosPendentes.map((pagamento: any) => (
-              <Card key={pagamento.id}>
-                <CardHeader>
+              <Card key={pagamento.id} className="overflow-hidden border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5 group">
+                <div className="h-2 w-full bg-gradient-to-r from-neomissio-primary to-purple-600 opacity-80" />
+                <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">
-                        {pagamento.matricula.aluno.nome_completo}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {pagamento.matricula.turma.atividade.nome} - {pagamento.matricula.turma.nome}
-                      </p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                          <CardIcon className="h-4 w-4" />
+                        </span>
+                        <CardTitle className="text-xl font-black tracking-tight">
+                          {pagamento.matricula.aluno.nome_completo}
+                        </CardTitle>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/30 w-fit px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        {pagamento.matricula.turma.atividade.nome} • {pagamento.matricula.turma.nome}
+                      </div>
                     </div>
                     {getStatusBadge(pagamento.data_vencimento)}
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Vencimento:</span>
-                      <span className="text-sm font-medium">
-                        {format(new Date(pagamento.data_vencimento), "dd 'de' MMMM 'de' yyyy", {
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
+                      <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                        <Calendar className="h-3 w-3" /> Vencimento
+                      </div>
+                      <p className="text-sm font-bold text-foreground">
+                        {format(new Date(pagamento.data_vencimento), "dd 'de' MMM", {
                           locale: ptBR,
                         })}
-                      </span>
+                      </p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Valor:</span>
-                      <span className="text-lg font-bold">
+                    <div className="space-y-1.5 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                      <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-primary tracking-widest">
+                        <Wallet className="h-3 w-3" /> Valor Total
+                      </div>
+                      <p className="text-sm font-black text-primary">
                         R$ {parseFloat(pagamento.valor.toString()).toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                         })}
-                      </span>
+                      </p>
                     </div>
-                    <Button
-                      onClick={() => handleOpenDialog(pagamento.id)}
-                      className="w-full mt-2"
-                      variant={isDueOrOverdue(pagamento.data_vencimento) ? "default" : "outline"}
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Registrar Pagamento
-                    </Button>
                   </div>
+
+                  <Button
+                    onClick={() => handleOpenDialog(pagamento.id)}
+                    className={`w-full h-11 text-base font-bold transition-all relative overflow-hidden group/btn ${
+                      isDueOrOverdue(pagamento.data_vencimento) 
+                        ? "shadow-[0_0_15px_rgba(238,17,101,0.3)] hover:shadow-[0_0_20px_rgba(238,17,101,0.5)]" 
+                        : ""
+                    }`}
+                    variant={isDueOrOverdue(pagamento.data_vencimento) ? "default" : "outline"}
+                  >
+                     <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-[100%] group-hover/btn:animate-[shimmer_1.5s_infinite]"></span>
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                    Registrar Pagamento
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                Nenhum pagamento pendente no momento.
+          <Card className="border-dashed border-2 border-muted bg-muted/5">
+            <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="p-4 rounded-full bg-muted/20 mb-4 scale-110">
+                <CheckCircle2 className="h-10 w-10 text-muted-foreground/60" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-1">Tudo em dia!</h3>
+              <p className="text-muted-foreground max-w-[280px]">
+                Não encontramos nenhum pagamento pendente no momento.
               </p>
             </CardContent>
           </Card>
@@ -294,6 +315,11 @@ const RegistrarPagamento = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <div className="mt-8 pt-6 border-t border-primary/5 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/40">
+          <div className="w-2 h-2 rounded-full bg-green-500/50 animate-pulse"></div>
+          Sistema de Pagamentos Seguro • Protegido por LGPD
+        </div>
       </div>
     </DashboardLayout>
   );

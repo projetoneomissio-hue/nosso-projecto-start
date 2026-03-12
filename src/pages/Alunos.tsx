@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useLocation } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -111,6 +112,16 @@ const Alunos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const location = useLocation();
+
+  // Auto-fill search filter from navigation state
+  useEffect(() => {
+    if (location.state?.search) {
+      setSearchTerm(location.state.search);
+      // Limpa o state para não reaplicar o filtro se o usuário navegar de volta
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Fetch alunos
   const { data: alunos, isLoading } = useQuery({

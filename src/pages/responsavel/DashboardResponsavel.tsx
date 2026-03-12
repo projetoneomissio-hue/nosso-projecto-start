@@ -35,6 +35,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { OnboardingResponsavel } from "@/components/responsavel/OnboardingResponsavel";
@@ -56,6 +59,15 @@ const DashboardResponsavel = () => {
     medicamentos: "",
     observacoes: "",
     foto_url: null as string | null,
+    tipoSanguineo: "",
+    isPne: false,
+    pneCid: "",
+    temLaudo: false,
+    laudoUrl: "",
+    contatoEmergenciaNome: "",
+    contatoEmergenciaTelefone: "",
+    contatoEmergenciaRelacao: "",
+    doenca_cronica: "",
   });
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -99,18 +111,46 @@ const DashboardResponsavel = () => {
     }
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cpfError) return;
+    
+    // 1. Atualizar Aluno
     saveMutation.mutate(
       { id: editingAluno?.id, data: formData },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          // 2. Atualizar Anamnese
+          const { error: anamneseError } = await supabase
+            .from("anamneses")
+            .upsert({
+              aluno_id: editingAluno.id,
+              tipo_sanguineo: formData.tipoSanguineo,
+              is_pne: formData.isPne,
+              pne_cid: formData.pneCid,
+              tem_laudo: formData.temLaudo,
+              laudo_url: formData.laudoUrl,
+              contato_emergencia_nome: formData.contatoEmergenciaNome,
+              contato_emergencia_telefone: formData.contatoEmergenciaTelefone,
+              contato_emergencia_relacao: formData.contatoEmergenciaRelacao,
+              doenca_cronica: formData.doenca_cronica,
+              alergias: formData.alergias,
+              medicamentos: formData.medicamentos,
+              observacoes: formData.observacoes,
+            });
+
+          if (anamneseError) {
+            console.error("Erro ao salvar anamnese:", anamneseError);
+          }
+
           setIsDialogOpen(false);
           setEditingAluno(null);
           setFormData({
             nome: "", data_nascimento: "", cpf: "", telefone: "", endereco: "",
-            alergias: "", medicamentos: "", observacoes: "", foto_url: null
+            alergias: "", medicamentos: "", observacoes: "", foto_url: null,
+            tipoSanguineo: "", isPne: false, pneCid: "", temLaudo: false,
+            laudoUrl: "", contatoEmergenciaNome: "", contatoEmergenciaTelefone: "",
+            contatoEmergenciaRelacao: "", doenca_cronica: ""
           });
         },
       }
@@ -124,7 +164,10 @@ const DashboardResponsavel = () => {
       if (!user) return [];
       const { data, error } = await supabase
         .from("alunos")
-        .select("id, nome_completo, data_nascimento, cpf, telefone, endereco, alergias, medicamentos, observacoes, foto_url")
+        .select(`
+          *,
+          anamneses (*)
+        `)
         .eq("responsavel_id", user.id);
       if (error) throw error;
       return data || [];
@@ -347,6 +390,7 @@ const DashboardResponsavel = () => {
                           size="sm"
                           className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
                           onClick={() => {
+                            const anamnese = aluno.anamneses?.[0] || {};
                             setEditingAluno(aluno);
                             setFormData({
                               nome: aluno.nome_completo,
@@ -354,10 +398,19 @@ const DashboardResponsavel = () => {
                               cpf: formatCPF(aluno.cpf || ""),
                               telefone: aluno.telefone || "",
                               endereco: aluno.endereco || "",
-                              alergias: (aluno as any).alergias || "",
-                              medicamentos: (aluno as any).medicamentos || "",
-                              observacoes: (aluno as any).observacoes || "",
-                              foto_url: (aluno as any).foto_url || null,
+                              alergias: anamnese.alergias || aluno.alergias || "",
+                              medicamentos: anamnese.medicamentos || aluno.medicamentos || "",
+                              observacoes: anamnese.observacoes || aluno.observacoes || "",
+                              foto_url: aluno.foto_url || null,
+                              tipoSanguineo: anamnese.tipo_sanguineo || "",
+                              isPne: anamnese.is_pne || false,
+                              pneCid: anamnese.pne_cid || "",
+                              temLaudo: anamnese.tem_laudo || false,
+                              laudoUrl: anamnese.laudo_url || "",
+                              contatoEmergenciaNome: anamnese.contato_emergencia_nome || "",
+                              contatoEmergenciaTelefone: anamnese.contato_emergencia_telefone || "",
+                              contatoEmergenciaRelacao: anamnese.contato_emergencia_relacao || "",
+                              doenca_cronica: anamnese.doenca_cronica || "",
                             });
                             setIsDialogOpen(true);
                           }}
@@ -572,32 +625,197 @@ const DashboardResponsavel = () => {
                 />
               </div>
 
-              {/* Health Fields */}
-              <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label htmlFor="alergias">Alergias</Label>
-                <Input
-                  id="alergias"
-                  value={formData.alergias}
-                  onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
-                  placeholder="Ex: Amendoim, Penicilina"
-                />
+
+              {/* Informações de Saúde Consolidada */}
+              <div className="col-span-1 md:col-span-2 space-y-4 pt-4 border-t border-primary/10">
+                <div className="flex items-center gap-2 text-sm font-bold text-neomissio-primary">
+                  <AlertCircle className="h-4 w-4" /> Informações de Saúde
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-1 space-y-2">
+                    <Label htmlFor="tipoSanguineo">Tipo Sanguíneo</Label>
+                    <Select
+                      value={formData.tipoSanguineo}
+                      onValueChange={(value) => setFormData({ ...formData, tipoSanguineo: value })}
+                    >
+                      <SelectTrigger id="tipoSanguineo" className="h-10">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2 space-y-2 border-l border-muted pl-4">
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Dica de Segurança</p>
+                    <p className="text-[10px] leading-tight text-muted-foreground">O tipo sanguíneo ajuda a equipe médica em casos de emergência.</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 space-y-4">
+                  <div>
+                    <p className="font-semibold text-xs text-foreground mb-2">Possui Necessidade Específica (PNE)?</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, isPne: true })}
+                        className={`flex-1 py-2 px-3 rounded-lg border font-bold text-xs transition-all ${formData.isPne === true
+                          ? "border-orange-500 bg-orange-500/10 text-orange-600"
+                          : "border-muted bg-muted/20 text-muted-foreground hover:border-orange-500/40"
+                          }`}
+                      >
+                        Sim
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, isPne: false })}
+                        className={`flex-1 py-2 px-3 rounded-lg border font-bold text-xs transition-all ${formData.isPne === false
+                          ? "border-green-500 bg-green-500/10 text-green-600"
+                          : "border-muted bg-muted/20 text-muted-foreground hover:border-green-500/40"
+                          }`}
+                      >
+                        Não
+                      </button>
+                    </div>
+                  </div>
+
+                  {formData.isPne && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="pneCid" className="text-[10px] uppercase font-bold text-muted-foreground">CID (Se houver)</Label>
+                        <Input
+                          id="pneCid"
+                          value={formData.pneCid}
+                          onChange={(e) => setFormData({ ...formData, pneCid: e.target.value })}
+                          placeholder="Ex: F84.0"
+                          className="h-9 bg-background"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Tem Laudo?</Label>
+                        <div className="flex gap-2 ml-auto">
+                          {["Sim", "Não"].map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, temLaudo: opt === "Sim" })}
+                              className={`px-3 py-1 rounded-md border text-[10px] font-medium transition-all ${formData.temLaudo === (opt === "Sim")
+                                ? "bg-slate-800 text-white border-slate-800"
+                                : "bg-background text-muted-foreground border-input hover:border-slate-300"
+                                }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {formData.laudoUrl && (
+                        <div className="flex items-center justify-between p-2 bg-green-500/5 border border-green-500/20 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-green-600" />
+                            <a href={formData.laudoUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-green-700 font-medium hover:underline">Ver Laudo Anexado</a>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive"
+                            onClick={() => setFormData(prev => ({ ...prev, laudoUrl: "" }))}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-bold text-muted-foreground/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    Dados Protegidos por LGPD
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="doenca_cronica" className="text-xs">Doenças Crônicas</Label>
+                  <Textarea
+                    id="doenca_cronica"
+                    value={formData.doenca_cronica}
+                    onChange={(e) => setFormData({ ...formData, doenca_cronica: e.target.value })}
+                    placeholder="Descreva se houver..."
+                    className="min-h-[60px] text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="alergias" className="text-xs">Alergias</Label>
+                    <Input
+                      id="alergias"
+                      value={formData.alergias}
+                      onChange={(e) => setFormData({ ...formData, alergias: e.target.value })}
+                      className="h-10 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="medicamentos" className="text-xs">Medicamentos</Label>
+                    <Input
+                      id="medicamentos"
+                      value={formData.medicamentos}
+                      onChange={(e) => setFormData({ ...formData, medicamentos: e.target.value })}
+                      className="h-10 text-sm"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label htmlFor="medicamentos">Medicamentos Contínuos</Label>
-                <Input
-                  id="medicamentos"
-                  value={formData.medicamentos}
-                  onChange={(e) => setFormData({ ...formData, medicamentos: e.target.value })}
-                  placeholder="Ex: Ritalina 10mg"
-                />
+
+              {/* Contato de Emergência */}
+              <div className="col-span-1 md:col-span-2 space-y-3 pt-4 border-t border-primary/10">
+                <div className="flex items-center gap-2 text-sm font-bold text-neomissio-primary">
+                  <AlertCircle className="h-4 w-4" /> Contato de Emergência
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 rounded-xl border border-dashed border-neomissio-primary/30 bg-neomissio-primary/5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contatoEmergenciaNome" className="text-[10px] uppercase font-bold text-muted-foreground">Nome</Label>
+                    <Input
+                      id="contatoEmergenciaNome"
+                      value={formData.contatoEmergenciaNome}
+                      onChange={(e) => setFormData({ ...formData, contatoEmergenciaNome: e.target.value })}
+                      className="h-9 bg-background text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contatoEmergenciaTelefone" className="text-[10px] uppercase font-bold text-muted-foreground">Telefone</Label>
+                    <Input
+                      id="contatoEmergenciaTelefone"
+                      value={formData.contatoEmergenciaTelefone}
+                      onChange={(e) => setFormData({ ...formData, contatoEmergenciaTelefone: e.target.value })}
+                      className="h-9 bg-background text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="contatoEmergenciaRelacao" className="text-[10px] uppercase font-bold text-muted-foreground">Parentesco</Label>
+                    <Input
+                      id="contatoEmergenciaRelacao"
+                      value={formData.contatoEmergenciaRelacao}
+                      onChange={(e) => setFormData({ ...formData, contatoEmergenciaRelacao: e.target.value })}
+                      className="h-9 bg-background text-sm"
+                    />
+                  </div>
+                </div>
               </div>
+
               <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label htmlFor="observacoes">Observações Gerais</Label>
-                <Input
+                <Label htmlFor="observacoes" className="text-xs">Observações Gerais</Label>
+                <Textarea
                   id="observacoes"
                   value={formData.observacoes}
                   onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                   placeholder="Outras informações importantes"
+                  className="min-h-[60px] text-sm"
                 />
               </div>
             </div>

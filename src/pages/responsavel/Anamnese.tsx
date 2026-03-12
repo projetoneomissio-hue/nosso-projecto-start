@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, FileText, Trash2 } from "lucide-react";
+
 
 interface Aluno {
   id: string;
@@ -25,6 +26,12 @@ interface AnamneseData {
   contato_emergencia_telefone: string;
   contato_emergencia_relacao: string;
   observacoes: string;
+  is_pne: boolean;
+  pne_descricao: string;
+  pne_cid: string;
+  tem_laudo: boolean;
+  laudo_url: string;
+  doenca_cronica: string;
 }
 
 const Anamnese = () => {
@@ -43,6 +50,12 @@ const Anamnese = () => {
     contato_emergencia_telefone: "",
     contato_emergencia_relacao: "",
     observacoes: "",
+    is_pne: false,
+    pne_descricao: "",
+    pne_cid: "",
+    tem_laudo: false,
+    laudo_url: "",
+    doenca_cronica: "",
   });
 
   useEffect(() => {
@@ -102,6 +115,12 @@ const Anamnese = () => {
           contato_emergencia_telefone: data.contato_emergencia_telefone || "",
           contato_emergencia_relacao: data.contato_emergencia_relacao || "",
           observacoes: data.observacoes || "",
+          is_pne: data.is_pne || false,
+          pne_descricao: data.pne_descricao || "",
+          pne_cid: data.pne_cid || "",
+          tem_laudo: data.tem_laudo || false,
+          laudo_url: data.laudo_url || "",
+          doenca_cronica: data.doenca_cronica || "",
         });
       } else {
         // Resetar formulário se não houver anamnese
@@ -115,6 +134,12 @@ const Anamnese = () => {
           contato_emergencia_telefone: "",
           contato_emergencia_relacao: "",
           observacoes: "",
+          is_pne: false,
+          pne_descricao: "",
+          pne_cid: "",
+          tem_laudo: false,
+          laudo_url: "",
+          doenca_cronica: "",
         });
       }
     } catch (error) {
@@ -184,7 +209,12 @@ const Anamnese = () => {
   };
 
   const updateFormData = (field: keyof AnamneseData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Converter "true"/"false" strings para booleans para campos específicos
+    if (field === "is_pne" || field === "tem_laudo") {
+      setFormData((prev) => ({ ...prev, [field]: value === "true" }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
   };
 
   return (
@@ -249,6 +279,126 @@ const Anamnese = () => {
                         <SelectItem value="O-">O-</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+                    <p className="font-semibold text-sm text-foreground mb-1">
+                      O aluno possui alguma necessidade específica de saúde, aprendizagem ou desenvolvimento?
+                    </p>
+                    <p className="text-[10px] leading-tight text-muted-foreground mb-4">
+                      Inclui condições físicas, neurodesenvolvimentais, emocionais, cognitivas, sensoriais ou outras que requeiram atenção da equipe pedagógica.
+                    </p>
+
+                    <div className="flex gap-3 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => updateFormData("is_pne", "true")}
+                        className={`flex-1 py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${formData.is_pne === true
+                          ? "border-orange-500 bg-orange-500/10 text-orange-600"
+                          : "border-muted bg-muted/20 text-muted-foreground hover:border-orange-500/40"
+                          }`}
+                      >
+                        ✔ Sim, possui
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateFormData("is_pne", "false")}
+                        className={`flex-1 py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${formData.is_pne === false
+                          ? "border-green-500 bg-green-500/10 text-green-600"
+                          : "border-muted bg-muted/20 text-muted-foreground hover:border-green-500/40"
+                          }`}
+                      >
+                        ✕ Não possui
+                      </button>
+                    </div>
+
+                    {formData.is_pne === true && (
+                      <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-2">
+                          <Label htmlFor="pne_descricao" className="text-orange-700 font-bold text-xs uppercase tracking-wider">Descrição Detalhada da Condição *</Label>
+                          <Textarea
+                            id="pne_descricao"
+                            value={formData.pne_descricao}
+                            onChange={(e) => updateFormData("pne_descricao", e.target.value)}
+                            placeholder="Descreva diagnóstico, comportamentos, adaptações necessárias..."
+                            className="bg-background border-orange-200 focus:border-orange-500 min-h-[100px]"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="pne_cid" className="text-muted-foreground font-bold text-[10px] uppercase tracking-wider">CID (Se houver)</Label>
+                            <Input
+                              id="pne_cid"
+                              value={formData.pne_cid}
+                              onChange={(e) => updateFormData("pne_cid", e.target.value)}
+                              placeholder="Ex: F84.0"
+                              className="bg-background border-orange-100 h-10"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-muted-foreground font-bold text-[10px] uppercase tracking-wider">Possui Laudo?</Label>
+                            <div className="flex gap-2">
+                              {["Sim", "Não"].map((opt) => (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => updateFormData("tem_laudo", opt === "Sim" ? "true" : "false")}
+                                  className={`flex-1 h-10 rounded-lg border text-xs font-medium transition-all ${formData.tem_laudo === (opt === "Sim")
+                                    ? "bg-slate-800 text-white border-slate-800"
+                                    : "bg-background text-muted-foreground border-input hover:border-slate-300"
+                                    }`}
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {formData.laudo_url && (
+                          <div className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/20 rounded-xl">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                                <FileText className="h-5 w-5 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-green-700">Laudo Médico Anexado</p>
+                                <a 
+                                  href={formData.laudo_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-green-600/70 hover:underline flex items-center gap-1"
+                                >
+                                  Clique para visualizar o documento
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="mt-4 pt-4 border-t border-orange-500/10 flex items-center gap-2 text-[9px] uppercase tracking-wider font-bold text-muted-foreground/60">
+                          <div className="flex items-center gap-1 bg-muted/30 px-2 py-1 rounded-full border border-muted-foreground/10">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            Dados Protegidos por LGPD
+                          </div>
+                          <span>•</span>
+                          <span>Sigilo Absoluto</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="doenca_cronica">Possui alguma doença crônica? Se sim, descreva:</Label>
+                    <Textarea
+                      id="doenca_cronica"
+                      placeholder="Informe se o aluno possui asma, diabetes, hipertensão, etc."
+                      value={formData.doenca_cronica}
+                      onChange={(e) => updateFormData("doenca_cronica", e.target.value)}
+                      className="min-h-[80px]"
+                    />
                   </div>
 
                   <div className="space-y-2">

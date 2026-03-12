@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnidade } from "@/contexts/UnidadeContext";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { WizardSteps } from "@/components/ui/wizard-steps";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Camera, User, AlertCircle, ArrowRight, ArrowLeft, Save, CheckCircle } from "lucide-react";
+import { Loader2, Camera, User, AlertCircle, ArrowRight, ArrowLeft, Save, CheckCircle, Paperclip, FileText, Trash2 } from "lucide-react";
 import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
 import { compressImage } from "@/utils/compressImage";
 
@@ -53,9 +54,16 @@ const CadastrarAluno = () => {
     // Health
     isPne: false,
     pneDescricao: "",
+    pneCid: "",
+    temLaudo: false,
     doencaCronica: "",
     alergias: "",
     medicamentos: "",
+    laudoUrl: "",
+    tipoSanguineo: "",
+    contatoEmergenciaNome: "",
+    contatoEmergenciaTelefone: "",
+    contatoEmergenciaRelacao: "",
     // Authorizations
     autorizaImagem: false,
     declaracaoAssinada: false,
@@ -64,6 +72,7 @@ const CadastrarAluno = () => {
 
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingLaudo, setUploadingLaudo] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
 
   // Photo Upload Handler
@@ -97,6 +106,42 @@ const CadastrarAluno = () => {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleLaudoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) return;
+      
+      setUploadingLaudo(true);
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user?.id}/${crypto.randomUUID()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('medical-reports')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('medical-reports')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, laudoUrl: data.publicUrl }));
+      
+      toast({
+        title: "Sucesso",
+        description: "Laudo anexado com sucesso!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro no upload",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLaudo(false);
     }
   };
 
@@ -163,6 +208,13 @@ const CadastrarAluno = () => {
           medicamentos: formData.medicamentos || null,
           is_pne: formData.isPne,
           pne_descricao: formData.pneDescricao || null,
+          pne_cid: formData.pneCid || null,
+          tem_laudo: formData.temLaudo,
+          laudo_url: formData.laudoUrl || null,
+          tipo_sanguineo: formData.tipoSanguineo || null,
+          contato_emergencia_nome: formData.contatoEmergenciaNome || null,
+          contato_emergencia_telefone: formData.contatoEmergenciaTelefone || null,
+          contato_emergencia_relacao: formData.contatoEmergenciaRelacao || null,
           doenca_cronica: formData.doencaCronica || null,
           observacoes: formData.observacoes || null,
         });
@@ -428,27 +480,225 @@ const CadastrarAluno = () => {
                         <AlertCircle className="h-4 w-4" /> Informações de Saúde
                       </div>
 
-                      <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-lg border">
-                        <Checkbox
-                          id="isPne"
-                          checked={formData.isPne}
-                          onCheckedChange={(checked) => setFormData({ ...formData, isPne: checked === true })}
-                        />
-                        <Label htmlFor="isPne" className="font-medium cursor-pointer">Possui necessidade especial? (PNE)</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="md:col-span-1 space-y-2">
+                          <Label htmlFor="tipoSanguineo">Tipo Sanguíneo</Label>
+                          <Select
+                            value={formData.tipoSanguineo}
+                            onValueChange={(value) => setFormData({ ...formData, tipoSanguineo: value })}
+                          >
+                            <SelectTrigger id="tipoSanguineo" className="h-11">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((type) => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="md:col-span-2 space-y-2 border-l border-muted pl-4">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Dica de Segurança</p>
+                          <p className="text-[11px] leading-snug">O tipo sanguíneo ajuda a equipe médica em casos de emergência. Se não souber, pode deixar em branco.</p>
+                        </div>
                       </div>
 
-                      {formData.isPne && (
-                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                          <Label htmlFor="pneDescricao">Descreva a necessidade especial</Label>
-                          <Textarea
-                            id="pneDescricao"
-                            value={formData.pneDescricao}
-                            onChange={(e) => setFormData({ ...formData, pneDescricao: e.target.value })}
-                            placeholder="Descreva aqui..."
-                            rows={2}
-                          />
+                      <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+                        <p className="font-semibold text-sm text-foreground mb-1">
+                          O aluno possui alguma necessidade específica de saúde, aprendizagem ou desenvolvimento?
+                        </p>
+                        <p className="text-[10px] leading-tight text-muted-foreground mb-4">
+                          Inclui condições físicas, neurodesenvolvimentais, emocionais, cognitivas, sensoriais ou outras que requeiram atenção da equipe pedagógica.
+                        </p>
+
+                        <div className="flex gap-3 mb-4">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, isPne: true })}
+                            className={`flex-1 py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${formData.isPne === true
+                              ? "border-orange-500 bg-orange-500/10 text-orange-600"
+                              : "border-muted bg-muted/20 text-muted-foreground hover:border-orange-500/40"
+                              }`}
+                          >
+                            ✔ Sim, possui
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, isPne: false })}
+                            className={`flex-1 py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${formData.isPne === false
+                              ? "border-green-500 bg-green-500/10 text-green-600"
+                              : "border-muted bg-muted/20 text-muted-foreground hover:border-green-500/40"
+                              }`}
+                          >
+                            ✕ Não possui
+                          </button>
                         </div>
-                      )}
+
+                        {formData.isPne === false && (
+                          <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-[11px] text-yellow-700 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <span className="font-bold">⚠ Atenção:</span> Você confirma que o aluno não possui nenhuma necessidade específica que a equipe deva conhecer? Esta informação é importante para garantir o melhor atendimento.
+                          </div>
+                        )}
+
+                        {formData.isPne === true && (
+                          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="space-y-2">
+                              <Label htmlFor="pneDescricao" className="text-xs font-bold uppercase text-orange-600">Descrição Detalhada da Condição *</Label>
+                              <Textarea
+                                id="pneDescricao"
+                                value={formData.pneDescricao}
+                                onChange={(e) => setFormData({ ...formData, pneDescricao: e.target.value })}
+                                placeholder="Descreva diagnóstico, comportamentos, adaptações necessárias..."
+                                rows={3}
+                                className="bg-white border-orange-500/20 focus:border-orange-500/50"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="pneCid" className="text-xs font-bold uppercase text-muted-foreground">CID (Se houver)</Label>
+                                <Input
+                                  id="pneCid"
+                                  value={formData.pneCid}
+                                  onChange={(e) => setFormData({ ...formData, pneCid: e.target.value.toUpperCase() })}
+                                  placeholder="Ex: F84.0"
+                                  className="h-10 bg-white"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Possui Laudo?</Label>
+                                <div className="flex gap-2 h-10">
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, temLaudo: true })}
+                                    className={`flex-1 rounded-lg border-2 text-xs font-bold transition-all ${formData.temLaudo
+                                      ? "border-neomissio-primary bg-neomissio-primary/10 text-neomissio-primary"
+                                      : "border-muted bg-muted/20 text-muted-foreground"
+                                      }`}
+                                  >
+                                    Sim
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, temLaudo: false })}
+                                    className={`flex-1 rounded-lg border-2 text-xs font-bold transition-all ${!formData.temLaudo
+                                      ? "border-muted bg-muted/50 text-foreground"
+                                      : "border-muted bg-muted/20 text-muted-foreground"
+                                      }`}
+                                  >
+                                    Não
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {formData.temLaudo && (
+                              <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Anexar Laudo Digitalizado</Label>
+                                
+                                {!formData.laudoUrl ? (
+                                  <div className="relative">
+                                    <input
+                                      type="file"
+                                      id="laudo-upload"
+                                      className="hidden"
+                                      accept=".pdf,image/*"
+                                      onChange={handleLaudoUpload}
+                                      disabled={uploadingLaudo}
+                                    />
+                                    <label
+                                      htmlFor="laudo-upload"
+                                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/20 rounded-xl bg-white hover:bg-muted/10 transition-colors cursor-pointer"
+                                    >
+                                      {uploadingLaudo ? (
+                                        <Loader2 className="h-8 w-8 animate-spin text-neomissio-primary" />
+                                      ) : (
+                                        <>
+                                          <Paperclip className="h-8 w-8 text-muted-foreground mb-2" />
+                                          <span className="text-sm font-medium text-foreground">Clique para anexar (PDF ou Imagem)</span>
+                                          <span className="text-xs text-muted-foreground mt-1">Tamanho máximo: 5MB</span>
+                                        </>
+                                      )}
+                                    </label>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/20 rounded-xl">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-bold text-green-700">Arquivo Anexado</p>
+                                        <p className="text-[10px] text-green-600/70">Documento pronto para envio</p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-destructive hover:bg-destructive/10"
+                                      onClick={() => setFormData(prev => ({ ...prev, laudoUrl: "" }))}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                )}
+                                
+                                <p className="text-[10px] text-neomissio-primary/80 bg-neomissio-primary/5 border border-neomissio-primary/10 rounded-lg p-2">
+                                  📋 <strong>Laudo confirmado.</strong> O arquivo será enviado junto com o formulário.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="mt-4 pt-4 border-t border-orange-500/10 flex items-center gap-2 text-[9px] uppercase tracking-wider font-bold text-muted-foreground/60">
+                          <div className="flex items-center gap-1 bg-muted/30 px-2 py-1 rounded-full border border-muted-foreground/10">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            Dados Protegidos por LGPD
+                          </div>
+                          <span>•</span>
+                          <span>Sigilo Absoluto</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-2">
+                        <div className="flex items-center gap-2 text-sm font-bold text-neomissio-primary">
+                          <AlertCircle className="h-4 w-4" /> Contato de Emergência
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl border border-dashed border-neomissio-primary/30 bg-neomissio-primary/5">
+                          <div className="space-y-2">
+                            <Label htmlFor="contatoEmergenciaNome">Nome Completo</Label>
+                            <Input
+                              id="contatoEmergenciaNome"
+                              value={formData.contatoEmergenciaNome}
+                              onChange={(e) => setFormData({ ...formData, contatoEmergenciaNome: e.target.value })}
+                              placeholder="Quem chamar..."
+                              className="h-11 bg-background"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="contatoEmergenciaTelefone">Telefone</Label>
+                            <Input
+                              id="contatoEmergenciaTelefone"
+                              value={formData.contatoEmergenciaTelefone}
+                              onChange={(e) => setFormData({ ...formData, contatoEmergenciaTelefone: e.target.value })}
+                              placeholder="(00) 00000-0000"
+                              className="h-11 bg-background"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="contatoEmergenciaRelacao">Grau de Parentesco</Label>
+                            <Input
+                              id="contatoEmergenciaRelacao"
+                              value={formData.contatoEmergenciaRelacao}
+                              onChange={(e) => setFormData({ ...formData, contatoEmergenciaRelacao: e.target.value })}
+                              placeholder="Ex: Mãe, Pai..."
+                              className="h-11 bg-background"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="doencaCronica">Possui alguma doença crônica? Se sim, descreva:</Label>
@@ -523,8 +773,27 @@ const CadastrarAluno = () => {
 
                     <div className="bg-muted/50 p-4 rounded-lg text-sm text-left w-full max-w-sm space-y-2">
                       <p><strong>CPF/RG:</strong> {formData.cpf || "Não inf."} / {formData.rg || "Não inf."}</p>
-                      <p><strong>Bairro:</strong> {formData.bairro || "Não inf."}</p>
-                      <p><strong>Saúde:</strong> {formData.isPne ? "Possui PNE" : "Sem PNE inf."}</p>
+                      <p><strong>Sangue / PNE:</strong> {formData.tipoSanguineo || "Sangue não inf."} | {formData.isPne ? (
+                        <span className="text-orange-600 font-bold ml-1">Com PNE</span>
+                      ) : "Sem PNE"}</p>
+                      
+                      {formData.tipoSanguineo && (
+                        <p className="text-xs text-muted-foreground ml-4">• Tipo: {formData.tipoSanguineo}</p>
+                      )}
+
+                      {formData.isPne && (
+                        <div className="ml-4 space-y-0.5">
+                          {formData.pneCid && <span className="text-xs block text-muted-foreground">• CID: {formData.pneCid}</span>}
+                          <span className="text-xs block text-muted-foreground">• Laudo: {formData.temLaudo ? "Sim" : "Não informado"}</span>
+                        </div>
+                      )}
+
+                      <div className="pt-2 mt-2 border-t border-muted-foreground/10">
+                        <p><strong>Emergência:</strong> {formData.contatoEmergenciaNome || "Não informado"}</p>
+                        {formData.contatoEmergenciaTelefone && (
+                          <p className="text-xs text-muted-foreground ml-4">• {formData.contatoEmergenciaTelefone} ({formData.contatoEmergenciaRelacao || "Contato"})</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-4 pt-4 border-t w-full text-left">
@@ -612,14 +881,22 @@ const CadastrarAluno = () => {
                   grauParentesco: "",
                   isPne: false,
                   pneDescricao: "",
+                  pneCid: "",
+                  temLaudo: false,
+                  laudoUrl: "",
                   doencaCronica: "",
                   alergias: "",
                   medicamentos: "",
+                  tipoSanguineo: "",
+                  contatoEmergenciaNome: "",
+                  contatoEmergenciaTelefone: "",
+                  contatoEmergenciaRelacao: "",
                   autorizaImagem: false,
                   declaracaoAssinada: false,
                   observacoes: "",
                 });
                 setFotoUrl(null);
+                setUploadingLaudo(false); // Reset laudo uploading state
               }}>Cadastrar Outro Aluno</AlertDialogAction>
               <AlertDialogAction className="bg-neomissio-primary" onClick={() => navigate("/responsavel/nova-matricula")}>
                 Matricular em Atividade <ArrowRight className="ml-2 h-4 w-4" />
