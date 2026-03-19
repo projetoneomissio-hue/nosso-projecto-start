@@ -4,7 +4,7 @@ import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-export type UserRole = "direcao" | "coordenacao" | "professor" | "responsavel";
+export type UserRole = "direcao" | "coordenacao" | "professor" | "responsavel" | "secretaria";
 
 const ACTIVE_ROLE_KEY = "neo-missio-active-role";
 

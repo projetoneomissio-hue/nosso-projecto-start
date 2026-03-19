@@ -153,7 +153,7 @@ const Alunos = () => {
       if (error) throw error;
       return data;
     },
-    enabled: user?.role === "direcao" || user?.role === "coordenacao",
+    enabled: user?.role === "direcao" || user?.role === "coordenacao" || user?.role === "secretaria",
   });
 
   // Delete mutation

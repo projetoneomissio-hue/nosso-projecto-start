@@ -11,7 +11,7 @@ import { Search, UserCog } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
-type AppRole = "direcao" | "coordenacao" | "professor" | "responsavel";
+type AppRole = "direcao" | "coordenacao" | "professor" | "responsavel" | "secretaria";
 
 interface UserData {
   id: string;
@@ -25,9 +25,10 @@ const roleLabels: Record<AppRole, string> = {
   coordenacao: "Coordenação",
   professor: "Professor",
   responsavel: "Responsável",
+  secretaria: "Secretaria",
 };
 
-const allRoles: AppRole[] = ["direcao", "coordenacao", "professor", "responsavel"];
+const allRoles: AppRole[] = ["direcao", "coordenacao", "professor", "responsavel", "secretaria"];
 
 const Usuarios = () => {
   const { toast } = useToast();

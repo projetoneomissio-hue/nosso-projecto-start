@@ -70,6 +70,12 @@ import RegistrarPagamento from "./pages/responsavel/RegistrarPagamento";
 import DashboardResponsavel from "./pages/responsavel/DashboardResponsavel";
 import PagamentoSucesso from "./pages/responsavel/PagamentoSucesso";
 
+// Secretaria (Voluntários)
+import DashboardSecretaria from "./pages/secretaria/DashboardSecretaria";
+
+// Shared Management/Secretaria
+import PreCadastro from "./pages/shared/PreCadastro";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -114,6 +120,7 @@ export const AppRoutes = () => {
       <Route path="/direcao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["direcao"]}><MatriculasPendentes /></ProtectedRoute>} />
       <Route path="/direcao/cobrancas" element={<ProtectedRoute allowedRoles={["direcao"]}><GestaoCobrancas /></ProtectedRoute>} />
       <Route path="/direcao/comunicados" element={<ProtectedRoute allowedRoles={["direcao"]}><Comunicados /></ProtectedRoute>} />
+      <Route path="/direcao/pre-cadastro" element={<ProtectedRoute allowedRoles={["direcao"]}><PreCadastro /></ProtectedRoute>} />
 
       {/* Coordenação */}
       <Route path="/coordenacao/dashboard" element={<ProtectedRoute allowedRoles={["coordenacao"]}><DashboardCoordenacao /></ProtectedRoute>} />
@@ -141,6 +148,13 @@ export const AppRoutes = () => {
       <Route path="/responsavel/anamnese" element={<ProtectedRoute allowedRoles={["responsavel"]}><Anamnese /></ProtectedRoute>} />
       <Route path="/responsavel/cadastrar-aluno" element={<ProtectedRoute allowedRoles={["responsavel"]}><CadastrarAluno /></ProtectedRoute>} />
       <Route path="/responsavel/pagamento-sucesso" element={<ProtectedRoute allowedRoles={["responsavel"]}><PagamentoSucesso /></ProtectedRoute>} />
+
+      {/* Secretaria (Voluntários) */}
+      <Route path="/secretaria/dashboard" element={<ProtectedRoute allowedRoles={["secretaria"]}><DashboardSecretaria /></ProtectedRoute>} />
+      <Route path="/secretaria/cadastrar-aluno" element={<ProtectedRoute allowedRoles={["secretaria"]}><CadastrarAluno /></ProtectedRoute>} />
+      <Route path="/secretaria/nova-matricula" element={<ProtectedRoute allowedRoles={["secretaria"]}><NovaMatricula /></ProtectedRoute>} />
+      <Route path="/secretaria/alunos" element={<ProtectedRoute allowedRoles={["secretaria"]}><Alunos /></ProtectedRoute>} />
+      <Route path="/secretaria/pre-cadastro" element={<ProtectedRoute allowedRoles={["secretaria", "direcao"]}><PreCadastro /></ProtectedRoute>} />
 
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />

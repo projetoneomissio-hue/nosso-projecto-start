@@ -130,4 +130,167 @@ export const alunosService = {
         if (error) throw error;
         if (existing) throw new Error("CPF já cadastrado para outro aluno.");
     },
+
+    /** 
+     * Busca global por duplicatas (CPF, Email ou Nome+DataNasc) 
+     * Verifica em perfis e alunos.
+     */
+    async checkGlobalDuplicate(params: { 
+        cpf?: string; 
+        email?: string; 
+        nome?: string; 
+        dataNascimento?: string 
+    }) {
+        const results = {
+            profile: null as any,
+            aluno: null as any,
+        };
+
+        // 1. Check by CPF (Strongest)
+        if (params.cpf) {
+            const cleanCpf = unmaskCPF(params.cpf);
+            
+            const { data: profile } = await (supabase
+                .from("profiles")
+                .select("id, nome_completo, email")
+                .eq("cpf" as any, cleanCpf)
+                .maybeSingle() as any);
+            
+            if (profile) results.profile = profile;
+
+            const { data: aluno } = await (supabase
+                .from("alunos")
+                .select("id, nome_completo, responsavel_id")
+                .eq("cpf", cleanCpf)
+                .maybeSingle() as any);
+            
+            if (aluno) results.aluno = aluno;
+        }
+
+        // 2. Check by Email
+        if (params.email && !results.profile) {
+            const { data: profileByEmail } = await (supabase
+                .from("profiles")
+                .select("id, nome_completo, email")
+                .eq("email", params.email)
+                .maybeSingle() as any);
+            
+            if (profileByEmail) results.profile = profileByEmail;
+        }
+
+        // 3. Fuzzy Check (Name + DOB) - Fallback for records without CPF
+        if (params.nome && params.dataNascimento) {
+            if (!results.profile) {
+                const { data: fuzzyProfile } = await (supabase
+                    .from("profiles")
+                    .select("id, nome_completo, email")
+                    .eq("nome_completo", params.nome)
+                    // Note: If profiles don't have birthdate, we might need to skip or use only name+id
+                    .maybeSingle() as any);
+                
+                // Only mark as duplicate if name matches exactly and we don't have a newer record
+                if (fuzzyProfile) results.profile = fuzzyProfile;
+            }
+
+            if (!results.aluno) {
+                const { data: fuzzyAluno } = await (supabase
+                    .from("alunos")
+                    .select("id, nome_completo, responsavel_id")
+                    .eq("nome_completo", params.nome)
+                    .eq("data_nascimento", params.dataNascimento)
+                    .maybeSingle() as any);
+                
+                if (fuzzyAluno) results.aluno = fuzzyAluno;
+            }
+        }
+
+        return results;
+    },
+
+    /**
+     * Busca alunos no banco (apenas para secretaria/direção)
+     */
+    async searchStudents(query: string) {
+        if (!query || query.length < 3) return [];
+
+        const { data, error } = await supabase
+            .from("alunos")
+            .select("id, nome_completo, data_nascimento, cpf")
+            .ilike("nome_completo", `%${query}%`)
+            .order("nome_completo")
+            .limit(10);
+        
+        if (error) throw error;
+        return data || [];
+    },
+
+    /** 
+     * Processa um convite aceito, criando os alunos listados no metadata 
+     */
+    async processInvitationData(token: string, userId: string) {
+        // 1. Fetch invitation metadata
+        const { data: invite, error: inviteError } = await (supabase
+            .from("invitations")
+            .select("metadata, email")
+            .eq("token", token)
+            .maybeSingle() as any);
+        
+        if (inviteError || !invite) return;
+
+        const metadata = invite.metadata as any;
+        if (!metadata) return;
+
+        // 2. Update Profile with birthdate if provided
+        if (metadata.responsavel_data_nascimento) {
+            await (supabase
+                .from("profiles")
+                .update({ data_nascimento: metadata.responsavel_data_nascimento } as any)
+                .eq("id", userId) as any);
+        }
+
+        // 3. Handle Self-Enrollment (Adult Students)
+        if (metadata.is_self) {
+            // Check if already exists as aluno
+            const { data: existing } = await supabase
+                .from("alunos")
+                .select("id")
+                .eq("responsavel_id", userId)
+                .maybeSingle();
+
+            if (!existing) {
+                await supabase.from("alunos").insert({
+                    nome_completo: metadata.responsavel_nome,
+                    cpf: unmaskCPF(metadata.responsavel_cpf),
+                    data_nascimento: metadata.responsavel_data_nascimento,
+                    responsavel_id: userId,
+                    status: "ativo"
+                });
+            }
+        }
+
+        // 4. Handle Existing Students (Retroactive Link)
+        if (metadata.existing_student_ids && Array.isArray(metadata.existing_student_ids)) {
+            for (const alunoId of metadata.existing_student_ids) {
+                await supabase
+                    .from("alunos")
+                    .update({ responsavel_id: userId })
+                    .eq("id", alunoId);
+            }
+        }
+
+        // 5. Handle New Students
+        if (metadata.alunos && Array.isArray(metadata.alunos)) {
+            for (const alunoData of metadata.alunos) {
+                // If it was already linked above, skip duplicate creation if same name
+                // (Though the UI should distinguish them)
+                await supabase.from("alunos").insert({
+                    nome_completo: alunoData.nome,
+                    data_nascimento: alunoData.data_nascimento,
+                    cpf: unmaskCPF(alunoData.cpf),
+                    responsavel_id: userId,
+                    status: "ativo"
+                });
+            }
+        }
+    },
 };

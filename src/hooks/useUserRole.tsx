@@ -49,10 +49,12 @@ export const useUserRole = () => {
   const isCoordenacao = () => hasRole("coordenacao");
   const isProfessor = () => hasRole("professor");
   const isResponsavel = () => hasRole("responsavel");
+  const isSecretaria = () => hasRole("secretaria");
 
   const canManageAll = () => isDirecao();
   const canManageActivities = () => isDirecao() || isCoordenacao();
   const canViewFinancial = () => isDirecao() || isCoordenacao();
+  const canManageStudents = () => isDirecao() || isCoordenacao() || isSecretaria();
 
   return {
     user,
@@ -64,9 +66,11 @@ export const useUserRole = () => {
     isCoordenacao,
     isProfessor,
     isResponsavel,
+    isSecretaria,
     canManageAll,
     canManageActivities,
     canViewFinancial,
+    canManageStudents,
     roles: user?.roles || [],
     activeRole: user?.activeRole,
     setActiveRole,

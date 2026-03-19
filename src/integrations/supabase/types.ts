@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1466,7 +1466,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "direcao" | "coordenacao" | "professor" | "responsavel"
+      app_role: "direcao" | "coordenacao" | "professor" | "responsavel" | "secretaria"
       status_certificado: "emitido" | "revogado"
       status_matricula: "pendente" | "ativa" | "cancelada" | "concluida"
       status_pagamento: "pendente" | "pago" | "atrasado" | "cancelado"
@@ -1606,7 +1606,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["direcao", "coordenacao", "professor", "responsavel"],
+      app_role: ["direcao", "coordenacao", "professor", "responsavel", "secretaria"],
       status_certificado: ["emitido", "revogado"],
       status_matricula: ["pendente", "ativa", "cancelada", "concluida"],
       status_pagamento: ["pendente", "pago", "atrasado", "cancelado"],

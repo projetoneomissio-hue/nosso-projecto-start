@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Camera, User, AlertCircle, ArrowRight, ArrowLeft, Save, CheckCircle, Paperclip, FileText, Trash2 } from "lucide-react";
 import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
 import { compressImage } from "@/utils/compressImage";
+import { alunosService } from "@/services/alunos.service";
 
 const CadastrarAluno = () => {
   const { user } = useAuth();
@@ -154,19 +155,25 @@ const CadastrarAluno = () => {
         if (cleanCpf.length !== 11 || !validateCPF(cleanCpf)) {
           throw new Error("CPF inválido. Verifique os dígitos informados.");
         }
-
-        // Check for duplicate CPF
-        const { data: existing, error: checkError } = await supabase
-          .from("alunos")
-          .select("id, nome_completo")
-          .eq("cpf", cleanCpf)
-          .maybeSingle();
-
-        if (checkError) throw checkError;
-        if (existing) {
+        // Check for duplicate CPF/Name globally
+        const dups = await alunosService.checkGlobalDuplicate({ 
+          cpf: cleanCpf,
+          nome: formData.nomeCompleto,
+          dataNascimento: formData.dataNascimento
+        });
+        
+        if (dups.aluno) {
+          const isFuzzy = !cleanCpf || cleanCpf !== dups.aluno.cpf;
           throw new Error(
-            `Já existe um aluno cadastrado com este CPF: ${existing.nome_completo}. ` +
+            `Já existe um ALUNO cadastrado com estas informações: ${dups.aluno.nome_completo}${isFuzzy ? ' (Nome + Data Nasc)' : ''}. ` +
             `Se deseja matriculá-lo em outra atividade, vá em "Nova Matrícula".`
+          );
+        }
+
+        if (dups.profile) {
+          throw new Error(
+            `Estas informações pertencem a um RESPONSÁVEL já cadastrado: ${dups.profile.nome_completo}. ` +
+            `Verifique se o CPF ou Nome+Data Nasc estão corretos.`
           );
         }
       }

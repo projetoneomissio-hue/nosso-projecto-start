@@ -28,6 +28,10 @@ const Dashboard = () => {
     return <Navigate to="/coordenacao/dashboard" replace />;
   }
 
+  if (user?.role === "secretaria") {
+    return <Navigate to="/secretaria/dashboard" replace />;
+  }
+
   if (user?.role === "professor") {
     return <Navigate to="/professor/turmas" replace />;
   }

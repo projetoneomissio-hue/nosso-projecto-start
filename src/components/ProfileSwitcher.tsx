@@ -6,6 +6,7 @@ import {
     Users,
     GraduationCap,
     UserCircle,
+    ClipboardList,
     ArrowLeftRight,
     ChevronDown,
     Check
@@ -24,6 +25,7 @@ const roleConfig: Record<UserRole, { label: string; icon: typeof Building2; dash
     coordenacao: { label: "Coordenação", icon: Users, dashboardPath: "/dashboard" },
     professor: { label: "Professor", icon: GraduationCap, dashboardPath: "/dashboard" },
     responsavel: { label: "Responsável", icon: UserCircle, dashboardPath: "/responsavel/dashboard" },
+    secretaria: { label: "Secretaria", icon: ClipboardList, dashboardPath: "/secretaria/dashboard" },
 };
 
 interface ProfileSwitcherProps {

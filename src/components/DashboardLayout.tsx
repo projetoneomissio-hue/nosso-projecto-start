@@ -29,6 +29,7 @@ import {
   ChevronRight,
   ChevronDown,
   Trophy,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -80,6 +81,7 @@ const getNavigationByRole = (role: string) => {
           { name: "Coordenadores", href: "/direcao/coordenadores", icon: UserCog },
           { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
           { name: "Convites", href: "/convites", icon: Mail },
+          { name: "Pré-Cadastro", href: "/direcao/pre-cadastro", icon: UserPlus },
         ]
       },
       {
@@ -178,6 +180,23 @@ const getNavigationByRole = (role: string) => {
         group: "Relatórios",
         items: [
           { name: "Relatórios do Aluno", href: "/responsavel/relatorios-aluno", icon: BarChart },
+        ]
+      }
+    ],
+    secretaria: [
+      {
+        group: "Atendimento",
+        items: [
+          { name: "Dashboard", href: "/secretaria/dashboard", icon: LayoutDashboard },
+          { name: "Cadastrar Aluno", href: "/secretaria/cadastrar-aluno", icon: UserCircle },
+          { name: "Pré-Cadastro", href: "/secretaria/pre-cadastro", icon: UserPlus },
+          { name: "Nova Matrícula", href: "/secretaria/nova-matricula", icon: FileText },
+        ]
+      },
+      {
+        group: "Consulta",
+        items: [
+          { name: "Alunos", href: "/secretaria/alunos", icon: Users },
         ]
       }
     ]

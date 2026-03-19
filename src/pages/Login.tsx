@@ -18,7 +18,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,9 @@ import { handleError } from "@/utils/error-handler";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { alunosService } from "@/services/alunos.service";
+// import { UserRole } from "@/hooks/useUserRole"; // Removed to fix lint
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: "Email inválido" }).max(255, { message: "Email muito longo" }),
@@ -56,11 +59,46 @@ const Login = () => {
   const [inviteToken, setInviteToken] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [hasInvite, setHasInvite] = useState(false);
+  const [isSelf, setIsSelf] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const { login, signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState("login");
+
+  // Handle invitation token from URL
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (token) {
+      setInviteToken(token);
+      setHasInvite(true);
+      setActiveTab("signup");
+      
+      // Try to fetch invitation details to pre-fill
+      const fetchInviteData = async () => {
+        const { data, error } = await (supabase
+          .from("invitations")
+          .select("email, metadata")
+          .eq("token", token)
+          .maybeSingle() as any);
+        
+        if (data && !error) {
+          setEmail(data.email);
+          const metadata = data.metadata as any;
+          if (metadata?.responsavel_nome) {
+            setName(metadata.responsavel_nome);
+          }
+          if (metadata?.is_self) {
+            setIsSelf(true);
+          }
+        }
+      };
+      
+      fetchInviteData();
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +175,7 @@ const Login = () => {
         */
 
         // Determine redirect based on roles
-        const savedRole = localStorage.getItem("neo-missio-active-role") as UserRole | null;
+        const savedRole = localStorage.getItem("neo-missio-active-role") as any;
         const activeRole = savedRole && roles.includes(savedRole)
           ? savedRole
           : roles[0];
@@ -211,10 +249,21 @@ const Login = () => {
           if (error) {
             handleError(error, "Erro ao criar conta");
           } else {
+            // Process invitation data (create pending students)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                try {
+                    await alunosService.processInvitationData(validation.data.inviteToken, user.id);
+                } catch (err) {
+                    console.error("Erro ao processar dados do convite:", err);
+                }
+            }
+
             toast({
               title: "Conta criada!",
               description: "Faça login para acessar o sistema.",
             });
+            setActiveTab("login");
             setHasInvite(false);
             setInviteToken("");
             setEmail("");
@@ -280,7 +329,7 @@ const Login = () => {
           <CardDescription>Sistema de Gestão</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Cadastro</TabsTrigger>
@@ -406,6 +455,18 @@ const Login = () => {
                     <p className="text-xs text-muted-foreground">
                       Cadastros públicos são criados automaticamente como Responsável.
                       Para acesso administrativo, solicite um convite à direção.
+                    </p>
+                  </div>
+                )}
+
+                {isSelf && (
+                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-semibold text-primary">Auto-Matrícula (Adulto)</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Você está se cadastrando como **Responsável e Aluno**. Sua conta terá acesso tanto aos dados de perfil quanto à sua área de aluno.
                     </p>
                   </div>
                 )}
