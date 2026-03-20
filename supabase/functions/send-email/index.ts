@@ -76,7 +76,7 @@ const handler = async (req: Request): Promise<Response> => {
                 Authorization: `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: "Neo Missio <sistema@neomissio.com>", // Updated to official domain
+                from: "Neo Missio <sistema@neomissio.com.br>", // Updated to official domain
                 to: [to],
                 subject: subject,
                 html: html,

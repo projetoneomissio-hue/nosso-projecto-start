@@ -41,6 +41,8 @@ import { Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { OnboardingResponsavel } from "@/components/responsavel/OnboardingResponsavel";
+import { compressImage } from "@/utils/compressImage";
+import { StudentProgressBar } from "@/components/responsavel/StudentProgressBar";
 
 const DashboardResponsavel = () => {
   const { user } = useAuth();
@@ -90,12 +92,16 @@ const DashboardResponsavel = () => {
       }
       setUploading(true);
       const file = event.target.files[0];
+      
+      // Comprimir imagem antes do upload
+      const compressedFile = await compressImage(file);
+      
       const fileExt = file.name.split('.').pop();
       const filePath = `${user?.id}/${Math.random()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('student-photos')
-        .upload(filePath, file);
+        .upload(filePath, compressedFile);
 
       if (uploadError) throw uploadError;
 
@@ -382,6 +388,7 @@ const DashboardResponsavel = () => {
                               Nascimento: {format(new Date(aluno.data_nascimento), "dd/MM/yyyy")}
                             </span>
                           </div>
+                          <StudentProgressBar aluno={aluno} />
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">

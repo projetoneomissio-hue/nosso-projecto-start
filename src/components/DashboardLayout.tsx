@@ -81,6 +81,7 @@ const getNavigationByRole = (role: string) => {
           { name: "Coordenadores", href: "/direcao/coordenadores", icon: UserCog },
           { name: "Usuários", href: "/direcao/usuarios", icon: UserCog },
           { name: "Convites", href: "/convites", icon: Mail },
+          { name: "Convites Legados", href: "/secretaria/convites-legados", icon: Mail },
           { name: "Pré-Cadastro", href: "/direcao/pre-cadastro", icon: UserPlus },
         ]
       },
@@ -189,6 +190,7 @@ const getNavigationByRole = (role: string) => {
         items: [
           { name: "Dashboard", href: "/secretaria/dashboard", icon: LayoutDashboard },
           { name: "Cadastrar Aluno", href: "/secretaria/cadastrar-aluno", icon: UserCircle },
+          { name: "Convites Legados", href: "/secretaria/convites-legados", icon: Mail },
           { name: "Pré-Cadastro", href: "/secretaria/pre-cadastro", icon: UserPlus },
           { name: "Nova Matrícula", href: "/secretaria/nova-matricula", icon: FileText },
         ]

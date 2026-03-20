@@ -31,6 +31,7 @@ import NotFound from "./pages/NotFound";
 
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import MatriculaOnline from "./pages/public/MatriculaOnline";
+import ResgatarConvite from "./pages/public/ResgatarConvite";
 
 // Direção
 import Usuarios from "./pages/direcao/Usuarios";
@@ -72,6 +73,7 @@ import PagamentoSucesso from "./pages/responsavel/PagamentoSucesso";
 
 // Secretaria (Voluntários)
 import DashboardSecretaria from "./pages/secretaria/DashboardSecretaria";
+import ConvitesLegados from "./pages/secretaria/ConvitesLegados";
 
 // Shared Management/Secretaria
 import PreCadastro from "./pages/shared/PreCadastro";
@@ -101,6 +103,7 @@ export const AppRoutes = () => {
       {/* <Route path="/checkout" element={<Checkout />} /> */}
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/matricula/:slug" element={<MatriculaOnline />} />
+      <Route path="/resgatar-convite" element={<ResgatarConvite />} />
 
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/atividades" element={<ProtectedRoute><Atividades /></ProtectedRoute>} />
@@ -155,6 +158,7 @@ export const AppRoutes = () => {
       <Route path="/secretaria/nova-matricula" element={<ProtectedRoute allowedRoles={["secretaria"]}><NovaMatricula /></ProtectedRoute>} />
       <Route path="/secretaria/alunos" element={<ProtectedRoute allowedRoles={["secretaria"]}><Alunos /></ProtectedRoute>} />
       <Route path="/secretaria/pre-cadastro" element={<ProtectedRoute allowedRoles={["secretaria", "direcao"]}><PreCadastro /></ProtectedRoute>} />
+      <Route path="/secretaria/convites-legados" element={<ProtectedRoute allowedRoles={["secretaria", "direcao"]}><ConvitesLegados /></ProtectedRoute>} />
 
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
