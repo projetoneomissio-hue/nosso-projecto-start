@@ -31,6 +31,7 @@ import {
   Trophy,
   UserPlus,
   Ghost,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -101,6 +102,12 @@ const getNavigationByRole = (role: string) => {
           { name: "Comunicados", href: "/direcao/comunicados", icon: Megaphone },
           { name: "Notificações", href: "/coordenacao/notificacoes", icon: AlertCircle },
         ]
+      },
+      {
+        group: "Suporte",
+        items: [
+          { name: "Central de Ajuda", href: "/ajuda", icon: HelpCircle },
+        ]
       }
     ],
     coordenacao: [
@@ -130,6 +137,12 @@ const getNavigationByRole = (role: string) => {
           { name: "Notificações", href: "/coordenacao/notificacoes", icon: Mail },
           { name: "Relatórios", href: "/coordenacao/relatorios", icon: BarChart },
         ]
+      },
+      {
+        group: "Suporte",
+        items: [
+          { name: "Central de Ajuda", href: "/ajuda", icon: HelpCircle },
+        ]
       }
     ],
     professor: [
@@ -153,6 +166,12 @@ const getNavigationByRole = (role: string) => {
         group: "Financeiro",
         items: [
           { name: "Comissões", href: "/professor/comissoes", icon: DollarSign },
+        ]
+      },
+      {
+        group: "Suporte",
+        items: [
+          { name: "Central de Ajuda", href: "/ajuda", icon: HelpCircle },
         ]
       }
     ],
@@ -184,6 +203,12 @@ const getNavigationByRole = (role: string) => {
         items: [
           { name: "Relatórios do Aluno", href: "/responsavel/relatorios-aluno", icon: BarChart },
         ]
+      },
+      {
+        group: "Suporte",
+        items: [
+          { name: "Central de Ajuda", href: "/ajuda", icon: HelpCircle },
+        ]
       }
     ],
     secretaria: [
@@ -202,6 +227,12 @@ const getNavigationByRole = (role: string) => {
         group: "Consulta",
         items: [
           { name: "Alunos", href: "/secretaria/alunos", icon: Users },
+        ]
+      },
+      {
+        group: "Suporte",
+        items: [
+          { name: "Central de Ajuda", href: "/ajuda", icon: HelpCircle },
         ]
       }
     ]

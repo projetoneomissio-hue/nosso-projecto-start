@@ -12,12 +12,26 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Bell } from "lucide-react";
+import { User, Lock, Bell, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { formatCPF, unmaskCPF, validateCPF } from "@/utils/cpf";
 
 const profileSchema = z.object({
   name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100, "Nome muito longo"),
   email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
-  phone: z.string().trim().regex(/^\(\d{2}\) \d{4,5}-\d{4}$/, "Telefone inválido (formato: (00) 00000-0000)").optional().or(z.literal("")),
+  cpf: z.string().optional(),
+  phone: z.string().trim().optional(),
+}).refine((data) => {
+  if (data.cpf) {
+    const clean = unmaskCPF(data.cpf);
+    return clean.length === 11 && validateCPF(clean);
+  }
+  return true;
+}, {
+  message: "CPF inválido",
+  path: ["cpf"],
 });
 
 const passwordSchema = z.object({
@@ -35,7 +49,23 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 const Configuracoes = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["user-profile-settings", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("nome_completo, email, cpf, telefone")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   const requestNotificationPermission = async () => {
     const permission = await Notification.requestPermission();
@@ -50,10 +80,54 @@ const Configuracoes = () => {
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || "",
-      email: user?.email || "",
+      name: "",
+      email: "",
+      cpf: "",
       phone: "",
     },
+  });
+
+  useEffect(() => {
+    if (profile) {
+      profileForm.reset({
+        name: profile.nome_completo || user?.name || "",
+        email: profile.email || user?.email || "",
+        cpf: profile.cpf ? formatCPF(profile.cpf) : "",
+        phone: profile.telefone || "",
+      });
+    }
+  }, [profile, user, profileForm]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: ProfileFormValues) => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
+      const cleanCPF = data.cpf ? unmaskCPF(data.cpf) : null;
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          nome_completo: data.name,
+          // email: data.email, // Email change usually requires Supabase Auth email change flow
+          cpf: cleanCPF,
+          telefone: data.phone,
+        })
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-profile-settings", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile-progress", user?.id] });
+      toast({
+        title: "Perfil atualizado",
+        description: "Suas informações foram atualizadas com sucesso.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   });
 
   const passwordForm = useForm<PasswordFormValues>({
@@ -66,19 +140,39 @@ const Configuracoes = () => {
   });
 
   const onProfileSubmit = (data: ProfileFormValues) => {
-    toast({
-      title: "Perfil atualizado",
-      description: "Suas informações foram atualizadas com sucesso.",
-    });
+    updateProfileMutation.mutate(data);
   };
 
-  const onPasswordSubmit = (data: PasswordFormValues) => {
-    toast({
-      title: "Senha alterada",
-      description: "Sua senha foi alterada com sucesso.",
-    });
-    passwordForm.reset();
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword
+      });
+      if (error) throw error;
+      
+      toast({
+        title: "Senha alterada",
+        description: "Sua senha foi alterada com sucesso.",
+      });
+      passwordForm.reset();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar senha",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex bg-background h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -139,11 +233,32 @@ const Configuracoes = () => {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="seu@email.com" {...field} />
+                            <Input type="email" placeholder="seu@email.com" {...field} disabled />
                           </FormControl>
                           <FormDescription>
-                            Email usado para login no sistema
+                            Email usado para login no sistema (não pode ser alterado por aqui)
                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={profileForm.control}
+                      name="cpf"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CPF</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="000.000.000-00" 
+                              maxLength={14}
+                              {...field} 
+                              onChange={(e) => {
+                                field.onChange(formatCPF(e.target.value));
+                              }}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -154,7 +269,7 @@ const Configuracoes = () => {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Telefone</FormLabel>
+                          <FormLabel>Telefone Celular</FormLabel>
                           <FormControl>
                             <Input placeholder="(00) 00000-0000" {...field} />
                           </FormControl>
@@ -164,7 +279,10 @@ const Configuracoes = () => {
                     />
 
                     <div className="flex gap-2">
-                      <Button type="submit">Salvar Alterações</Button>
+                      <Button type="submit" disabled={updateProfileMutation.isPending}>
+                        {updateProfileMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Salvar Alterações
+                      </Button>
                       <Button type="button" variant="outline" onClick={() => profileForm.reset()}>
                         Cancelar
                       </Button>

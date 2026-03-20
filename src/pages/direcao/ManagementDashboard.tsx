@@ -45,6 +45,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SocialImpactDashboard } from "@/components/direcao/SocialImpactDashboard";
 
 interface FinanceiroKPIs {
     receita?: { total: number; liquida: number; repasse_professores: number };
@@ -224,15 +226,26 @@ const ManagementDashboard = () => {
                     </div>
                 </div>
 
-                {/* KPI Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <GlassCard
-                        title="Total de Alunos"
-                        value={totalAlunosAtivos?.toString() || "0"}
-                        icon={<Users className="h-5 w-5" />}
-                        description={`${totalCadastrados} cadastros no sistema`}
-                        trend={{ value: 0, isPositive: true }}
-                        color={colors.escuta}
+                <Tabs defaultValue="operacional" className="space-y-8 w-full">
+                    <TabsList className="bg-card border shadow-sm p-1 rounded-xl h-auto">
+                        <TabsTrigger value="operacional" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all font-bold text-sm">
+                            Gestão Operacional & Financeira
+                        </TabsTrigger>
+                        <TabsTrigger value="impacto" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-bold text-sm">
+                            Impacto Social & Alcance
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="operacional" className="space-y-8 mt-6">
+                        {/* Status Cards / KPIs */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <GlassCard
+                                title="Total de Alunos"
+                                value={totalAlunosAtivos?.toString() || "0"}
+                                icon={<Users className="h-5 w-5" />}
+                                description={`${totalCadastrados} cadastros no sistema`}
+                                trend={{ value: 0, isPositive: true }}
+                                color={colors.escuta}
                         isLoading={loadingTodosAlunos}
                     />
                     <GlassCard
@@ -652,9 +665,15 @@ const ManagementDashboard = () => {
                         </div>
                     </GlassCard>
                 </div>
+              </TabsContent>
 
-                {/* Footer info */}
-                <div className="flex justify-between items-center pt-8 border-t border-border/50 opacity-50">
+              <TabsContent value="impacto" className="mt-6">
+                  <SocialImpactDashboard alunos={todosAlunos || []} />
+              </TabsContent>
+            </Tabs>
+
+            {/* Footer info */}
+            <div className="flex justify-between items-center pt-8 border-t border-border/50 opacity-50">
                     <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em]">
                         <Activity className="h-3 w-3 text-green-400" />
                         Dados atualizados em tempo real via Supabase

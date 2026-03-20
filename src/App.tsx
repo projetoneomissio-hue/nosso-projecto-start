@@ -32,6 +32,7 @@ import NotFound from "./pages/NotFound";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import MatriculaOnline from "./pages/public/MatriculaOnline";
 import ResgatarConvite from "./pages/public/ResgatarConvite";
+import Ajuda from "./pages/Ajuda";
 
 // Direção
 import Usuarios from "./pages/direcao/Usuarios";
@@ -163,6 +164,7 @@ export const AppRoutes = () => {
       <Route path="/secretaria/gestao-legados" element={<ProtectedRoute allowedRoles={["secretaria", "direcao"]}><GestaoLegados /></ProtectedRoute>} />
 
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+      <Route path="/ajuda" element={<ProtectedRoute><Ajuda /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

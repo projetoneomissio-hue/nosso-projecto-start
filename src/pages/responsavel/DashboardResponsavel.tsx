@@ -43,6 +43,7 @@ import { useState } from "react";
 import { OnboardingResponsavel } from "@/components/responsavel/OnboardingResponsavel";
 import { compressImage } from "@/utils/compressImage";
 import { StudentProgressBar } from "@/components/responsavel/StudentProgressBar";
+import { ProfileProgressBar } from "@/components/responsavel/ProfileProgressBar";
 
 const DashboardResponsavel = () => {
   const { user } = useAuth();
@@ -57,6 +58,7 @@ const DashboardResponsavel = () => {
     cpf: "",
     telefone: "",
     endereco: "",
+    bairro: "",
     alergias: "",
     medicamentos: "",
     observacoes: "",
@@ -127,6 +129,24 @@ const DashboardResponsavel = () => {
       {
         onSuccess: async () => {
           // 2. Atualizar Anamnese
+          const cleanCpf = unmaskCPF(formData.cpf);
+          const { error: alunoError } = await supabase
+          .from("alunos")
+          .update({
+            nome_completo: formData.nome,
+            data_nascimento: formData.data_nascimento,
+            cpf: cleanCpf || null,
+            telefone: formData.telefone || null,
+            endereco: formData.endereco || null,
+            bairro: formData.bairro || null,
+            foto_url: formData.foto_url,
+          })
+          .eq("id", editingAluno.id);
+
+          if (alunoError) {
+            console.error("Erro ao salvar aluno:", alunoError);
+          }
+
           const { error: anamneseError } = await supabase
             .from("anamneses")
             .upsert({
@@ -287,6 +307,8 @@ const DashboardResponsavel = () => {
           </p>
         </div>
 
+        <ProfileProgressBar />
+
         {/* Cards de Resumo */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <DashboardCard
@@ -355,14 +377,19 @@ const DashboardResponsavel = () => {
               <div>
                 <CardTitle className="text-xl flex items-center gap-2 text-primary">
                   <Users className="h-5 w-5" />
-                  Meus Alunos
+                  Perfis Vinculados
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">Gerencie os dependentes vinculados a você</p>
+                <p className="text-sm text-muted-foreground mt-1">Gerencie os perfis atuais ou adicione novas pessoas para realizar matrículas.</p>
               </div>
-              <Button variant="default" className="shadow-lg hover:shadow-primary/20 transition-all font-semibold" asChild>
+              <Button 
+                variant="default" 
+                className="shadow-lg hover:shadow-primary/20 transition-all font-semibold" 
+                title="Cadastre os dados pessoais do estudante aqui antes de solicitar uma nova matrícula"
+                asChild
+              >
                 <Link to="/responsavel/cadastrar-aluno">
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Novo Aluno
+                  Cadastrar p/ Matrícula
                 </Link>
               </Button>
             </CardHeader>
@@ -405,6 +432,7 @@ const DashboardResponsavel = () => {
                               cpf: formatCPF(aluno.cpf || ""),
                               telefone: aluno.telefone || "",
                               endereco: aluno.endereco || "",
+                              bairro: aluno.bairro || "",
                               alergias: anamnese.alergias || aluno.alergias || "",
                               medicamentos: anamnese.medicamentos || aluno.medicamentos || "",
                               observacoes: anamnese.observacoes || aluno.observacoes || "",
@@ -623,13 +651,25 @@ const DashboardResponsavel = () => {
                   placeholder="(00) 00000-0000"
                 />
               </div>
-              <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label htmlFor="endereco">Endereço</Label>
-                <Input
-                  id="endereco"
-                  value={formData.endereco}
-                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bairro">Bairro</Label>
+                  <Input
+                    id="bairro"
+                    value={formData.bairro}
+                    onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
+                    placeholder="Bairro"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endereco">Endereço Completo</Label>
+                  <Input
+                    id="endereco"
+                    value={formData.endereco}
+                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                    placeholder="Rua, número"
+                  />
+                </div>
               </div>
 
 

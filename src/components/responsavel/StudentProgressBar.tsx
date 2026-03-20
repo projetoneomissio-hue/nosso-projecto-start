@@ -7,13 +7,16 @@ interface StudentProgressBarProps {
 
 export const StudentProgressBar = ({ aluno }: StudentProgressBarProps) => {
   const calculateProgress = () => {
-    let score = 0;
-    if (aluno.nome_completo) score += 20;
-    if (aluno.data_nascimento && aluno.data_nascimento !== "1900-01-01") score += 20;
-    if (aluno.cpf) score += 20;
-    if (aluno.foto_url) score += 20;
-    if (aluno.anamneses && aluno.anamneses.length > 0) score += 20;
-    return score;
+    const fields = [
+      !!aluno.nome_completo,
+      !!(aluno.data_nascimento && aluno.data_nascimento !== "1900-01-01"),
+      !!aluno.cpf,
+      !!aluno.bairro,
+      !!aluno.foto_url,
+      !!(aluno.anamneses && aluno.anamneses.length > 0)
+    ];
+    const filled = fields.filter(Boolean).length;
+    return Math.round((filled / fields.length) * 100);
   };
 
   const progress = calculateProgress();

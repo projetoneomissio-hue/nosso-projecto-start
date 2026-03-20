@@ -210,7 +210,6 @@ const CadastrarAluno = () => {
       if (newAluno) {
         await supabase.from("anamneses").upsert({
           aluno_id: newAluno.id,
-          tipo_sanguineo: null,
           alergias: formData.alergias || null,
           medicamentos: formData.medicamentos || null,
           is_pne: formData.isPne,
