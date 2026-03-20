@@ -74,6 +74,7 @@ import PagamentoSucesso from "./pages/responsavel/PagamentoSucesso";
 // Secretaria (Voluntários)
 import DashboardSecretaria from "./pages/secretaria/DashboardSecretaria";
 import ConvitesLegados from "./pages/secretaria/ConvitesLegados";
+import GestaoLegados from "./pages/secretaria/GestaoLegados";
 
 // Shared Management/Secretaria
 import PreCadastro from "./pages/shared/PreCadastro";
@@ -159,6 +160,7 @@ export const AppRoutes = () => {
       <Route path="/secretaria/alunos" element={<ProtectedRoute allowedRoles={["secretaria"]}><Alunos /></ProtectedRoute>} />
       <Route path="/secretaria/pre-cadastro" element={<ProtectedRoute allowedRoles={["secretaria", "direcao"]}><PreCadastro /></ProtectedRoute>} />
       <Route path="/secretaria/convites-legados" element={<ProtectedRoute allowedRoles={["secretaria", "direcao"]}><ConvitesLegados /></ProtectedRoute>} />
+      <Route path="/secretaria/gestao-legados" element={<ProtectedRoute allowedRoles={["secretaria", "direcao"]}><GestaoLegados /></ProtectedRoute>} />
 
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
