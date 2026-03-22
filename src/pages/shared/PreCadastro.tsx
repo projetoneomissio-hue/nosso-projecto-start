@@ -237,7 +237,7 @@ export default function PreCadastro() {
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground text-center pt-2">
+                <p className="text-xs text-muted-foreground text-center pt-2">
                   Envie este link para o responsável. Ele poderá definir a senha e completar o cadastro.
                 </p>
               </div>
@@ -397,7 +397,7 @@ export default function PreCadastro() {
                           <div key={aluno.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors">
                             <div>
                               <p className="font-semibold text-sm">{aluno.nome_completo}</p>
-                              <p className="text-[10px] text-muted-foreground">
+                              <p className="text-xs text-muted-foreground">
                                 Nasc: {aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'N/A'} 
                                 {aluno.cpf ? ` • CPF: ${aluno.cpf}` : ''}
                               </p>
@@ -447,7 +447,7 @@ export default function PreCadastro() {
                         <div className="flex items-center gap-3">
                           <Database className="h-4 w-4 text-primary" />
                           <div>
-                            <p className="font-semibold text-sm">{aluno.nome_completo} <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-1 tracking-tight">EXISTENTE</span></p>
+                            <p className="font-semibold text-sm">{aluno.nome_completo} <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-1 tracking-tight">EXISTENTE</span></p>
                             <p className="text-xs text-muted-foreground">Nasc: {aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'N/A'}</p>
                           </div>
                         </div>
@@ -503,7 +503,7 @@ export default function PreCadastro() {
 
                 <div className="pt-4 border-t border-primary/10">
                     <AlertCircle className="h-4 w-4 text-primary inline mr-2" />
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                         Ao finalizar, um convite será criado. O responsável receberá um email e poderá completar o cadastro no sistema.
                     </span>
                 </div>

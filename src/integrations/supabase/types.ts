@@ -1169,6 +1169,16 @@ export type Database = {
           unidade_id: string
           updated_at: string | null
           whatsapp: string
+          atividade_desejada: string | null
+          sobrenome: string | null
+          cpf_responsavel: string | null
+          escola: string | null
+          serie_ano: string | null
+          necessidades_especiais: string | null
+          como_conheceu: string | null
+          autoriza_imagem: boolean | null
+          email_responsavel: string | null
+          nome_responsavel: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1179,6 +1189,14 @@ export type Database = {
           unidade_id: string
           updated_at?: string | null
           whatsapp: string
+          atividade_desejada?: string | null
+          sobrenome?: string | null
+          cpf_responsavel?: string | null
+          escola?: string | null
+          serie_ano?: string | null
+          necessidades_especiais?: string | null
+          como_conheceu?: string | null
+          autoriza_imagem?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -1189,6 +1207,14 @@ export type Database = {
           unidade_id?: string
           updated_at?: string | null
           whatsapp?: string
+          atividade_desejada?: string | null
+          sobrenome?: string | null
+          cpf_responsavel?: string | null
+          escola?: string | null
+          serie_ano?: string | null
+          necessidades_especiais?: string | null
+          como_conheceu?: string | null
+          autoriza_imagem?: boolean | null
         }
         Relationships: [
           {
@@ -1470,7 +1496,7 @@ export type Database = {
       status_certificado: "emitido" | "revogado"
       status_matricula: "pendente" | "ativa" | "cancelada" | "concluida"
       status_pagamento: "pendente" | "pago" | "atrasado" | "cancelado"
-      status_solicitacao: "pendente" | "aprovada" | "rejeitada"
+      status_solicitacao: "pendente" | "aprovada" | "rejeitada" | "interessado"
       tipo_contato:
         | "ligacao"
         | "whatsapp"

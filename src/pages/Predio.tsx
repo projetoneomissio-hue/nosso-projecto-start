@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { useUnidade } from "@/contexts/UnidadeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ type Locacao = {
 };
 
 const Predio = () => {
+  const { currentUnidade } = useUnidade();
   const queryClient = useQueryClient();
 
   // Modal states
@@ -72,11 +74,12 @@ const Predio = () => {
   const [deletingLocacao, setDeletingLocacao] = useState<string | null>(null);
 
   const { data: custos, isLoading: loadingCustos } = useQuery({
-    queryKey: ["custos-predio"],
+    queryKey: ["custos-predio", currentUnidade?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custos_predio")
         .select("*")
+        .eq("unidade_id", currentUnidade?.id || '00000000-0000-0000-0000-000000000001')
         .order("data_competencia", { ascending: false });
 
       if (error) throw error;
@@ -87,11 +90,12 @@ const Predio = () => {
   });
 
   const { data: funcionarios, isLoading: loadingFunc } = useQuery({
-    queryKey: ["funcionarios"],
+    queryKey: ["funcionarios", currentUnidade?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("funcionarios")
         .select("*")
+        .eq("unidade_id", currentUnidade?.id || '00000000-0000-0000-0000-000000000001')
         .order("nome");
 
       if (error) throw error;
@@ -100,11 +104,12 @@ const Predio = () => {
   });
 
   const { data: locacoes, isLoading: loadingLoc } = useQuery({
-    queryKey: ["locacoes"],
+    queryKey: ["locacoes", currentUnidade?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locacoes")
         .select("*")
+        .eq("unidade_id", currentUnidade?.id || '00000000-0000-0000-0000-000000000001')
         .order("data", { ascending: true });
 
       if (error) throw error;

@@ -19,6 +19,7 @@ import {
   Mail,
   Send
 } from "lucide-react";
+import { useUnidade } from "@/contexts/UnidadeContext";
 import { useFinanceiroKPIs, useDespesasPorCategoria, useFluxoCaixaMeses, useReceitaPorAtividade } from "@/hooks/useFinanceiro";
 import { financeiroService } from "@/services/financeiro.service";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -39,17 +40,26 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 const Financeiro = () => {
   const { toast } = useToast();
   const reportRef = useRef<HTMLDivElement>(null);
+  const { currentUnidade } = useUnidade();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Responsive state
+  useState(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  });
 
   // Novos Hooks Otimizados
   const { data: kpis, isLoading: loadingKPIs } = useFinanceiroKPIs();
   const { data: despesasPorCategoria, isLoading: loadingDespesasCat } = useDespesasPorCategoria();
-  const { data: fluxoCaixa, isLoading: loadingFluxo } = useFluxoCaixaMeses(6);
+  const { data: fluxoCaixa, isLoading: loadingFluxo } = useFluxoCaixaMeses();
   const { data: receitaPorAtividade, isLoading: loadingAtividade } = useReceitaPorAtividade();
 
   const exportarCSV = async () => {
     try {
       toast({ title: "Gerando CSV...", description: "Processando dados." });
-      const { data } = await financeiroService.fetchDadosPDF();
+      const { data } = await financeiroService.fetchDadosPDF(currentUnidade?.id);
 
       const headers = ["ID", "Descrição", "Valor", "Tipo", "Categoria", "Data", "Status"];
       const rows = data.map((item: any) => [
@@ -87,7 +97,7 @@ const Financeiro = () => {
         description: "Buscando dados e gerando PDF.",
       });
 
-      const { data, periodo } = await financeiroService.fetchDadosPDF();
+      const { data, periodo } = await financeiroService.fetchDadosPDF(currentUnidade?.id);
 
       const transacoes = data.map((item: any) => ({
         id: item.id,
@@ -139,23 +149,23 @@ const Financeiro = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-8 animate-fade-in">
-        <div className="flex justify-between items-center">
+      <div className="p-3 sm:p-6 lg:p-8 space-y-8 animate-fade-in">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Financeiro</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Financeiro</h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               Visão geral da saúde financeira da escola
             </p>
           </div>
-          <div className="flex gap-2">
-            <NovaDespesaDialog />
-            <Button onClick={exportarPDF} variant="outline" className="gap-2 shadow-sm">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <NovaDespesaDialog className="gap-2 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm h-9 sm:h-10" />
+            <Button onClick={exportarPDF} variant="outline" className="gap-2 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm">
               <Download className="h-4 w-4" />
-              Relatório PDF
+              <span className="hidden sm:inline">Relatório</span> PDF
             </Button>
-            <Button onClick={exportarCSV} variant="outline" className="gap-2 shadow-sm">
+            <Button onClick={exportarCSV} variant="outline" className="gap-2 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm">
               <Download className="h-4 w-4" />
-              Exportar CSV
+              <span className="hidden sm:inline">Exportar</span> CSV
             </Button>
           </div>
         </div>
@@ -215,79 +225,86 @@ const Financeiro = () => {
               </div>
 
               {/* Gráficos Principais */}
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+              <div className="grid gap-6 grid-cols-1 lg:grid-cols-7">
                 {/* Fluxo de Caixa (Maior) */}
-                <Card className="col-span-4 shadow-sm">
+                <Card className="col-span-full lg:col-span-4 shadow-sm">
                   <CardHeader>
                     <CardTitle>Fluxo de Caixa (6 Meses)</CardTitle>
                   </CardHeader>
-                  <CardContent className="pl-2">
-                    <ResponsiveContainer width="100%" height={350}>
-                      <BarChart data={fluxoCaixa}>
+                  <CardContent className="pl-0 sm:pl-2">
+                    <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
+                      <BarChart data={fluxoCaixa && typeof fluxoCaixa === 'object' && !Array.isArray(fluxoCaixa) ? Object.values(fluxoCaixa) : (fluxoCaixa || [])} margin={{ left: isMobile ? -30 : -20, right: 10, top: 10 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis
                           dataKey="mes"
                           stroke="#888888"
-                          fontSize={12}
+                          fontSize={10}
                           tickLine={false}
                           axisLine={false}
+                          tick={{ fill: '#888888' }}
                         />
                         <YAxis
                           stroke="#888888"
-                          fontSize={12}
+                          fontSize={10}
                           tickLine={false}
                           axisLine={false}
                           tickFormatter={(value) => `R$ ${value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
                         />
                         <Tooltip
                           cursor={{ fill: 'transparent' }}
-                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                           formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, ""]}
                         />
-                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                        <Bar name="Receita" dataKey="receita" fill="#10B981" radius={[4, 4, 0, 0]} barSize={30} />
-                        <Bar name="Despesas" dataKey="despesa" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={30} />
+                        <Legend verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: '20px', fontSize: '10px' }} />
+                        <Bar name="Receita" dataKey="receita" fill="#10B981" radius={[4, 4, 0, 0]} barSize={isMobile ? 12 : 25} />
+                        <Bar name="Despesas" dataKey="despesa" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={isMobile ? 12 : 25} />
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
 
                 {/* Despesas por Categoria (Menor) */}
-                <Card className="col-span-3 shadow-sm">
+                <Card className="col-span-full lg:col-span-3 shadow-sm">
                   <CardHeader>
                     <CardTitle>Despesas por Categoria</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={350}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 320 : 350}>
                       <PieChart>
                         <Pie
-                          data={despesasPorCategoria}
+                          data={despesasPorCategoria || []}
                           cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={100}
+                          cy={isMobile ? "40%" : "45%"}
+                          innerRadius={isMobile ? 50 : 60}
+                          outerRadius={isMobile ? 70 : 80}
                           paddingAngle={5}
                           dataKey="value"
+                          nameKey="name"
                         >
-                          {despesasPorCategoria?.map((entry: any, index: number) => (
+                          {(despesasPorCategoria || []).map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
                         <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
-                        <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }} />
+                        <Legend 
+                          layout={isMobile ? "horizontal" : "vertical"} 
+                          verticalAlign={isMobile ? "bottom" : "middle"} 
+                          align="center" 
+                          wrapperStyle={{ fontSize: isMobile ? '10px' : '12px', paddingTop: isMobile ? '20px' : '0' }} 
+                        />
                       </PieChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
                 <Card className="shadow-sm">
                   <CardHeader>
                     <CardTitle>Receita por Atividade</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={250}>
                       <BarChart data={receitaPorAtividade} layout="vertical" margin={{ left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
                         <XAxis type="number" hide />
@@ -316,13 +333,13 @@ const Financeiro = () => {
                       Inadimplência Recente
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[300px] overflow-auto pr-2">
+                  <CardContent className="h-[250px] overflow-auto pr-2">
                     <InadimplenciaTable />
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
                 <Card className="shadow-sm">
                   <CardHeader><CardTitle>Últimos Pagamentos</CardTitle></CardHeader>
                   <CardContent><RecentPaymentsTable /></CardContent>

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUnidade } from "@/contexts/UnidadeContext";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ export function FormFuncionario({
   onOpenChange,
   funcionario,
 }: FormFuncionarioProps) {
+  const { currentUnidade } = useUnidade();
   const queryClient = useQueryClient();
   const isEditing = !!funcionario;
 
@@ -68,6 +70,7 @@ export function FormFuncionario({
         funcao: data.funcao,
         salario: parseFloat(data.salario),
         ativo: data.ativo,
+        unidade_id: currentUnidade?.id || '00000000-0000-0000-0000-000000000001',
       };
 
       if (isEditing && funcionario) {
@@ -77,7 +80,7 @@ export function FormFuncionario({
           .eq("id", funcionario.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("funcionarios").insert(payload);
+        const { error } = await supabase.from("funcionarios").insert([payload]);
         if (error) throw error;
       }
     },

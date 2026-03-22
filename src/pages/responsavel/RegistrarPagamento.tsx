@@ -204,7 +204,7 @@ const RegistrarPagamento = () => {
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5 p-3 rounded-xl bg-muted/20 border border-border/50">
-                      <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                      <div className="flex items-center gap-1.5 text-xs uppercase font-bold text-muted-foreground tracking-widest">
                         <Calendar className="h-3 w-3" /> Vencimento
                       </div>
                       <p className="text-sm font-bold text-foreground">
@@ -214,7 +214,7 @@ const RegistrarPagamento = () => {
                       </p>
                     </div>
                     <div className="space-y-1.5 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                      <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold text-primary tracking-widest">
+                      <div className="flex items-center gap-1.5 text-xs uppercase font-bold text-primary tracking-widest">
                         <Wallet className="h-3 w-3" /> Valor Total
                       </div>
                       <p className="text-sm font-black text-primary">
@@ -316,7 +316,7 @@ const RegistrarPagamento = () => {
           </DialogContent>
         </Dialog>
 
-        <div className="mt-8 pt-6 border-t border-primary/5 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground/40">
+        <div className="mt-8 pt-6 border-t border-primary/5 flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-muted-foreground/40">
           <div className="w-2 h-2 rounded-full bg-green-500/50 animate-pulse"></div>
           Sistema de Pagamentos Seguro • Protegido por LGPD
         </div>

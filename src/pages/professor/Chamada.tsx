@@ -310,7 +310,7 @@ const Chamada = () => {
 
                             <Button
                                 size="sm"
-                                className="h-9 rounded-xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 group overflow-hidden px-4"
+                                className="h-9 rounded-xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 group overflow-hidden px-4"
                                 onClick={() => saveMutation.mutate()}
                                 disabled={saveMutation.isPending}
                             >
@@ -331,11 +331,11 @@ const Chamada = () => {
                             </div>
 
                             {isOffline ? (
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/20 text-red-100 text-[10px] font-black rounded-full border border-red-500/30 uppercase tracking-tighter shadow-sm">
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/20 text-red-100 text-xs font-black rounded-full border border-red-500/30 uppercase tracking-tighter shadow-sm">
                                     <WifiOff className="w-3 h-3" /> Offline
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/20 text-green-100 text-[10px] font-black rounded-full border border-green-500/30 uppercase tracking-tighter shadow-sm">
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/20 text-green-100 text-xs font-black rounded-full border border-green-500/30 uppercase tracking-tighter shadow-sm">
                                     <Wifi className="w-3 h-3" /> Online
                                 </div>
                             )}
@@ -427,7 +427,7 @@ const Chamada = () => {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="flex-1 sm:flex-initial rounded-xl text-[10px] font-black uppercase tracking-tighter border-green-500/20 text-green-600 hover:bg-green-500/5 h-9"
+                                                className="flex-1 sm:flex-initial rounded-xl text-xs font-black uppercase tracking-tighter border-green-500/20 text-green-600 hover:bg-green-500/5 h-9"
                                                 onClick={() => {
                                                     const newState = { ...attendance };
                                                     studentsData?.matriculas?.forEach((m: any) => newState[m.id] = true);
@@ -439,7 +439,7 @@ const Chamada = () => {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="flex-1 sm:flex-initial rounded-xl text-[10px] font-black uppercase tracking-tighter border-red-500/20 text-red-600 hover:bg-red-500/5 h-9"
+                                                className="flex-1 sm:flex-initial rounded-xl text-xs font-black uppercase tracking-tighter border-red-500/20 text-red-600 hover:bg-red-500/5 h-9"
                                                 onClick={() => {
                                                     const newState = { ...attendance };
                                                     studentsData?.matriculas?.forEach((m: any) => newState[m.id] = false);
@@ -461,7 +461,7 @@ const Chamada = () => {
                             {loadingStudents ? (
                                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                                     <Loader2 className="h-12 w-12 animate-spin text-primary opacity-30" />
-                                    <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">Aguarde...</p>
+                                    <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Aguarde...</p>
                                 </div>
                             ) : studentsData?.matriculas?.length === 0 ? (
                                 <Card className="glass border-white/5 bg-white/5 border-dashed rounded-[24px]">
@@ -508,13 +508,13 @@ const Chamada = () => {
                                                     <div className="flex items-center justify-between sm:justify-end gap-2 mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-border/10 shrink-0">
                                                         <div className="flex items-center bg-muted/30 p-1 rounded-xl border border-border/10">
                                                             <button
-                                                                className={`h-9 px-4 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all flex-1 sm:flex-none ${!isPresent ? "bg-red-500 text-white shadow-md shadow-red-500/30" : "text-muted-foreground hover:bg-background/40"}`}
+                                                                className={`h-9 px-4 rounded-lg text-xs font-black uppercase tracking-tighter transition-all flex-1 sm:flex-none ${!isPresent ? "bg-red-500 text-white shadow-md shadow-red-500/30" : "text-muted-foreground hover:bg-background/40"}`}
                                                                 onClick={() => setPresence(m.id, false)}
                                                             >
                                                                 FALTOU
                                                             </button>
                                                             <button
-                                                                className={`h-9 px-4 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all flex-1 sm:flex-none ${isPresent ? "bg-green-500 text-white shadow-md shadow-green-500/30" : "text-muted-foreground hover:bg-background/40"}`}
+                                                                className={`h-9 px-4 rounded-lg text-xs font-black uppercase tracking-tighter transition-all flex-1 sm:flex-none ${isPresent ? "bg-green-500 text-white shadow-md shadow-green-500/30" : "text-muted-foreground hover:bg-background/40"}`}
                                                                 onClick={() => setPresence(m.id, true)}
                                                             >
                                                                 PRESENTE
@@ -570,13 +570,13 @@ const Chamada = () => {
                                                     <div className="flex items-center gap-2 pt-4 border-t border-border/10">
                                                         <div className="grid grid-cols-2 flex-1 gap-1.5 bg-muted/30 p-1 rounded-xl">
                                                             <button
-                                                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${!isPresent ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "text-muted-foreground hover:bg-background/50 opacity-60"}`}
+                                                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-black uppercase tracking-tighter transition-all ${!isPresent ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "text-muted-foreground hover:bg-background/50 opacity-60"}`}
                                                                 onClick={(e) => { e.stopPropagation(); setPresence(m.id, false); }}
                                                             >
                                                                 <X className="w-3 h-3" /> Faltou
                                                             </button>
                                                             <button
-                                                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${isPresent ? "bg-green-500 text-white shadow-lg shadow-green-500/20" : "text-muted-foreground hover:bg-background/50 opacity-60"}`}
+                                                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-black uppercase tracking-tighter transition-all ${isPresent ? "bg-green-500 text-white shadow-lg shadow-green-500/20" : "text-muted-foreground hover:bg-background/50 opacity-60"}`}
                                                                 onClick={(e) => { e.stopPropagation(); setPresence(m.id, true); }}
                                                             >
                                                                 <Check className="w-3 h-3" /> Presente

@@ -19,6 +19,7 @@ import { financeiroService } from "@/services/financeiro.service";
 import { matriculasService } from "@/services/matriculas.service";
 import { turmasService } from "@/services/turmas.service";
 import { alunosService } from "@/services/alunos.service";
+import { solicitacoesService } from "@/services/solicitacoes.service";
 import { useState } from "react";
 import {
     Select,
@@ -92,6 +93,7 @@ const ManagementDashboard = () => {
     ];
 
     const years = [2024, 2025, 2026];
+    const [activeTabSub, setActiveTabSub] = useState<string>("leads");
 
     // Data Fetching
     const { data: todosAlunos, isLoading: loadingTodosAlunos } = useQuery({
@@ -163,6 +165,19 @@ const ManagementDashboard = () => {
     const { data: turmas, isLoading: loadingTurmas } = useQuery({
         queryKey: ["management-turmas-ocupacao"],
         queryFn: () => turmasService.fetchAll(),
+    });
+
+    const { data: leadsCounts, isLoading: loadingLeadsCounts } = useQuery({
+        queryKey: ["management-leads-counts"],
+        queryFn: () => solicitacoesService.fetchCounts(),
+    });
+
+    const { data: leadsRecentes, isLoading: loadingLeadsRecentes } = useQuery({
+        queryKey: ["management-leads-recentes"],
+        queryFn: async () => {
+            const data = await solicitacoesService.fetchAll();
+            return data.slice(0, 5); // Apenas os 5 mais recentes
+        },
     });
 
     // Helper to calculate total occupation
@@ -275,6 +290,16 @@ const ManagementDashboard = () => {
                         color={colors.conhecimento}
                         isLoading={loadingTurmas}
                     />
+                    <GlassCard
+                        title="Novos Interessados"
+                        value={leadsCounts?.total?.toString() || "0"}
+                        icon={<Activity className="h-5 w-5" />}
+                        description={`${leadsCounts?.pendente || 0} fichas completas`}
+                        trend={{ value: 0, isPositive: true }}
+                        color={colors.escuta}
+                        isLoading={loadingLeadsCounts}
+                        onClick={() => navigate('/direcao/interessados')}
+                    />
                 </div>
 
                 {/* Row 2: Analytics Grid */}
@@ -375,14 +400,14 @@ const ManagementDashboard = () => {
                                                 if (active && payload && payload.length) {
                                                     return (
                                                         <div className="bg-background/95 backdrop-blur-md border border-border p-2 rounded-lg shadow-xl outline-none">
-                                                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                                                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                                                                 {payload[0].name}
                                                             </p>
                                                             <div className="flex items-baseline justify-between gap-4">
                                                                 <p className="text-sm font-black text-foreground">
                                                                     R$ {Number(payload[0].value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                                                 </p>
-                                                                <p className="text-[10px] font-black" style={{ color: payload[0].payload.color }}>
+                                                                <p className="text-xs font-black" style={{ color: payload[0].payload.color }}>
                                                                     {payload[0].payload.percentage}%
                                                                 </p>
                                                             </div>
@@ -395,7 +420,7 @@ const ManagementDashboard = () => {
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Total</span>
+                                    <span className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Total</span>
                                     <span className="text-xl font-black text-foreground">
                                         R$ {kpis?.receita?.total?.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0,00"}
                                     </span>
@@ -409,7 +434,7 @@ const ManagementDashboard = () => {
                                 <div key={`legend-${item.name}-${index}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-foreground/[0.03] border border-border/50">
                                     <div className="flex items-center gap-2">
                                         <div className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.color }} />
-                                        <span className="text-[10px] font-black text-muted-foreground uppercase truncate tracking-widest">{item.name}</span>
+                                        <span className="text-xs font-black text-muted-foreground uppercase truncate tracking-widest">{item.name}</span>
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <span className="text-[11px] font-bold text-foreground">R$ {item.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
@@ -472,8 +497,8 @@ const ManagementDashboard = () => {
                         icon={<UserMinus className="h-4 w-4" />}
                     >
                         <div className="flex justify-between items-center mb-4 mt-1">
-                            <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Aguardando Contato Comercial</span>
-                            <Badge variant="outline" className="bg-[#E8004F]/10 text-[#E8004F] border-[#E8004F]/20 text-[10px] px-3 font-black uppercase shadow-sm">
+                            <span className="text-xs uppercase font-black tracking-widest text-muted-foreground">Aguardando Contato Comercial</span>
+                            <Badge variant="outline" className="bg-[#E8004F]/10 text-[#E8004F] border-[#E8004F]/20 text-xs px-3 font-black uppercase shadow-sm">
                                 {alunosOrfaos.length} ALUNOS PARADOS
                             </Badge>
                         </div>
@@ -495,7 +520,7 @@ const ManagementDashboard = () => {
                                                     const cleanPhone = (aluno.telefone || "").replace(/\D/g, '');
                                                     if (cleanPhone) window.open(`https://wa.me/55${cleanPhone}?text=Olá! Vimos que você iniciou o cadastro de ${aluno.nome_completo.split(' ')[0]} no Neo Missio, mas ainda não escolheu as atividades. Podemos ajudar?`, '_blank');
                                                 }}
-                                                className="bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg shadow-[#25D366]/20 h-7 rounded-full text-[10px] font-black uppercase tracking-wider px-3"
+                                                className="bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg shadow-[#25D366]/20 h-7 rounded-full text-xs font-black uppercase tracking-wider px-3"
                                             >
                                                 <Phone className="w-3 h-3 mr-1.5" />
                                                 WhatsApp
@@ -516,60 +541,107 @@ const ManagementDashboard = () => {
                 {/* Row 4: 3-Column Bottom Area */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {/* Left: Lista de Matrículas */}
+                    {/* Left: Lista de Matrículas e Interessados */}
                     <GlassCard
-                        title="Aprovação de Matrículas"
+                        title="Novas Entradas"
                         color={colors.conhecimento}
                         icon={<Activity className="h-4 w-4" />}
                     >
-                        <div className="flex items-center justify-between mb-4 mt-1">
-                            <span className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.1em]">Aprovação pendente</span>
-                            {matriculasPendentes && matriculasPendentes.length > 0 && (
-                                <Badge variant="outline" className="bg-[#FFC200]/10 text-[#FFC200] border-0 text-[9px] font-black px-2 py-0.5">
-                                    {matriculasPendentes.length} PENDENTES
-                                </Badge>
-                            )}
-                        </div>
-                        <ScrollArea className="h-[260px] pr-4">
-                            {loadingPendentes ? (
-                                <div className="space-y-3 flex flex-col items-center justify-center h-full opacity-40">
-                                    <Activity className="h-8 w-8 mb-2 animate-spin" />
-                                    <span className="text-[10px] uppercase font-black">Carregando...</span>
-                                </div>
-                            ) : matriculasPendentes && matriculasPendentes.length > 0 ? (
-                                <div className="space-y-3">
-                                    {matriculasPendentes.map((m: any) => (
-                                        <div
-                                            key={m.id}
-                                            onClick={() => navigate('/direcao/matriculas-pendentes')}
-                                            className="group p-3 rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all flex items-center justify-between shadow-sm cursor-pointer"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center font-black text-[10px] text-white uppercase">
-                                                    {m.aluno?.nome_completo?.[0] || "?"}
+                        <Tabs defaultValue="leads" value={activeTabSub} onValueChange={setActiveTabSub} className="w-full">
+                            <div className="flex items-center justify-between mb-4 mt-1">
+                                <TabsList className="bg-foreground/5 h-7 p-0.5">
+                                    <TabsTrigger value="leads" className="text-[9px] font-black h-6 uppercase px-3">Interessados</TabsTrigger>
+                                    <TabsTrigger value="matriculas" className="text-[9px] font-black h-6 uppercase px-3">Matrículas</TabsTrigger>
+                                </TabsList>
+                                <Button 
+                                    variant="link" 
+                                    className="text-[9px] font-black uppercase h-auto p-0 text-primary"
+                                    onClick={() => navigate(activeTabSub === "leads" ? "/direcao/interessados" : "/direcao/matriculas-pendentes")}
+                                >
+                                    Ver tudo
+                                </Button>
+                            </div>
+
+                            <TabsContent value="leads" className="mt-0">
+                                <ScrollArea className="h-[220px] pr-4">
+                                    {loadingLeadsRecentes ? (
+                                        <div className="flex flex-col items-center justify-center h-full opacity-40 py-8">
+                                            <Activity className="h-6 w-6 mb-2 animate-spin" />
+                                        </div>
+                                    ) : leadsRecentes && leadsRecentes.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {leadsRecentes.map((lead: any) => (
+                                                <div
+                                                    key={lead.id}
+                                                    onClick={() => navigate('/direcao/interessados')}
+                                                    className="group p-3 rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all flex items-center justify-between shadow-sm cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-lg bg-escuta/20 text-[#4DD9C0] flex items-center justify-center font-black text-[10px] uppercase">
+                                                            {lead.nome_completo?.[0] || "?"}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[11px] font-bold text-foreground tracking-tight">{lead.nome_completo} {lead.sobrenome}</div>
+                                                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                                                                {lead.atividade_desejada || "Interesse Geral"}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <Badge className={`text-[8px] font-black uppercase h-5 ${lead.status === 'pendente' ? 'bg-[#FFC200] text-black' : 'bg-blue-500/10 text-blue-500'}`}>
+                                                        {lead.status === 'pendente' ? 'FICHA' : 'LEAD'}
+                                                    </Badge>
                                                 </div>
-                                                <div>
-                                                    <div className="text-[11px] font-bold text-foreground tracking-tight">{m.aluno?.nome_completo}</div>
-                                                    <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                                                        {m.turma?.atividade?.nome || "Sem Atividade"}
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full opacity-40 py-8">
+                                            <span className="text-[10px] uppercase font-black">Sem novos interessados</span>
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            </TabsContent>
+
+                            <TabsContent value="matriculas" className="mt-0">
+                                <ScrollArea className="h-[220px] pr-4">
+                                    {loadingPendentes ? (
+                                        <div className="flex flex-col items-center justify-center h-full opacity-40 py-8">
+                                            <Activity className="h-6 w-6 mb-2 animate-spin" />
+                                        </div>
+                                    ) : matriculasPendentes && matriculasPendentes.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {matriculasPendentes.map((m: any) => (
+                                                <div
+                                                    key={m.id}
+                                                    onClick={() => navigate('/direcao/matriculas-pendentes')}
+                                                    className="group p-3 rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all flex items-center justify-between shadow-sm cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center font-black text-[10px] text-white uppercase">
+                                                            {m.aluno?.nome_completo?.[0] || "?"}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[11px] font-bold text-foreground tracking-tight">{m.aluno?.nome_completo}</div>
+                                                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
+                                                                {m.turma?.atividade?.nome || "Sem Atividade"}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full hover:bg-green-500/20 text-green-500">
+                                                            <ArrowUpRight className="h-3 w-3" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full hover:bg-green-500/20 text-green-500">
-                                                    <ArrowUpRight className="h-3 w-3" />
-                                                </Button>
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="space-y-3 flex flex-col items-center justify-center h-full opacity-40">
-                                    <Activity className="h-8 w-8 mb-2" />
-                                    <span className="text-[10px] uppercase font-black">Sem novas matrículas</span>
-                                </div>
-                            )}
-                        </ScrollArea>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full opacity-40 py-8">
+                                            <span className="text-[10px] uppercase font-black">Sem matrículas pendentes</span>
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            </TabsContent>
+                        </Tabs>
                     </GlassCard>
 
                     {/* Middle: Alerta de Inadimplência */}

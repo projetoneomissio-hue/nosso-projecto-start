@@ -318,7 +318,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border border-primary/10 shadow-2xl overflow-hidden flex flex-col">
+            <DialogContent className="w-[95vw] sm:max-w-[700px] max-h-[90vh] p-0 bg-background/95 backdrop-blur-xl border border-primary/10 shadow-2xl overflow-hidden flex flex-col">
                 <div className="relative shrink-0 h-24 bg-gradient-to-r from-neomissio-primary/10 to-primary/5 flex items-center px-6 z-10 py-4">
                     <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:16px_16px]" />
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
@@ -351,13 +351,13 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
 
                 <div className="flex-1 overflow-y-auto">
                     <Form {...form}>
-                        <form id="aluno-form-modal" onSubmit={form.handleSubmit(onSubmit)} className="px-6 py-6 h-full flex flex-col">
+                        <form id="aluno-form-modal" onSubmit={form.handleSubmit(onSubmit)} className="px-4 sm:px-6 py-6 h-full flex flex-col">
                             <Tabs defaultValue="basico" className="w-full flex-1 flex flex-col">
-                                <TabsList className="grid w-full grid-cols-4 bg-muted/30 p-1 mb-6 rounded-xl">
-                                    <TabsTrigger value="basico" className="rounded-lg text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all">Básico</TabsTrigger>
-                                    <TabsTrigger value="academico" className="rounded-lg text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all">Família/Academ.</TabsTrigger>
-                                    <TabsTrigger value="saude" className="rounded-lg text-xs font-semibold data-[state=active]:bg-tertiary data-[state=active]:text-tertiary-foreground data-[state=active]:shadow-sm transition-all">Saúde (Anamnese)</TabsTrigger>
-                                    <TabsTrigger value="compliance" className="rounded-lg text-xs font-semibold data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-sm transition-all">Legal/Docs</TabsTrigger>
+                            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-muted/30 p-1 mb-6 rounded-xl gap-1 h-auto">
+                                    <TabsTrigger value="basico" className="rounded-lg py-2.5 text-[10px] sm:text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all">Básico</TabsTrigger>
+                                    <TabsTrigger value="academico" className="rounded-lg py-2.5 text-[10px] sm:text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all">Família</TabsTrigger>
+                                    <TabsTrigger value="saude" className="rounded-lg py-2.5 text-[10px] sm:text-xs font-semibold data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">Saúde</TabsTrigger>
+                                    <TabsTrigger value="compliance" className="rounded-lg py-2.5 text-[10px] sm:text-xs font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">Legal</TabsTrigger>
                                 </TabsList>
 
                                 {/* ABA 1: BÁSICO */}
@@ -387,7 +387,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                                 )}
                                             />
 
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <FormField
                                                     control={form.control}
                                                     name="data_nascimento"
@@ -438,7 +438,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                         </div>
 
                                         <div className="grid gap-4">
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <FormField
                                                     control={form.control}
                                                     name="telefone"
@@ -515,7 +515,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                                 />
                                             )}
 
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <FormField
                                                     control={form.control}
                                                     name="grau_parentesco"
@@ -557,7 +557,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                                 Histórico / Acadêmico Secundário
                                             </h3>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <FormField
                                                 control={form.control}
                                                 name="rg"
@@ -622,12 +622,12 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                                     render={({ field }) => (
                                                         <FormItem>
                                                             <FormControl>
-                                                                <div className="flex gap-3">
+                                                                <div className="flex flex-col sm:flex-row gap-3">
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => field.onChange(true)}
-                                                                        className={`flex-1 py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${field.value === true
-                                                                            ? "border-orange-500 bg-orange-500/10 text-orange-400"
+                                                                        className={`flex-1 py-3.5 px-4 rounded-xl border-2 font-bold text-sm transition-all active:scale-[0.98] ${field.value === true
+                                                                            ? "border-orange-500 bg-orange-500/10 text-orange-400 shadow-lg shadow-orange-500/10"
                                                                             : "border-white/10 bg-muted/10 text-muted-foreground hover:border-orange-500/40"
                                                                             }`}
                                                                     >
@@ -636,8 +636,8 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => field.onChange(false)}
-                                                                        className={`flex-1 py-3 px-4 rounded-xl border-2 font-bold text-sm transition-all ${field.value === false
-                                                                            ? "border-green-500 bg-green-500/10 text-green-400"
+                                                                        className={`flex-1 py-3.5 px-4 rounded-xl border-2 font-bold text-sm transition-all active:scale-[0.98] ${field.value === false
+                                                                            ? "border-green-500 bg-green-500/10 text-green-400 shadow-lg shadow-green-500/10"
                                                                             : "border-white/10 bg-muted/10 text-muted-foreground hover:border-green-500/40"
                                                                             }`}
                                                                     >
@@ -711,7 +711,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => field.onChange(true)}
-                                                                                className={`flex-1 h-11 rounded-xl border-2 text-xs font-bold transition-all ${field.value
+                                                                                className={`flex-1 h-12 rounded-xl border-2 text-xs font-bold transition-all active:scale-95 ${field.value
                                                                                     ? "border-primary bg-primary/10 text-primary"
                                                                                     : "border-white/10 bg-muted/10 text-muted-foreground"
                                                                                     }`}
@@ -721,7 +721,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => field.onChange(false)}
-                                                                                className={`flex-1 h-11 rounded-xl border-2 text-xs font-bold transition-all ${!field.value
+                                                                                className={`flex-1 h-12 rounded-xl border-2 text-xs font-bold transition-all active:scale-95 ${!field.value
                                                                                     ? "border-white/20 bg-muted/20 text-foreground"
                                                                                     : "border-white/10 bg-muted/10 text-muted-foreground"
                                                                                     }`}
@@ -744,7 +744,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                                         </div>
 
 
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <FormField
                                                 control={form.control}
                                                 name="tipo_sanguineo"
@@ -865,7 +865,7 @@ export function AlunoFormModal({ open, onOpenChange, alunoToEdit }: AlunoFormMod
                     </Form>
                 </div>
 
-                <div className="shrink-0 p-5 border-t border-primary/10 bg-muted/10 backdrop-blur-md flex justify-end gap-3 z-10">
+                <div className="shrink-0 p-4 sm:p-5 border-t border-primary/10 bg-muted/10 backdrop-blur-md flex justify-end gap-3 z-10">
                     <Button
                         variant="ghost"
                         onClick={() => onOpenChange(false)}

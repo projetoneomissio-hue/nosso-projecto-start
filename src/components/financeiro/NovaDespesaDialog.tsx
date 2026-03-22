@@ -8,12 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 import { handleError } from "@/utils/error-handler";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useUnidade } from "@/contexts/UnidadeContext";
 import { Loader2, Plus, DollarSign, Calendar, FileText } from "lucide-react";
 
-export function NovaDespesaDialog() {
+export function NovaDespesaDialog({ className }: { className?: string }) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { currentUnidade } = useUnidade();
 
     const [formData, setFormData] = useState({
         item: "",
@@ -24,12 +26,16 @@ export function NovaDespesaDialog() {
 
     const saveMutation = useMutation({
         mutationFn: async () => {
-            const { error } = await supabase.from("custos_predio").insert({
+            const payload = {
                 item: formData.item,
                 valor: parseFloat(formData.valor),
                 data_competencia: formData.data_competencia,
                 tipo: formData.tipo,
-            });
+                unidade_id: currentUnidade?.id || '00000000-0000-0000-0000-000000000001',
+            };
+
+
+            const { error } = await supabase.from("custos_predio").insert([payload]);
 
             if (error) throw error;
         },
@@ -64,7 +70,7 @@ export function NovaDespesaDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button className={className}>
                     <Plus className="mr-2 h-4 w-4" />
                     Adicionar Despesa
                 </Button>

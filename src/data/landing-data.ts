@@ -15,6 +15,7 @@ import testimonialLucas from "@/assets/testimonial-lucas.jpg";
 import testimonialCarlos from "@/assets/testimonial-carlos.jpg";
 
 export interface ActivityItem {
+    id: string;
     title: string;
     description: string;
     price: string;
@@ -36,6 +37,7 @@ export interface TestimonialItem {
 
 export const activities: ActivityItem[] = [
     {
+        id: "desenho",
         title: "Aulas de Desenho",
         description: "Técnicas de desenho incluindo animes, cartoons, realismo, anatomia humana, sombras, perspectivas e expressões.",
         price: "R$ 60,00/mês",
@@ -48,6 +50,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-indigo-500 to-purple-500"
     },
     {
+        id: "ingles",
         title: "Aulas de Inglês",
         description: "Aulas de inglês utilizando material cristão, ensinando a língua de forma divertida e interativa.",
         price: "R$ 60,00/mês",
@@ -60,6 +63,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-blue-500 to-cyan-500"
     },
     {
+        id: "jiu-jitsu",
         title: "Jiu-Jitsu",
         description: "Aulas de Jiu-Jitsu para todas as idades, ministradas por instrutor faixa preta com vasta experiência.",
         price: "R$ 100,00/mês",
@@ -72,6 +76,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-red-500 to-orange-500"
     },
     {
+        id: "violao",
         title: "Aulas de Violão",
         description: "Aulas de violão para iniciantes e intermediários com teoria musical e prática.",
         price: "R$ 80,00/mês",
@@ -84,6 +89,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-yellow-500 to-amber-500"
     },
     {
+        id: "ballet",
         title: "Ballet Infantil",
         description: "Aulas de ballet clássico para crianças, desenvolvendo coordenação, postura e expressão artística.",
         price: "R$ 80,00/mês",
@@ -96,6 +102,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-pink-500 to-rose-500"
     },
     {
+        id: "pilates",
         title: "Pilates",
         description: "Aulas de Pilates para adultos, focando em fortalecimento, flexibilidade e bem-estar.",
         price: "R$ 80,00/mês",
@@ -107,6 +114,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-teal-500 to-emerald-500"
     },
     {
+        id: "volei",
         title: "Vôlei",
         description: "Aulas de vôlei para crianças e adolescentes com foco em técnica, tática e espírito de equipe.",
         price: "R$ 60,00/mês",
@@ -118,6 +126,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-orange-500 to-yellow-500"
     },
     {
+        id: "reforco",
         title: "Reforço Escolar",
         description: "Acompanhamento educacional e reforço em matérias escolares para crianças e adolescentes.",
         price: "R$ 60,00/mês",
@@ -129,6 +138,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-violet-500 to-purple-500"
     },
     {
+        id: "violin",
         title: "Cordas do Amor",
         description: "Aulas de violino para crianças e adolescentes, com acompanhamento de teoria musical.",
         price: "R$ 80,00/mês",
@@ -140,6 +150,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-amber-500 to-red-500"
     },
     {
+        id: "terapia-feminino",
         title: "Aconselhamento Feminino",
         description: "Grupo de apoio e aconselhamento voltado para mulheres, trabalhando questões emocionais e espirituais.",
         price: "Gratuito",
@@ -151,6 +162,7 @@ export const activities: ActivityItem[] = [
         gradient: "from-rose-400 to-pink-500"
     },
     {
+        id: "terapia-masculino",
         title: "Aconselhamento Masculino",
         description: "Grupo de apoio e mentoria para homens, focando em liderança, paternidade e desenvolvimento pessoal.",
         price: "Gratuito",

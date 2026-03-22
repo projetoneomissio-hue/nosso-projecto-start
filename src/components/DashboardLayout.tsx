@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -32,6 +32,7 @@ import {
   UserPlus,
   Ghost,
   HelpCircle,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -70,8 +71,9 @@ const getNavigationByRole = (role: string) => {
         group: "Acadêmico",
         items: [
           { name: "Atividades", href: "/atividades", icon: Dumbbell },
-          { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
+          { name: "Turmas", href: "/direcao/turmas", icon: Users },
           { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
+          { name: "Interessados", href: "/direcao/interessados", icon: MessageCircle },
           { name: "Aprovar Matrículas", href: "/direcao/matriculas-pendentes", icon: ClipboardList },
         ]
       },
@@ -122,6 +124,7 @@ const getNavigationByRole = (role: string) => {
         items: [
           { name: "Minhas Atividades", href: "/atividades", icon: Dumbbell },
           { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
+          { name: "Interessados", href: "/direcao/interessados", icon: MessageCircle },
           { name: "Alunos", href: "/alunos", icon: Users },
         ]
       },
@@ -240,6 +243,37 @@ const getNavigationByRole = (role: string) => {
   return nav[role] || [];
 };
 
+const getBottomNavItems = (role: string) => {
+  const items: Record<string, any[]> = {
+    direcao: [
+      { name: "Início", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Alunos", href: "/alunos", icon: Users },
+      { name: "Financeiro", href: "/financeiro", icon: BarChart },
+    ],
+    professor: [
+      { name: "Início", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Turmas", href: "/professor/turmas", icon: Users },
+      { name: "Chamada", href: "/professor/turmas", icon: FileText, search: "?mode=chamada" },
+    ],
+    responsavel: [
+      { name: "Início", href: "/responsavel/dashboard", icon: LayoutDashboard },
+      { name: "Pagamentos", href: "/responsavel/pagamentos", icon: DollarSign },
+      { name: "Matrículas", href: "/responsavel/atividades-matriculadas", icon: Dumbbell },
+    ],
+    secretaria: [
+      { name: "Início", href: "/secretaria/dashboard", icon: LayoutDashboard },
+      { name: "Alunos", href: "/secretaria/alunos", icon: Users },
+      { name: "Novo Aluno", href: "/secretaria/cadastrar-aluno", icon: UserPlus },
+    ],
+    coordenacao: [
+      { name: "Início", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Alunos", href: "/alunos", icon: Users },
+      { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
+    ],
+  };
+  return items[role] || items.direcao;
+};
+
 const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggleCollapsed: () => void }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -312,7 +346,7 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
               {navigation.map((group) => (
                 <li key={group.group}>
                   {!isCollapsed && (
-                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-2 opacity-50">
+                    <h3 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 px-2 opacity-60">
                       {group.group}
                     </h3>
                   )}
@@ -339,7 +373,7 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
                                   isActive ? "text-white" : "text-primary/70"
                                 )} />
                                 {!isCollapsed && (
-                                  <span className="text-[11px] font-black uppercase tracking-widest truncate">
+                                  <span className="text-xs font-black uppercase tracking-widest truncate">
                                     {item.name}
                                   </span>
                                 )}
@@ -422,9 +456,18 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
   );
 };
 
-
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const { user } = useAuth();
+
+  // Auto-close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  const bottomNavItems = user && user.activeRole ? getBottomNavItems(user.activeRole) : [];
 
   return (
     <div className="flex h-screen bg-background overflow-hidden relative">
@@ -440,15 +483,15 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <Sidebar isCollapsed={isCollapsed} toggleCollapsed={() => setIsCollapsed(!isCollapsed)} />
       </div>
 
-      {/* Mobile Sidebar */}
-      <div className="lg:hidden fixed top-6 left-6 z-[60]">
-        <Sheet>
+      {/* Mobile Sidebar Trigger (Top Left) */}
+      <div className="lg:hidden fixed top-4 left-4 z-[60]">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="glass rounded-xl shadow-lg border-white/20 hover:scale-110 active:scale-95 transition-all">
+            <Button variant="outline" size="icon" className="glass rounded-xl shadow-lg border-white/20 hover:scale-110 active:scale-95 transition-all h-10 w-10">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] p-0 bg-transparent border-none shadow-none" aria-describedby={undefined}>
+          <SheetContent side="left" className="w-[300px] p-0 bg-transparent border-none shadow-none">
             <SheetHeader className="sr-only">
               <SheetTitle>Menu de Navegação</SheetTitle>
               <SheetDescription>Acesso rápido às áreas do sistema</SheetDescription>
@@ -460,10 +503,53 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Main Content */}
       <main className="flex-1 h-full overflow-hidden relative">
-        <div className="h-full overflow-y-auto bg-background/30 backdrop-blur-[2px] transition-all duration-300 hover:bg-background/20 scrollbar-hide">
+        <div className={cn(
+          "h-full overflow-y-auto bg-background/30 backdrop-blur-[2px] transition-all duration-300 hover:bg-background/20 scrollbar-hide pt-16 lg:pt-0",
+          "pb-24 lg:pb-0" // Space for Bottom Nav
+        )}>
           {children}
         </div>
       </main>
+
+      {/* Bottom Navigation (Mobile Only) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-6 pb-8 pt-2 pointer-events-none">
+        <div className="mx-auto max-w-sm h-16 bg-background/95 backdrop-blur-2xl rounded-2xl border border-primary/20 shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.5)] flex items-center justify-around pointer-events-auto relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+          {bottomNavItems.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link 
+                key={item.name} 
+                to={item.href + (item.search || "")}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 relative",
+                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <item.icon className={cn(
+                  "h-5 w-5 transition-transform duration-300",
+                  isActive && "scale-110 -translate-y-0.5"
+                )} />
+                <span className="text-[10px] font-black uppercase tracking-tighter truncate max-w-full px-1">
+                  {item.name}
+                </span>
+                {isActive && (
+                  <div className="absolute bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_hsl(var(--primary))]" />
+                )}
+              </Link>
+            );
+          })}
+          
+          {/* More Menu Toggle Button */}
+          <button 
+            onClick={() => setMobileOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 flex-1 h-full text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Menu className="h-5 w-5" />
+            <span className="text-[10px] font-black uppercase tracking-tighter">Mais</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

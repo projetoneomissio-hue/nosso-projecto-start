@@ -4,6 +4,7 @@ import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUnidade } from "@/contexts/UnidadeContext";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,7 @@ interface FormLocacaoProps {
 }
 
 export function FormLocacao({ open, onOpenChange, locacao }: FormLocacaoProps) {
+  const { currentUnidade } = useUnidade();
   const queryClient = useQueryClient();
   const isEditing = !!locacao;
 
@@ -80,6 +82,7 @@ export function FormLocacao({ open, onOpenChange, locacao }: FormLocacaoProps) {
         horario_fim: data.horario_fim,
         valor: parseFloat(data.valor),
         observacoes: data.observacoes || null,
+        unidade_id: currentUnidade?.id || '00000000-0000-0000-0000-000000000001',
       };
 
       if (isEditing && locacao) {
@@ -89,7 +92,7 @@ export function FormLocacao({ open, onOpenChange, locacao }: FormLocacaoProps) {
           .eq("id", locacao.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("locacoes").insert(payload);
+        const { error } = await supabase.from("locacoes").insert([payload]);
         if (error) throw error;
       }
     },

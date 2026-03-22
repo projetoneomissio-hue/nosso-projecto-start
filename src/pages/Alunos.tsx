@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import {
   User,
+  Eye,
   Calendar,
   IdCard,
   Phone,
@@ -261,7 +262,7 @@ const Alunos = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-6">
+      <div className="p-3 sm:p-6 lg:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Alunos</h1>
@@ -354,111 +355,203 @@ const Alunos = () => {
               <CardTitle>Lista de Alunos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead className="hidden md:table-cell">CPF/RG</TableHead>
-                      <TableHead className="hidden md:table-cell">Bairro</TableHead>
-                      <TableHead className="hidden md:table-cell text-center">Saúde</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAlunos.map((aluno) => (
-                      <TableRow key={aluno.id} className="group">
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-3">
-                            <div className="relative shrink-0">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border-2 border-primary/20 overflow-hidden">
-                                {aluno.foto_url ? (
-                                  <img src={aluno.foto_url} alt={aluno.nome_completo} className="w-full h-full object-cover" />
-                                ) : (
-                                  aluno.nome_completo.charAt(0)
+              <div className="rounded-md border bg-card/30 backdrop-blur-sm overflow-hidden">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="hidden md:table-cell">CPF/RG</TableHead>
+                        <TableHead className="hidden md:table-cell">Bairro</TableHead>
+                        <TableHead className="hidden lg:table-cell text-center">Saúde</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAlunos.map((aluno) => (
+                        <TableRow key={aluno.id} className="group hover:bg-primary/[0.02] transition-colors">
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <div className="relative shrink-0">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border-2 border-primary/20 overflow-hidden">
+                                  {aluno.foto_url ? (
+                                    <img src={aluno.foto_url} alt={aluno.nome_completo} className="w-full h-full object-cover" />
+                                  ) : (
+                                    aluno.nome_completo.charAt(0)
+                                  )}
+                                </div>
+                                {aluno.anamneses?.[0]?.is_pne && (
+                                  <div className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-red-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold border-2 border-background animate-pulse" title="PNE">
+                                    !
+                                  </div>
                                 )}
                               </div>
-                              {aluno.anamneses?.[0]?.is_pne && (
-                                <div className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-red-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold border-2 border-background animate-pulse" title="PNE">
-                                  !
-                                </div>
-                              )}
-
+                              <div className="flex flex-col">
+                                <button
+                                  onClick={() => handleOpenDialog(aluno)}
+                                  className="font-bold text-foreground hover:text-primary transition-colors text-left focus:outline-none"
+                                >
+                                  {aluno.nome_completo}
+                                </button>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                                  {aluno.serie_ano || "Série não inf."}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex flex-col">
-                              <button
-                                onClick={() => handleOpenDialog(aluno)}
-                                className="font-bold text-foreground hover:text-primary transition-colors text-left focus:outline-none"
-                                title="Editar cadastro do aluno"
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                            {renderVal(aluno.cpf ? formatCPF(aluno.cpf) : aluno.rg, "Sem doc.")}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                              <span className="truncate max-w-[150px]">{renderVal(aluno.bairro, "Não inf.")}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-center">
+                            {aluno.anamneses?.[0]?.is_pne ? (
+                               <Badge variant="destructive" className="bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-none">Alerta</Badge>
+                            ) : (
+                               <Badge variant="outline" className="border-green-500/20 bg-green-500/10 text-green-500 shadow-none">Estável</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenTimeline(aluno)}
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                                title="Histórico"
                               >
-                                {aluno.nome_completo}
-                              </button>
-                              <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                                {aluno.serie_ano || "Série não inf."}
-                              </span>
+                                <CalendarClock className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleOpenFicha(aluno)}
+                                className="h-8 px-2.5 gap-1.5 font-medium bg-secondary/50 hover:bg-secondary"
+                              >
+                                <IdCard className="h-3.5 w-3.5" />
+                                <span className="hidden lg:inline">Ficha</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenDialog(aluno)}
+                                className="h-9 w-9 p-0 text-muted-foreground hover:text-primary transition-colors"
+                                title="Editar"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(aluno.id)}
+                                className="h-8 w-8 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                                title="Excluir"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-primary/5">
+                  {filteredAlunos.map((aluno) => (
+                    <div key={aluno.id} className="p-4 space-y-4 hover:bg-primary/[0.02] active:bg-primary/[0.05] transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="relative shrink-0">
+                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base border-2 border-primary/20 overflow-hidden">
+                              {aluno.foto_url ? (
+                                <img src={aluno.foto_url} alt={aluno.nome_completo} className="w-full h-full object-cover" />
+                              ) : (
+                                aluno.nome_completo.charAt(0)
+                              )}
+                            </div>
+                            {aluno.anamneses?.[0]?.is_pne && (
+                              <div className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-background animate-pulse">
+                                !
+                              </div>
+                            )}
                           </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                          {renderVal(aluno.cpf ? formatCPF(aluno.cpf) : aluno.rg, "Sem doc.")}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="h-3.5 w-3.5 shrink-0 opacity-50" />
-                            <span className="truncate max-w-[150px]">{renderVal(aluno.bairro, "Não inf.")}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-center">
-                          {aluno.anamneses?.[0]?.is_pne ? (
-                            <Badge variant="destructive" className="bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-none">Alerta</Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-green-500/20 bg-green-500/10 text-green-500 shadow-none">Estável</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenTimeline(aluno)}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                              title="Histórico de Contatos"
-                            >
-                              <CalendarClock className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
+                          <div>
+                            <button
                               onClick={() => handleOpenFicha(aluno)}
-                              className="h-8 px-2.5 gap-1.5 font-medium bg-secondary/50 hover:bg-secondary"
+                              className="font-black text-foreground text-left leading-tight"
                             >
-                              <IdCard className="h-3.5 w-3.5" />
-                              <span className="hidden lg:inline">Ficha</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenDialog(aluno)}
-                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                              title="Editar Aluno"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(aluno.id)}
-                              className="h-8 w-8 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
-                              title="Excluir Aluno"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              {aluno.nome_completo}
+                            </button>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mt-0.5">
+                              {aluno.serie_ano || "Série não informada"}
+                            </p>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          {aluno.anamneses?.[0]?.is_pne ? (
+                            <Badge className="bg-red-500/10 text-red-500 border-none text-[9px] h-5 uppercase px-1.5 font-black">Saúde !</Badge>
+                          ) : (
+                            <Badge className="bg-green-500/10 text-green-500 border-none text-[9px] h-5 uppercase px-1.5 font-black text-center">OK</Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-muted-foreground p-2 rounded-lg bg-muted/20">
+                          <IdCard className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                          <span className="truncate">{renderVal(aluno.cpf ? formatCPF(aluno.cpf) : aluno.rg, "-")}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground p-2 rounded-lg bg-muted/20">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                          <span className="truncate">{renderVal(aluno.bairro, "-")}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleOpenFicha(aluno)}
+                          className="flex-1 h-11 gap-2 font-bold bg-primary/10 hover:bg-primary/20 text-primary border-none active:scale-[0.98] transition-all"
+                        >
+                          <Eye className="h-5 w-5" />
+                          Ficha
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(aluno)}
+                          className="h-11 w-11 border border-primary/10 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
+                        >
+                          <Pencil className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenTimeline(aluno)}
+                          className="h-11 w-11 border border-primary/10 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
+                        >
+                          <CalendarClock className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(aluno.id)}
+                          className="h-11 w-11 border border-destructive/10 text-destructive/70 hover:text-destructive hover:bg-destructive/10 ml-auto active:scale-95 transition-transform"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -525,37 +618,37 @@ const Alunos = () => {
 
         {/* Dialog da Ficha Digital do Aluno (Audit 3.0+) - Premium Redesign */}
         < Dialog open={fichaOpen} onOpenChange={setFichaOpen} >
-          <DialogContent className="sm:max-w-[650px] max-h-[90vh] p-0 flex flex-col bg-background/95 backdrop-blur-xl border-primary/10 overflow-hidden shadow-2xl">
+          <DialogContent className="w-[95vw] sm:max-w-[650px] max-h-[90vh] p-0 flex flex-col bg-background/95 backdrop-blur-xl border-primary/10 overflow-hidden shadow-2xl">
             {/* Header com Gradiente e Foto */}
-            <div className="relative shrink-0 h-48 bg-gradient-to-br from-neomissio-primary/20 via-background to-background border-b border-primary/10">
+            <div className="relative shrink-0 h-40 sm:h-48 bg-gradient-to-br from-neomissio-primary/30 via-background to-background border-b border-primary/10">
               <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]" />
-              <div className="absolute bottom-[-40px] left-8 flex items-end gap-6 z-10">
-                <div className="h-32 w-32 rounded-3xl bg-gradient-to-tr from-neomissio-primary/40 to-primary/10 p-1 shadow-2xl backdrop-blur-md">
-                  <div className="h-full w-full rounded-[22px] bg-background flex items-center justify-center border border-white/10">
+              <div className="absolute -bottom-6 sm:bottom-[-40px] left-4 sm:left-8 flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-6 z-10 w-full sm:w-auto px-4 sm:px-0 text-center sm:text-left">
+                <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-neomissio-primary/40 to-primary/10 p-1 shadow-2xl backdrop-blur-md shrink-0">
+                  <div className="h-full w-full rounded-[14px] sm:rounded-[22px] bg-background flex items-center justify-center border border-white/10">
                     {selectedAlunoForFicha?.foto_url ? (
-                      <img src={selectedAlunoForFicha.foto_url} alt={selectedAlunoForFicha?.nome_completo} className="h-full w-full object-cover rounded-[22px]" />
+                      <img src={selectedAlunoForFicha.foto_url} alt={selectedAlunoForFicha?.nome_completo} className="h-full w-full object-cover rounded-[14px] sm:rounded-[22px]" />
                     ) : (
-                      <span className="text-4xl font-bold text-primary">{selectedAlunoForFicha?.nome_completo?.charAt(0)}</span>
+                      <span className="text-3xl sm:text-4xl font-bold text-primary">{selectedAlunoForFicha?.nome_completo?.charAt(0)}</span>
                     )}
                   </div>
                 </div>
-                <div className="pb-4">
-                  <DialogTitle className="text-3xl font-bold text-white tracking-tight">{selectedAlunoForFicha?.nome_completo}</DialogTitle>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <span className="px-2.5 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">
+                <div className="pb-0 sm:pb-4 overflow-hidden w-full">
+                  <DialogTitle className="text-xl sm:text-3xl font-bold text-foreground sm:text-white tracking-tight truncate px-2">{selectedAlunoForFicha?.nome_completo}</DialogTitle>
+                  <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 mt-1 sm:mt-1.5">
+                    <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[9px] sm:text-[10px] font-bold uppercase tracking-widest border border-primary/20">
                       {selectedAlunoForFicha?.serie_ano || "Série pendente"}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Calendar className="h-3.5 w-3.5" /> ID: {selectedAlunoForFicha?.id?.slice(0, 8)}
+                    <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> ID: {selectedAlunoForFicha?.id?.slice(0, 8)}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-8 pt-16 pb-12 space-y-10">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-8 pt-24 sm:pt-16 pb-12 space-y-10">
               {/* Grid de Dados Rápidos */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="p-4 rounded-2xl bg-muted/20 border border-white/5 space-y-1">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Idade</p>
                   <p className="text-lg font-bold text-foreground">{calculateAge(selectedAlunoForFicha?.data_nascimento)} anos</p>
@@ -583,7 +676,7 @@ const Alunos = () => {
                       Identificação & Contato
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-6 p-6 rounded-3xl bg-muted/10 border border-white/5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 sm:gap-y-6 p-4 sm:p-6 rounded-3xl bg-muted/10 border border-white/5">
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">CPF do Aluno</p>
                       <p className="font-semibold text-foreground text-sm">{renderVal(selectedAlunoForFicha?.cpf)}</p>
@@ -623,7 +716,7 @@ const Alunos = () => {
                         <p className="text-xs text-muted-foreground">{renderVal(selectedAlunoForFicha?.responsavel?.email, "Sem e-mail")}</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                           <Briefcase className="h-3 w-3" /> Profissão
@@ -656,7 +749,7 @@ const Alunos = () => {
                         </div>
                       </div>
                     )}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div className="p-4 rounded-2xl bg-muted/10 border border-white/5 space-y-1.5">
                         <p className="text-[10px] text-muted-foreground uppercase font-bold flex items-center gap-1.5">
                           <Activity className="h-3 w-3" /> Alergias
@@ -691,7 +784,7 @@ const Alunos = () => {
                     <div className="p-1.5 rounded-lg bg-green-500/10"><CheckCircle className="h-4 w-4 text-green-500" /></div>
                     Governança & Compliance
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className={cn(
                       "p-4 rounded-2xl border flex items-center justify-between transition-colors",
                       selectedAlunoForFicha?.autoriza_imagem ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20"
@@ -719,7 +812,7 @@ const Alunos = () => {
             </div>
 
             {/* Sticky Footer */}
-            <div className="shrink-0 flex gap-4 px-8 py-4 border-t shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.5)] border-primary/10 bg-background z-20">
+            <div className="shrink-0 flex gap-3 sm:gap-4 px-4 sm:px-8 py-4 border-t shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.5)] border-primary/10 bg-background z-20">
               <Button variant="outline" className="flex-1 h-11 rounded-xl border-primary/20 hover:bg-primary/5 text-primary font-bold gap-2" disabled>
                 <Save className="h-4 w-4" /> Exportar PDF
               </Button>

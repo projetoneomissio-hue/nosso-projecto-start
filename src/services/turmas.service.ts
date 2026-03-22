@@ -77,36 +77,30 @@ export const turmasService = {
         return data;
     },
 
-    /** Buscar alunos de uma turma (para PDF e Avaliações) */
+    /** Buscar alunos de uma turma (para PDF, Avaliações e Visualização em Grade) */
     async fetchAlunosDaTurma(turmaId: string) {
         const { data, error } = await supabase
             .from("matriculas")
             .select(`
-        id,
-        status,
-        aluno:alunos(
-          id,
-          nome_completo,
-          data_nascimento,
-          responsavel:profiles!alunos_responsavel_id_fkey(nome_completo),
-          anamneses(is_pne, doenca_cronica, alergias)
-        )
-      `)
+                id,
+                status,
+                aluno:alunos(
+                    id,
+                    nome_completo,
+                    foto_url,
+                    cpf,
+                    rg,
+                    telefone,
+                    data_nascimento,
+                    responsavel:profiles!alunos_responsavel_id_fkey(nome_completo),
+                    anamneses(is_pne, pne_cid, doenca_cronica, alergias, laudo_url)
+                )
+            `)
             .eq("turma_id", turmaId)
             .eq("status", "ativa");
 
         if (error) throw error;
-
-        return (data || []).map((m: any) => ({
-            id: m.id, // matricula_id
-            aluno_id: m.aluno.id,
-            nome_completo: m.aluno.nome_completo,
-            data_nascimento: m.aluno.data_nascimento,
-            responsavel_nome: m.aluno.responsavel?.nome_completo,
-            status_matricula: m.status,
-            saude_pne: m.aluno.anamneses?.[0]?.is_pne || false,
-            saude_alergias: m.aluno.anamneses?.[0]?.alergias || null
-        }));
+        return data || [];
     },
 
     /** Buscar avaliações de uma turma */

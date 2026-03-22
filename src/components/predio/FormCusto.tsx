@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useUnidade } from "@/contexts/UnidadeContext";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -52,6 +53,7 @@ interface FormCustoProps {
 
 export function FormCusto({ open, onOpenChange, custo }: FormCustoProps) {
   const queryClient = useQueryClient();
+  const { currentUnidade } = useUnidade();
   const isEditing = !!custo;
 
   const form = useForm<FormData>({
@@ -71,7 +73,9 @@ export function FormCusto({ open, onOpenChange, custo }: FormCustoProps) {
         valor: parseFloat(data.valor),
         tipo: data.tipo,
         data_competencia: data.data_competencia,
+        unidade_id: currentUnidade?.id || '00000000-0000-0000-0000-000000000001',
       };
+
 
       if (isEditing && custo) {
         const { error } = await supabase
@@ -80,7 +84,7 @@ export function FormCusto({ open, onOpenChange, custo }: FormCustoProps) {
           .eq("id", custo.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("custos_predio").insert(payload);
+        const { error } = await supabase.from("custos_predio").insert([payload]);
         if (error) throw error;
       }
     },

@@ -4,16 +4,19 @@ import { ptBR } from "date-fns/locale";
 
 export const financeiroService = {
     /** Receita mensal (pagamentos pagos no mês atual) */
-    async fetchReceitaMensal() {
+    async fetchReceitaMensal(unidadeId?: string) {
         const hoje = new Date().toISOString().split("T")[0];
-        const { data, error } = await supabase.rpc("get_financial_kpis", { month_ref: hoje });
+        const { data, error } = await supabase.rpc("get_financial_kpis", { 
+            month_ref: hoje,
+            p_unidade_id: unidadeId 
+        });
         if (error) throw error;
         // @ts-ignore - RPC types might not be generated yet
         return Number(data?.receita?.total) || 0;
     },
 
     /** Busca KPIs financeiros com filtro de mês/ano opcional */
-    async fetchFinanceiroKPIs(params?: { month?: number; year?: number }) {
+    async fetchFinanceiroKPIs(params?: { month?: number; year?: number; unidadeId?: string }) {
         let referenceDate: string;
 
         if (params?.month && params?.year) {
@@ -23,7 +26,10 @@ export const financeiroService = {
             referenceDate = new Date().toISOString().split("T")[0];
         }
 
-        const { data, error } = await supabase.rpc("get_financial_kpis", { month_ref: referenceDate });
+        const { data, error } = await supabase.rpc("get_financial_kpis", { 
+            month_ref: referenceDate,
+            p_unidade_id: params?.unidadeId
+        });
         if (error) throw error;
 
         // @ts-ignore
@@ -31,16 +37,21 @@ export const financeiroService = {
     },
 
     /** Receita agregada por atividade (via RPC) */
-    async fetchReceitaPorAtividade() {
-        const { data, error } = await supabase.rpc("get_receita_por_atividade");
+    async fetchReceitaPorAtividade(unidadeId?: string) {
+        const { data, error } = await supabase.rpc("get_receita_por_atividade", {
+            p_unidade_id: unidadeId
+        });
         if (error) throw error;
         return data || [];
     },
 
     /** Inadimplência (pendentes vencidos) */
-    async fetchInadimplencia() {
+    async fetchInadimplencia(unidadeId?: string) {
         const hoje = new Date().toISOString().split("T")[0];
-        const { data, error } = await supabase.rpc("get_financial_kpis", { month_ref: hoje });
+        const { data, error } = await supabase.rpc("get_financial_kpis", { 
+            month_ref: hoje,
+            p_unidade_id: unidadeId
+        });
 
         if (error) throw error;
 
@@ -52,32 +63,35 @@ export const financeiroService = {
     },
 
     /** Fluxo de Caixa (Receita x Despesas) filtrado por ano */
-    async fetchFluxoCaixaMeses(year?: number) {
+    async fetchFluxoCaixaMeses(year?: number, unidadeId?: string) {
         const yearRef = year || new Date().getFullYear();
-        const { data, error } = await supabase.rpc("get_monthly_revenue", { year_ref: yearRef });
+        const { data, error } = await supabase.rpc("get_monthly_revenue", { 
+            year_ref: yearRef,
+            p_unidade_id: unidadeId
+        });
 
         if (error) throw error;
 
-        // Converter Array [{mes: 'Jan', receita: 100...}] para Objeto { 'Jan': {receita: 100...} }
-        // Mantendo compatibilidade com o frontend atual que espera um Record<string, ...>
-        const result: Record<string, { receita: number; despesa: number }> = {};
-
+        // Converter para Array [{mes: 'Jan', receita: 100, despesa: 50}, ...]
         // @ts-ignore
-        data?.forEach((item: any) => {
-            result[item.mes] = {
-                receita: Number(item.receita),
-                despesa: Number(item.despesa)
-            };
-        });
-
-        return result;
+        return (data || []).map((item: any) => ({
+            mes: item.mes,
+            receita: Number(item.receita),
+            despesa: Number(item.despesa)
+        }));
     },
 
     /** Despesas por tipo (ex-categoria) */
-    async fetchDespesasPorTipo() {
-        const { data, error } = await supabase
+    async fetchDespesasPorTipo(unidadeId?: string) {
+        let query = supabase
             .from("custos_predio")
             .select("tipo, valor");
+        
+        if (unidadeId) {
+            query = query.eq("unidade_id", unidadeId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -91,8 +105,8 @@ export const financeiroService = {
     },
 
     /** Últimos pagamentos recebidos */
-    async fetchUltimosPagamentos(limit = 10) {
-        const { data, error } = await supabase
+    async fetchUltimosPagamentos(limit = 10, unidadeId?: string) {
+        let query = supabase
             .from("pagamentos")
             .select(`
                 id,
@@ -111,7 +125,13 @@ export const financeiroService = {
                     )
                 )
             `)
-            .eq("status", "pago")
+            .eq("status", "pago");
+        
+        if (unidadeId) {
+            query = query.eq("unidade_id", unidadeId);
+        }
+
+        const { data, error } = await query
             .order("data_pagamento", { ascending: false })
             .limit(limit);
 
@@ -120,10 +140,16 @@ export const financeiroService = {
     },
 
     /** Custos recentes do prédio */
-    async fetchCustosRecentes(limit = 10) {
-        const { data, error } = await supabase
+    async fetchCustosRecentes(limit = 10, unidadeId?: string) {
+        let query = supabase
             .from("custos_predio")
-            .select("id, item, valor, tipo, data_competencia")
+            .select("id, item, valor, tipo, data_competencia");
+        
+        if (unidadeId) {
+            query = query.eq("unidade_id", unidadeId);
+        }
+
+        const { data, error } = await query
             .order("data_competencia", { ascending: false })
             .limit(limit);
 
@@ -132,8 +158,8 @@ export const financeiroService = {
     },
 
     /** Lista de inadimplentes detalhada (Otimizada) */
-    async fetchInadimplentesOtimizado() {
-        const { data, error } = await supabase
+    async fetchInadimplentesOtimizado(unidadeId?: string) {
+        let query = supabase
             .from("pagamentos")
             .select(`
                 id,
@@ -154,7 +180,13 @@ export const financeiroService = {
                 )
             `)
             .eq("status", "pendente")
-            .lt("data_vencimento", new Date().toISOString().split("T")[0])
+            .lt("data_vencimento", new Date().toISOString().split("T")[0]);
+        
+        if (unidadeId) {
+            query = query.eq("unidade_id", unidadeId);
+        }
+
+        const { data, error } = await query
             .order("data_vencimento", { ascending: true });
 
         if (error) throw error;
@@ -162,21 +194,34 @@ export const financeiroService = {
     },
 
     /** Dados para exportação PDF/CSV */
-    async fetchDadosPDF() {
+    async fetchDadosPDF(unidadeId?: string) {
         const hoje = new Date();
         const startOfMonth = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString();
 
-        const [pagamentos, custos] = await Promise.all([
-            supabase.from("pagamentos").select("*").gte("created_at", startOfMonth),
-            supabase.from("custos_predio").select("*").gte("created_at", startOfMonth)
+        let pagQuery = supabase.from("pagamentos").select("*").gte("created_at", startOfMonth);
+        let cusQuery = supabase.from("custos_predio").select("*").gte("created_at", startOfMonth);
+        let locQuery = supabase.from("locacoes").select("*").gte("created_at", startOfMonth);
+
+        if (unidadeId) {
+            pagQuery = pagQuery.eq("unidade_id", unidadeId);
+            cusQuery = cusQuery.eq("unidade_id", unidadeId);
+            locQuery = locQuery.eq("unidade_id", unidadeId);
+        }
+
+        const [pagamentos, custos, locacoes] = await Promise.all([
+            pagQuery,
+            cusQuery,
+            locQuery
         ]);
 
         if (pagamentos.error) throw pagamentos.error;
         if (custos.error) throw custos.error;
+        if (locacoes.error) throw locacoes.error;
 
         const merged = [
-            ...(pagamentos.data?.map(p => ({ ...p, tipo: 'entrada', categoria: 'Mensalidade' })) || []),
-            ...(custos.data?.map(c => ({ ...c, tipo: 'saida' })) || [])
+            ...(pagamentos.data?.map(p => ({ ...p, tipo: 'entrada', categoria: 'Mensalidade', descricao: 'Mensalidade Aluno' })) || []),
+            ...(locacoes.data?.map(l => ({ ...l, tipo: 'entrada', categoria: 'Locação', descricao: l.evento || 'Locação de Espaço' })) || []),
+            ...(custos.data?.map(c => ({ ...c, tipo: 'saida', categoria: c.tipo, descricao: c.item })) || [])
         ];
 
         return {

@@ -39,8 +39,8 @@ import Usuarios from "./pages/direcao/Usuarios";
 import Convites from "./pages/direcao/Convites";
 import Matriculas from "./pages/direcao/Matriculas";
 import ManagementDashboard from "./pages/direcao/ManagementDashboard";
-
 import Coordenadores from "./pages/direcao/Coordenadores";
+import Interessados from "./pages/direcao/Interessados";
 import Comunicados from "./pages/direcao/Comunicados";
 import MatriculasPendentes from "./pages/direcao/MatriculasPendentes";
 import GestaoCobrancas from "./pages/direcao/GestaoCobrancas";
@@ -122,6 +122,8 @@ export const AppRoutes = () => {
       <Route path="/direcao/coordenadores" element={<ProtectedRoute allowedRoles={["direcao"]}><Coordenadores /></ProtectedRoute>} />
       <Route path="/convites" element={<ProtectedRoute allowedRoles={["direcao"]}><Convites /></ProtectedRoute>} />
       <Route path="/direcao/matriculas" element={<ProtectedRoute allowedRoles={["direcao"]}><Matriculas /></ProtectedRoute>} />
+      <Route path="/direcao/turmas" element={<ProtectedRoute allowedRoles={["direcao", "coordenacao"]}><TurmasCoordenacao /></ProtectedRoute>} />
+      <Route path="/direcao/interessados" element={<ProtectedRoute allowedRoles={["direcao", "coordenacao"]}><Interessados /></ProtectedRoute>} />
       <Route path="/direcao/matriculas-pendentes" element={<ProtectedRoute allowedRoles={["direcao"]}><MatriculasPendentes /></ProtectedRoute>} />
       <Route path="/direcao/cobrancas" element={<ProtectedRoute allowedRoles={["direcao"]}><GestaoCobrancas /></ProtectedRoute>} />
       <Route path="/direcao/comunicados" element={<ProtectedRoute allowedRoles={["direcao"]}><Comunicados /></ProtectedRoute>} />

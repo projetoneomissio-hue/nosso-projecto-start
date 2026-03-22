@@ -408,6 +408,7 @@ const Alunos = () => {
                                                                     </DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             );

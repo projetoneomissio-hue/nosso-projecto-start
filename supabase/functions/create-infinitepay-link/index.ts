@@ -70,7 +70,7 @@ serve(async (req) => {
         const { data: pagamento, error: pagError } = await supabaseService
             .from("pagamentos")
             .select(`
-        id, valor, data_vencimento, status,
+        id, valor, data_vencimento, status, referencia,
         matricula:matriculas!inner(
           aluno:alunos!inner(
             nome_completo
@@ -94,6 +94,13 @@ serve(async (req) => {
         const aluno = matricula.aluno;
         const atividade = matricula.turma.atividade;
 
+        // Smart description based on payment type
+        const isMatricula = (pagamento as any).referencia?.toUpperCase()?.includes("MATRICULA") ||
+                            (pagamento as any).referencia?.toUpperCase()?.includes("TAXA");
+        const descricaoItem = isMatricula
+            ? `Taxa de Matrícula - ${atividade.nome} - ${aluno.nome_completo}`
+            : `Mensalidade - ${atividade.nome} - ${aluno.nome_completo}`;
+
         // 6. Convert value to centavos (InfinitePay uses centavos)
         const amountInCentavos = Math.round(Number(pagamento.valor) * 100);
 
@@ -105,7 +112,7 @@ serve(async (req) => {
         const origin = req.headers.get("origin") || "https://sistema.neomissio.com.br";
         const redirectUrl = `${origin}/responsavel/pagamento-sucesso?payment_id=${pagamentoId}`;
 
-        console.log("[INFINITEPAY] Creating checkout link for:", pagamentoId, "Amount:", amountInCentavos);
+        console.log("[INFINITEPAY] Creating checkout link for:", pagamentoId, "Amount:", amountInCentavos, "Type:", isMatricula ? "MATRICULA" : "MENSALIDADE");
 
         // 9. Create InfinitePay Checkout Link
         const checkoutPayload = {
@@ -120,7 +127,7 @@ serve(async (req) => {
                 {
                     quantity: 1,
                     price: amountInCentavos,
-                    description: `Mensalidade - ${atividade.nome} - ${aluno.nome_completo}`,
+                    description: descricaoItem,
                 },
             ],
         };

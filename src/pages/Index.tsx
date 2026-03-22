@@ -32,15 +32,15 @@ const Index = () => {
       {/* Navigation */}
       <nav className="fixed top-0 w-full bg-background/95 backdrop-blur-sm border-b border-border z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <img src={logoNeoMissio} alt="Neo Missio" className="h-12 w-auto" />
+          <img src={logoNeoMissio} alt="Neo Missio" className="h-10 sm:h-12 w-auto" />
           <div className="flex gap-4 items-center">
-            <a href="#atividades" className="text-sm font-medium hover:text-primary transition-colors">
+            <a href="#atividades" className="hidden sm:inline text-sm font-medium hover:text-primary transition-colors">
               Atividades
             </a>
-            <a href="#depoimentos" className="text-sm font-medium hover:text-primary transition-colors">
+            <a href="#depoimentos" className="hidden md:inline text-sm font-medium hover:text-primary transition-colors">
               Depoimentos
             </a>
-            <a href="#terapia" className="text-sm font-medium hover:text-primary transition-colors">
+            <a href="#terapia" className="hidden md:inline text-sm font-medium hover:text-primary transition-colors">
               Aconselhamento
             </a>
             <Button size="sm" asChild>
@@ -59,7 +59,7 @@ const Index = () => {
               <Badge className="w-fit" variant="secondary">
                 Centro Social Comunitário
               </Badge>
-              <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">
                 Atividades 2026
                 <span className="text-primary"> - Inscreva-se!</span>
               </h1>
