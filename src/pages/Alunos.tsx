@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Loader2, Search, UserPlus, ArrowRightLeft, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Search, UserPlus, ArrowRightLeft, AlertTriangle, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PremiumEmptyState } from "@/components/ui/premium-empty-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -120,6 +120,7 @@ const Alunos = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Auto-fill search filter from navigation state
   useEffect(() => {
@@ -337,6 +338,10 @@ const Alunos = () => {
                 </span>
               </Button>
             )}
+            <Button variant="outline" onClick={() => navigate("/alunos/importar")} className="gap-2">
+              <Upload className="h-4 w-4" />
+              Importar
+            </Button>
             <Button onClick={() => handleOpenDialog()} className="gap-2">
               <Plus className="h-4 w-4" />
               Novo Aluno

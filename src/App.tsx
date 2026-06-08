@@ -21,6 +21,7 @@ import { RealtimeNotifications } from "./components/RealtimeNotifications";
 import Dashboard from "./pages/Dashboard";
 import Atividades from "./pages/Atividades";
 import Alunos from "./pages/Alunos";
+import ImportarAlunos from "./pages/ImportarAlunos";
 import Professores from "./pages/Professores";
 import Financeiro from "./pages/Financeiro";
 import Predio from "./pages/Predio";
@@ -109,6 +110,7 @@ export const AppRoutes = () => {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/atividades" element={<ProtectedRoute><Atividades /></ProtectedRoute>} />
       <Route path="/alunos" element={<ProtectedRoute><Alunos /></ProtectedRoute>} />
+      <Route path="/alunos/importar" element={<ProtectedRoute allowedRoles={["direcao", "coordenacao", "secretaria"]}><ImportarAlunos /></ProtectedRoute>} />
       <Route path="/professores" element={<ProtectedRoute><Professores /></ProtectedRoute>} />
       <Route path="/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
       <Route path="/predio" element={<ProtectedRoute><Predio /></ProtectedRoute>} />
