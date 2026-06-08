@@ -76,6 +76,7 @@ const getNavigationByRole = (role: string) => {
           { name: "Turmas", href: "/direcao/turmas", icon: Users },
           { name: "Matrículas", href: "/direcao/matriculas", icon: FileText },
           { name: "Interessados", href: "/direcao/interessados", icon: MessageCircle },
+          { name: "Calendário", href: "/calendario", icon: Calendar },
         ]
       },
       {
@@ -126,6 +127,7 @@ const getNavigationByRole = (role: string) => {
           { name: "Turmas", href: "/coordenacao/turmas", icon: Users },
           { name: "Interessados", href: "/direcao/interessados", icon: MessageCircle },
           { name: "Alunos", href: "/alunos", icon: Users },
+          { name: "Calendário", href: "/calendario", icon: Calendar },
         ]
       },
       {

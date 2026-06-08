@@ -155,7 +155,7 @@ const Financeiro = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Financeiro</h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Visão geral da saúde financeira da escola
+              Visão geral da saúde financeira da unidade
             </p>
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">

@@ -16,6 +16,8 @@ export interface Unidade {
     instagram_url?: string;
     cor_primaria?: string;
     email_contato?: string;
+    tipo_instituicao?: string;
+    feature_flags?: Record<string, boolean>;
 }
 
 interface UnidadeContextType {
@@ -65,7 +67,9 @@ export const UnidadeProvider = ({ children }: { children: ReactNode }) => {
           whatsapp,
           instagram_url,
           cor_primaria,
-          email_contato
+          email_contato,
+          tipo_instituicao,
+          feature_flags
         )
       `)
                 .eq("user_id", user.id);
@@ -95,7 +99,7 @@ export const UnidadeProvider = ({ children }: { children: ReactNode }) => {
             console.error("Erro ao buscar unidades:", error);
             toast({
                 title: "Erro de Unidade",
-                description: "Não foi possível carregar as escolas vinculadas.",
+                description: "Não foi possível carregar as unidades vinculadas.",
                 variant: "destructive",
             });
         } finally {
