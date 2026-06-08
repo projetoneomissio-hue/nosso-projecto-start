@@ -17,7 +17,8 @@ import {
   Users,
   Loader2,
   Mail,
-  Send
+  Send,
+  History
 } from "lucide-react";
 import { useUnidade } from "@/contexts/UnidadeContext";
 import { useFinanceiroKPIs, useDespesasPorCategoria, useFluxoCaixaMeses, useReceitaPorAtividade } from "@/hooks/useFinanceiro";
@@ -158,6 +159,10 @@ const Financeiro = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button onClick={() => navigate("/financeiro/importar-historico")} variant="outline" className="gap-2 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm">
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">Importar</span> Histórico
+            </Button>
             <NovaDespesaDialog className="gap-2 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm h-9 sm:h-10" />
             <Button onClick={exportarPDF} variant="outline" className="gap-2 shadow-sm flex-1 sm:flex-none text-xs sm:text-sm">
               <Download className="h-4 w-4" />

@@ -125,7 +125,7 @@ export const financeiroService = {
                     )
                 )
             `)
-            .eq("status", "pago");
+            .in("status", ["pago", "migrado"]);
         
         if (unidadeId) {
             query = query.eq("unidade_id", unidadeId);

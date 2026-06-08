@@ -23,6 +23,7 @@ import Atividades from "./pages/Atividades";
 import Alunos from "./pages/Alunos";
 import ImportarAlunos from "./pages/ImportarAlunos";
 import ImportarMatriculas from "./pages/ImportarMatriculas";
+import ImportarHistoricoFinanceiro from "./pages/ImportarHistoricoFinanceiro";
 import Professores from "./pages/Professores";
 import Financeiro from "./pages/Financeiro";
 import Predio from "./pages/Predio";
@@ -114,6 +115,7 @@ export const AppRoutes = () => {
       <Route path="/alunos/importar" element={<ProtectedRoute allowedRoles={["direcao", "coordenacao", "secretaria"]}><ImportarAlunos /></ProtectedRoute>} />
       <Route path="/professores" element={<ProtectedRoute><Professores /></ProtectedRoute>} />
       <Route path="/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
+      <Route path="/financeiro/importar-historico" element={<ProtectedRoute allowedRoles={["direcao"]}><ImportarHistoricoFinanceiro /></ProtectedRoute>} />
       <Route path="/predio" element={<ProtectedRoute><Predio /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
       <Route path="/calendario" element={<ProtectedRoute><CalendarioEscolar /></ProtectedRoute>} />

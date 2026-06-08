@@ -696,3 +696,288 @@ export function downloadMatriculaErrorReport(erros: MatriculaImportSummary["erro
   XLSX.utils.book_append_sheet(wb, ws, "erros");
   XLSX.writeFile(wb, "erros_importacao_matriculas.xlsx");
 }
+
+// ===========================================================================
+// FASE C — Importação de Histórico Financeiro
+// ===========================================================================
+
+export interface FinanceiroImportRow {
+  cpf_aluno?: string;
+  nome_aluno?: string;
+  atividade?: string;
+  mes_ano: string;        // MM/AAAA
+  dia_vencimento?: string; // número 1-31, default 10
+  valor: string;
+  status_original?: string; // pago | atrasado | pendente
+  forma_pagamento?: string;
+  observacoes?: string;
+}
+
+export interface FinanceiroImportSummary {
+  total: number;
+  pagamentosCriados: number;
+  erros: { row: number; nome: string; motivo: string }[];
+}
+
+const FINANCEIRO_HEADERS: { key: keyof FinanceiroImportRow; label: string }[] = [
+  { key: "cpf_aluno",        label: "cpf_aluno (somente números)" },
+  { key: "nome_aluno",       label: "nome_aluno (se não tiver CPF)" },
+  { key: "atividade",        label: "atividade (nome da atividade)" },
+  { key: "mes_ano",          label: "mes_ano * (MM/AAAA)" },
+  { key: "dia_vencimento",   label: "dia_vencimento (1-31, padrão 10)" },
+  { key: "valor",            label: "valor * (ex: 150.00)" },
+  { key: "status_original",  label: "status_original (pago/atrasado/pendente)" },
+  { key: "forma_pagamento",  label: "forma_pagamento (ex: PIX, Dinheiro)" },
+  { key: "observacoes",      label: "observacoes" },
+];
+
+const FINANCEIRO_EXAMPLE: Record<string, string> = {
+  "cpf_aluno (somente números)": "12345678900",
+  "nome_aluno (se não tiver CPF)": "Maria da Silva",
+  "atividade (nome da atividade)": "Jiu-Jitsu",
+  "mes_ano * (MM/AAAA)": "03/2025",
+  "dia_vencimento (1-31, padrão 10)": "10",
+  "valor * (ex: 150.00)": "150.00",
+  "status_original (pago/atrasado/pendente)": "pago",
+  "forma_pagamento (ex: PIX, Dinheiro)": "PIX",
+  "observacoes": "",
+};
+
+const FINANCEIRO_INSTRUCTIONS = [
+  ["INSTRUÇÕES DE PREENCHIMENTO — HISTÓRICO FINANCEIRO"],
+  [],
+  ["Campos obrigatórios", "mes_ano, valor"],
+  ["Identificação do aluno", "cpf_aluno (preferencial) OU nome_aluno"],
+  [],
+  ["CAMPO", "DESCRIÇÃO"],
+  ["cpf_aluno", "CPF do aluno sem pontos/traços."],
+  ["atividade", "Nome da atividade para identificar a matrícula correta. Se o aluno tiver só uma matrícula, pode deixar vazio."],
+  ["mes_ano", "Mês e ano do pagamento no formato MM/AAAA. Ex: 03/2025"],
+  ["dia_vencimento", "Dia do vencimento. Se vazio, usa 10 como padrão."],
+  ["valor", "Valor em reais. Use ponto como separador decimal. Ex: 150.00"],
+  ["status_original", "pago = foi pago | atrasado = não foi pago, estava em atraso | pendente = ainda em aberto"],
+  ["forma_pagamento", "Como foi pago (apenas se status_original = pago). Ex: PIX, Dinheiro, Cartão"],
+  [],
+  ["IMPORTANTE"],
+  ["• Todos os registros importados receberão o status 'migrado' no sistema"],
+  ["• Um badge visual identificará esses registros como dados históricos"],
+  ["• O aluno precisa ter uma matrícula ativa ou concluída no sistema"],
+  ["• Pagamentos duplicados (mesmo aluno + mesma matrícula + mesmo mês) serão ignorados"],
+];
+
+export function generateFinanceiroTemplate(): void {
+  const wb = XLSX.utils.book_new();
+  const headers = FINANCEIRO_HEADERS.map((h) => h.label);
+  const ws = XLSX.utils.aoa_to_sheet([
+    headers,
+    headers.map((h) => FINANCEIRO_EXAMPLE[h] ?? ""),
+  ]);
+  ws["!cols"] = headers.map(() => ({ wch: 32 }));
+  XLSX.utils.book_append_sheet(wb, ws, "historico");
+
+  const wsInstr = XLSX.utils.aoa_to_sheet(FINANCEIRO_INSTRUCTIONS);
+  wsInstr["!cols"] = [{ wch: 28 }, { wch: 70 }];
+  XLSX.utils.book_append_sheet(wb, wsInstr, "instrucoes");
+
+  XLSX.writeFile(wb, "template_historico_financeiro.xlsx");
+}
+
+function parseMesAno(raw: string): { year: number; month: number } | null {
+  const match = String(raw).trim().match(/^(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const month = parseInt(match[1]);
+  const year = parseInt(match[2]);
+  if (month < 1 || month > 12) return null;
+  return { year, month };
+}
+
+export function parseFinanceiroFile(file: File): Promise<{ rows: FinanceiroImportRow[]; errors: ValidationError[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target!.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array", cellDates: false });
+
+        const sheetName =
+          wb.SheetNames.find((n) => ["historico", "financeiro", "pagamentos"].includes(n.toLowerCase())) ??
+          wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const raw: Record<string, string>[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+        if (raw.length === 0) {
+          return resolve({ rows: [], errors: [{ row: 0, field: "arquivo", message: "Planilha vazia." }] });
+        }
+
+        const normalized = raw.map((r) => {
+          const out: Record<string, string> = {};
+          for (const [k, v] of Object.entries(r)) out[normalizeHeader(k)] = String(v).trim();
+          return out;
+        });
+
+        const errors: ValidationError[] = [];
+        const rows: FinanceiroImportRow[] = [];
+
+        normalized.forEach((r, i) => {
+          const rowNum = i + 2;
+          const rowErrors: ValidationError[] = [];
+
+          if (!r.mes_ano) rowErrors.push({ row: rowNum, field: "mes_ano", message: "Campo obrigatório." });
+          if (!r.valor) rowErrors.push({ row: rowNum, field: "valor", message: "Campo obrigatório." });
+          if (!r.cpf_aluno && !r.nome_aluno) {
+            rowErrors.push({ row: rowNum, field: "identificacao", message: "Informe cpf_aluno ou nome_aluno." });
+          }
+
+          if (r.mes_ano && !parseMesAno(r.mes_ano)) {
+            rowErrors.push({ row: rowNum, field: "mes_ano", message: `Formato inválido: "${r.mes_ano}". Use MM/AAAA.` });
+          }
+
+          const valorNum = parseFloat(String(r.valor).replace(",", "."));
+          if (isNaN(valorNum) || valorNum <= 0) {
+            rowErrors.push({ row: rowNum, field: "valor", message: `Valor inválido: "${r.valor}".` });
+          }
+
+          const dia = parseInt(r.dia_vencimento || "10");
+          if (isNaN(dia) || dia < 1 || dia > 31) {
+            rowErrors.push({ row: rowNum, field: "dia_vencimento", message: `Dia inválido: "${r.dia_vencimento}". Use 1-31.` });
+          }
+
+          const cpfClean = r.cpf_aluno ? unmaskCPF(r.cpf_aluno) : "";
+          if (cpfClean && (cpfClean.length !== 11 || !validateCPF(cpfClean))) {
+            rowErrors.push({ row: rowNum, field: "cpf_aluno", message: `CPF inválido: "${r.cpf_aluno}".` });
+          }
+
+          errors.push(...rowErrors);
+          if (rowErrors.length === 0) {
+            rows.push({
+              cpf_aluno: cpfClean || undefined,
+              nome_aluno: r.nome_aluno || undefined,
+              atividade: r.atividade || undefined,
+              mes_ano: r.mes_ano,
+              dia_vencimento: r.dia_vencimento || "10",
+              valor: String(valorNum),
+              status_original: r.status_original?.toLowerCase() || "pago",
+              forma_pagamento: r.forma_pagamento || undefined,
+              observacoes: r.observacoes || undefined,
+            });
+          }
+        });
+
+        resolve({ rows, errors });
+      } catch (err) {
+        reject(new Error("Não foi possível ler o arquivo."));
+      }
+    };
+    reader.onerror = () => reject(new Error("Erro ao ler o arquivo."));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function findMatriculaParaFinanceiro(row: FinanceiroImportRow): Promise<{ id: string } | null> {
+  // Primeiro encontra o aluno
+  let alunoId: string | null = null;
+
+  if (row.cpf_aluno) {
+    const { data } = await supabase.from("alunos").select("id").eq("cpf", row.cpf_aluno).maybeSingle();
+    if (data) alunoId = data.id;
+  }
+  if (!alunoId && row.nome_aluno) {
+    const { data } = await supabase.from("alunos").select("id").ilike("nome_completo", row.nome_aluno).maybeSingle();
+    if (data) alunoId = data.id;
+  }
+  if (!alunoId) return null;
+
+  // Busca matrícula do aluno (filtra por atividade se informada)
+  let query = supabase
+    .from("matriculas")
+    .select("id, turma:turmas(atividade:atividades(nome))")
+    .eq("aluno_id", alunoId)
+    .in("status", ["ativa", "concluida"]);
+
+  const { data: matriculas } = await query;
+  if (!matriculas || matriculas.length === 0) return null;
+
+  if (row.atividade && matriculas.length > 1) {
+    const filtered = matriculas.filter((m: any) =>
+      m.turma?.atividade?.nome?.toLowerCase().includes(row.atividade!.toLowerCase())
+    );
+    if (filtered.length > 0) return filtered[0];
+  }
+
+  return matriculas[0];
+}
+
+export async function executeFinanceiroImport(rows: FinanceiroImportRow[]): Promise<FinanceiroImportSummary> {
+  const summary: FinanceiroImportSummary = {
+    total: rows.length,
+    pagamentosCriados: 0,
+    erros: [],
+  };
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const label = row.nome_aluno ?? row.cpf_aluno ?? `linha ${i + 2}`;
+
+    try {
+      // 1. Localiza matrícula
+      const matricula = await findMatriculaParaFinanceiro(row);
+      if (!matricula) {
+        summary.erros.push({ row: i + 2, nome: label, motivo: "Aluno não encontrado ou sem matrícula no sistema." });
+        continue;
+      }
+
+      // 2. Calcula data de vencimento
+      const mesAno = parseMesAno(row.mes_ano)!;
+      const dia = parseInt(row.dia_vencimento ?? "10");
+      const dataVencimento = `${mesAno.year}-${String(mesAno.month).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+
+      // 3. Verifica duplicata (mesma matrícula + mesmo vencimento)
+      const { data: existente } = await supabase
+        .from("pagamentos")
+        .select("id")
+        .eq("matricula_id", matricula.id)
+        .eq("data_vencimento", dataVencimento)
+        .maybeSingle();
+
+      if (existente) {
+        summary.erros.push({ row: i + 2, nome: label, motivo: `Pagamento duplicado — ${row.mes_ano} já existe para essa matrícula.` });
+        continue;
+      }
+
+      // 4. Insere pagamento com status 'migrado'
+      const statusOriginal = row.status_original ?? "pago";
+      const foiPago = statusOriginal === "pago";
+      const obs = [
+        `Migrado de planilha. Status original: ${statusOriginal}.`,
+        row.observacoes ?? "",
+      ].filter(Boolean).join(" ");
+
+      const { error } = await supabase.from("pagamentos").insert({
+        matricula_id: matricula.id,
+        valor: parseFloat(row.valor),
+        data_vencimento: dataVencimento,
+        data_pagamento: foiPago ? dataVencimento : null,
+        status: "migrado" as any,
+        forma_pagamento: row.forma_pagamento ?? null,
+        observacoes: obs,
+      });
+
+      if (error) throw new Error(error.message);
+      summary.pagamentosCriados++;
+    } catch (err: any) {
+      summary.erros.push({ row: i + 2, nome: label, motivo: err.message ?? "Erro desconhecido." });
+    }
+  }
+
+  return summary;
+}
+
+export function downloadFinanceiroErrorReport(erros: FinanceiroImportSummary["erros"]): void {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(
+    erros.map((e) => ({ Linha: e.row, Aluno: e.nome, Motivo: e.motivo }))
+  );
+  ws["!cols"] = [{ wch: 8 }, { wch: 30 }, { wch: 60 }];
+  XLSX.utils.book_append_sheet(wb, ws, "erros");
+  XLSX.writeFile(wb, "erros_historico_financeiro.xlsx");
+}

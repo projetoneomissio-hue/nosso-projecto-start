@@ -47,9 +47,15 @@ export const RecentPaymentsTable = () => {
                                     R$ {parseFloat(pagamento.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-4 align-middle text-center">
-                                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                                        Pago
-                                    </span>
+                                    {pagamento.status === "migrado" ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase bg-purple-500/10 text-purple-600 border border-purple-500/20" title="Dado importado de planilha histórica">
+                                            📋 Migrado
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                            Pago
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="p-4 align-middle text-right">
                                     {pagamento.matricula?.aluno?.responsavel?.telefone && (
