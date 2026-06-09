@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, School } from "lucide-react";
+import { Loader2, CheckCircle, School, User, UserCheck, Camera } from "lucide-react";
 import { solicitacoesService } from "@/services/solicitacoes.service";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -141,6 +141,8 @@ export default function MatriculaOnline() {
                 unidade_id: unidade.id,
                 status: "pendente",
                 atividade_desejada: atividadeUrl || "Geral",
+                nome_responsavel: data.nome_responsavel,
+                email_responsavel: data.email_responsavel,
                 cpf_responsavel: data.cpf_responsavel,
                 escola: data.escola,
                 serie_ano: data.serie_ano,
@@ -148,8 +150,6 @@ export default function MatriculaOnline() {
                 como_conheceu: data.como_conheceu,
                 autoriza_imagem: data.autoriza_imagem,
             };
-
-            console.log("Enviando Passo 2 (Final):", payload);
 
             await solicitacoesService.upsert(payload as any);
             setSubmitted(true);
@@ -238,13 +238,19 @@ export default function MatriculaOnline() {
                         <form onSubmit={form.handleSubmit(onFinalSubmit)} className="space-y-6">
                             {/* PASSO 1 - SEMPRE NO DOM, MAS OCULTO SE STEP > 1 */}
                             <div className={`space-y-5 animate-in fade-in duration-300 ${step !== 1 ? 'hidden' : 'block'}`}>
+                                {/* Seção: Dados do Aluno */}
+                                <div className="flex items-center gap-2 pb-1 border-b border-gray-100">
+                                    <User className="h-3.5 w-3.5 text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Dados do Aluno</span>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                         control={form.control}
                                         name="nome_completo"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Nome</FormLabel>
+                                                <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Nome do Aluno</FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="Ex: João" className="h-11 font-medium" {...field} />
                                                 </FormControl>
@@ -269,10 +275,30 @@ export default function MatriculaOnline() {
 
                                 <FormField
                                     control={form.control}
+                                    name="data_nascimento"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Data de Nascimento do Aluno</FormLabel>
+                                            <FormControl>
+                                                <Input type="date" className="h-11 font-medium" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Seção: Contato do Responsável */}
+                                <div className="flex items-center gap-2 pb-1 border-b border-gray-100 pt-2">
+                                    <UserCheck className="h-3.5 w-3.5 text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Contato do Responsável</span>
+                                </div>
+
+                                <FormField
+                                    control={form.control}
                                     name="whatsapp"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">WhatsApp para Contato</FormLabel>
+                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">WhatsApp do Responsável</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder="(00) 00000-0000"
@@ -287,28 +313,15 @@ export default function MatriculaOnline() {
                                                     }}
                                                 />
                                             </FormControl>
+                                            <p className="text-[10px] text-gray-400 mt-1">Entraremos em contato por aqui para confirmar a vaga.</p>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
 
-                                <FormField
-                                    control={form.control}
-                                    name="data_nascimento"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Data de Nascimento</FormLabel>
-                                            <FormControl>
-                                                <Input type="date" className="h-11 font-medium" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <Button 
-                                    type="button" 
-                                    onClick={onStep1Submit} 
+                                <Button
+                                    type="button"
+                                    onClick={onStep1Submit}
                                     className="w-full text-lg h-12 font-black italic uppercase group"
                                 >
                                     Próximo Passo
@@ -318,13 +331,20 @@ export default function MatriculaOnline() {
 
                             {/* PASSO 2 - SEMPRE NO DOM, MAS OCULTO SE STEP !== 2 */}
                             <div className={`space-y-6 animate-in fade-in duration-300 ${step !== 2 ? 'hidden' : 'block'}`}>
+
+                                {/* Seção: Dados do Responsável */}
+                                <div className="flex items-center gap-2 pb-1 border-b border-gray-100">
+                                    <UserCheck className="h-3.5 w-3.5 text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Dados do Responsável</span>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
                                         control={form.control}
                                         name="nome_responsavel"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Nome do Responsável</FormLabel>
+                                                <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Nome Completo</FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="Ex: João Silva" className="h-11 font-medium" {...field} />
                                                 </FormControl>
@@ -337,7 +357,7 @@ export default function MatriculaOnline() {
                                         name="email_responsavel"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">E-mail do Responsável</FormLabel>
+                                                <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">E-mail</FormLabel>
                                                 <FormControl>
                                                     <Input type="email" placeholder="email@exemplo.com" className="h-11 font-medium" {...field} />
                                                 </FormControl>
@@ -352,18 +372,24 @@ export default function MatriculaOnline() {
                                     name="cpf_responsavel"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">CPF do Responsável</FormLabel>
+                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">CPF</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    placeholder="000.000.000-00" 
-                                                    className="h-11 font-medium" 
-                                                    {...field} 
+                                                <Input
+                                                    placeholder="000.000.000-00"
+                                                    className="h-11 font-medium"
+                                                    {...field}
                                                 />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* Seção: Dados do Aluno (escola/série) */}
+                                <div className="flex items-center gap-2 pb-1 border-b border-gray-100 pt-2">
+                                    <User className="h-3.5 w-3.5 text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Informações do Aluno</span>
+                                </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField
@@ -401,10 +427,10 @@ export default function MatriculaOnline() {
                                         <FormItem>
                                             <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Necessidades Especiais / Neurodiversidade</FormLabel>
                                             <FormControl>
-                                                <Textarea 
-                                                    placeholder="Descreva se houver alguma condição especial..." 
-                                                    className="min-h-[80px] font-medium resize-none shadow-none focus-visible:ring-1" 
-                                                    {...field} 
+                                                <Textarea
+                                                    placeholder="Descreva se houver alguma condição especial..."
+                                                    className="min-h-[80px] font-medium resize-none shadow-none focus-visible:ring-1"
+                                                    {...field}
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -417,7 +443,7 @@ export default function MatriculaOnline() {
                                     name="como_conheceu"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Como conheceu?</FormLabel>
+                                            <FormLabel className="text-[11px] font-black uppercase tracking-wider opacity-70">Como conheceu a {unidade?.nome}?</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className="h-11 font-medium bg-white/50 border-gray-200">
@@ -436,21 +462,29 @@ export default function MatriculaOnline() {
                                     )}
                                 />
 
+                                {/* Autorização de imagem — clara e contextualizada */}
                                 <FormField
                                     control={form.control}
                                     name="autoriza_imagem"
                                     render={({ field }) => (
-                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 rounded-xl bg-primary/5 border border-primary/10">
                                             <FormControl>
                                                 <Checkbox
                                                     checked={field.value}
                                                     onCheckedChange={field.onChange}
+                                                    className="mt-0.5"
                                                 />
                                             </FormControl>
                                             <div className="space-y-1 leading-none">
-                                                <FormLabel className="text-xs font-bold uppercase tracking-tight leading-normal cursor-pointer">
-                                                    Autorizo o uso de imagem
-                                                </FormLabel>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Camera className="h-3.5 w-3.5 text-primary" />
+                                                    <FormLabel className="text-xs font-black uppercase tracking-tight cursor-pointer text-primary">
+                                                        Autorizo o uso de fotos e vídeos
+                                                    </FormLabel>
+                                                </div>
+                                                <p className="text-[11px] text-gray-500 leading-relaxed">
+                                                    Autorizo a {unidade?.nome} a publicar fotos e vídeos do aluno em redes sociais (Instagram, Facebook, WhatsApp) e materiais de divulgação da instituição.
+                                                </p>
                                             </div>
                                         </FormItem>
                                     )}
