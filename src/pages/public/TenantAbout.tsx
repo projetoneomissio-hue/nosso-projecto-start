@@ -101,7 +101,8 @@ const TenantAbout = () => {
     const qs = cfg.quem_somos || {};
     const equipe = qs.equipe || [];
     const stats = qs.stats || [];
-    const valores = qs.valores ? qs.valores.split(/[,\n]+/).map(v => v.trim()).filter(Boolean) : [];
+    // Split only on double newlines to preservar frases completas como um único valor
+    const valores = qs.valores ? qs.valores.split(/\n\n+/).map(v => v.trim()).filter(Boolean) : [];
     const landingUrl = slug ? `/org/${slug}` : "/";
 
     const seoTitle = `Quem Somos — ${tenant.nome}`;
@@ -109,6 +110,21 @@ const TenantAbout = () => {
 
     const hasMVV = qs.missao || qs.visao || qs.valores;
     const hasDepoimento = qs.depoimento_destaque?.texto;
+
+    const StatsBar = stats.length > 0 ? (
+        <section className="bg-primary text-white py-10">
+            <div className="container mx-auto px-4">
+                <div className={`grid gap-8 text-center ${stats.length === 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
+                    {stats.map((s, i) => (
+                        <div key={i} className="space-y-1">
+                            <p className="text-4xl sm:text-5xl font-black">{s.numero}</p>
+                            <p className="text-sm font-medium text-white/80 uppercase tracking-wide">{s.label}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    ) : null;
 
     return (
         <div className="light min-h-screen bg-white text-gray-900">
@@ -144,9 +160,6 @@ const TenantAbout = () => {
                         <Link to="/login" className="text-sm font-medium text-gray-500 hover:text-primary transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100">
                             Entrar
                         </Link>
-                        <Button size="sm" asChild>
-                            <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição</Link>
-                        </Button>
                     </div>
                 </div>
             </nav>
@@ -167,10 +180,7 @@ const TenantAbout = () => {
                             {qs.subtitulo && (
                                 <p className="text-lg text-white/80 leading-relaxed max-w-2xl mx-auto">{qs.subtitulo}</p>
                             )}
-                            <div className="flex flex-wrap gap-3 justify-center pt-2">
-                                <Button asChild className="gap-2 shadow-lg">
-                                    <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
-                                </Button>
+                            <div className="flex justify-center pt-2">
                                 <Button asChild variant="outline" className="gap-2 border-white/40 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm">
                                     <a href="#historia">Nossa História</a>
                                 </Button>
@@ -188,10 +198,7 @@ const TenantAbout = () => {
                             {qs.subtitulo && (
                                 <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">{qs.subtitulo}</p>
                             )}
-                            <div className="flex flex-wrap gap-3 justify-center pt-2">
-                                <Button asChild className="gap-2">
-                                    <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
-                                </Button>
+                            <div className="flex justify-center pt-2">
                                 <Button asChild variant="outline" className="gap-2">
                                     <a href="#historia">Nossa História</a>
                                 </Button>
@@ -200,22 +207,6 @@ const TenantAbout = () => {
                     </div>
                 )}
             </section>
-
-            {/* ── STATS BAR ────────────────────────────────────────────────────── */}
-            {stats.length > 0 && (
-                <section className="bg-primary text-white py-10">
-                    <div className="container mx-auto px-4">
-                        <div className={`grid gap-8 text-center ${stats.length === 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
-                            {stats.map((s, i) => (
-                                <div key={i} className="space-y-1">
-                                    <p className="text-4xl sm:text-5xl font-black">{s.numero}</p>
-                                    <p className="text-sm font-medium text-white/80 uppercase tracking-wide">{s.label}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-            )}
 
             {/* ── HISTÓRIA ─────────────────────────────────────────────────────── */}
             {qs.historia && (
@@ -237,6 +228,9 @@ const TenantAbout = () => {
                 </section>
             )}
 
+            {/* ── STATS BAR — aparece após a história para dar contexto aos números */}
+            {StatsBar}
+
             {/* ── DEPOIMENTO DESTAQUE ───────────────────────────────────────────── */}
             {hasDepoimento && (
                 <section className="py-16 bg-gray-50">
@@ -256,21 +250,6 @@ const TenantAbout = () => {
                 </section>
             )}
 
-            {/* ── CTA INTERMEDIÁRIO ────────────────────────────────────────────── */}
-            {(qs.historia || hasDepoimento) && (
-                <section className="py-12 border-y border-gray-100">
-                    <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-4xl">
-                        <div>
-                            <p className="font-bold text-gray-900 text-lg">Quer fazer parte dessa história?</p>
-                            <p className="text-sm text-gray-500">Vagas limitadas. Inscreva-se agora.</p>
-                        </div>
-                        <Button asChild size="lg" className="gap-2 shrink-0">
-                            <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
-                        </Button>
-                    </div>
-                </section>
-            )}
-
             {/* ── MISSÃO / VISÃO / VALORES ─────────────────────────────────────── */}
             {hasMVV && (
                 <section className="py-20 bg-gray-50">
@@ -286,7 +265,7 @@ const TenantAbout = () => {
                                         <Target className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-lg mb-2">Missão</h3>
+                                        <h3 className="font-bold text-lg mb-2 text-gray-900">Missão</h3>
                                         <p className="text-sm text-gray-600 leading-relaxed">{qs.missao}</p>
                                     </div>
                                 </div>
@@ -297,7 +276,7 @@ const TenantAbout = () => {
                                         <Eye className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-lg mb-2">Visão</h3>
+                                        <h3 className="font-bold text-lg mb-2 text-gray-900">Visão</h3>
                                         <p className="text-sm text-gray-600 leading-relaxed">{qs.visao}</p>
                                     </div>
                                 </div>
@@ -308,15 +287,16 @@ const TenantAbout = () => {
                                         <Heart className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-lg mb-2">Valores</h3>
+                                        <h3 className="font-bold text-lg mb-2 text-gray-900">Valores</h3>
                                         {valores.length > 1 ? (
-                                            <div className="flex flex-wrap gap-2 mt-3">
+                                            <ul className="mt-3 space-y-2">
                                                 {valores.map((v, i) => (
-                                                    <span key={i} className="px-3 py-1 bg-primary/8 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                                                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600 leading-relaxed">
+                                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                                                         {v}
-                                                    </span>
+                                                    </li>
                                                 ))}
-                                            </div>
+                                            </ul>
                                         ) : (
                                             <p className="text-sm text-gray-600 leading-relaxed">{qs.valores}</p>
                                         )}
@@ -362,7 +342,7 @@ const TenantAbout = () => {
                 </section>
             )}
 
-            {/* ── CTA FINAL / CANAIS ───────────────────────────────────────────── */}
+            {/* ── RODAPÉ — canais de contato e link para atividades ────────────── */}
             <section className="py-20 bg-gray-900 text-white">
                 <div className="container mx-auto px-4 text-center max-w-xl space-y-6">
                     <h2 className="text-3xl font-bold">Venha fazer parte</h2>
@@ -385,7 +365,7 @@ const TenantAbout = () => {
                             </Button>
                         )}
                         <Button className="gap-2" asChild>
-                            <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
+                            <Link to={landingUrl}>Ver Atividades <ChevronRight className="h-4 w-4" /></Link>
                         </Button>
                     </div>
                 </div>
