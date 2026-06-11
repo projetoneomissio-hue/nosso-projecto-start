@@ -122,8 +122,8 @@ const ManagementDashboard = () => {
     }) : [];
 
     const { data: inadimplentes } = useQuery({
-        queryKey: ["management-inadimplentes"],
-        queryFn: () => financeiroService.fetchInadimplentesOtimizado(),
+        queryKey: ["management-inadimplentes", currentUnidade?.id],
+        queryFn: () => financeiroService.fetchInadimplentesOtimizado(currentUnidade?.id),
     });
 
     const { data: matriculasPendentes, isLoading: loadingPendentes } = useQuery({

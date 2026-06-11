@@ -65,11 +65,14 @@ const DetalhesMatriculaSheet = ({ matricula, open, onOpenChange }: any) => {
     mutationFn: async () => {
       if (!matricula || !currentUnidade?.id) return;
 
-      const { error: errUpdate } = await supabase
+      const { data: updated, error: errUpdate } = await supabase
         .from("matriculas")
         .update({ status: "ativa" })
-        .eq("id", matricula.id);
+        .eq("id", matricula.id)
+        .eq("status", "pendente")
+        .select("id");
       if (errUpdate) throw new Error(`Erro ao aprovar: ${errUpdate.message}`);
+      if (!updated || updated.length === 0) throw new Error("Matrícula já foi processada.");
 
       const turmaId = matricula.turma?.id;
       const { data: turmaInfo } = turmaId ? await supabase
