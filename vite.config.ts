@@ -17,25 +17,25 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'prompt',
       filename: 'manifest.json',
-      includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon-180x180.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon-180x180.png', 'icon-institui.png'],
       manifest: {
-        name: 'Neo Missio - Gestão Social',
-        short_name: 'Neo Missio',
-        description: 'Sistema de gestão para o projeto social Neo Missio.',
+        name: 'Institui — Gestão para Organizações Sociais',
+        short_name: 'Institui',
+        description: 'Sistema completo de gestão para escolas, ONGs e centros educacionais.',
         theme_color: '#e60049',
-        background_color: '#09090b',
+        background_color: '#ffffff',
         display: 'standalone',
         scope: '/',
         start_url: '/',
         orientation: 'portrait',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: '/icon-institui.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/icon-institui.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',

@@ -258,11 +258,8 @@ const Index = () => {
       {/* ── Nav ───────────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 w-full bg-background/95 backdrop-blur-sm border-b border-border z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-xl font-black text-primary-foreground">I</span>
-            </div>
-            <span className="font-black text-xl tracking-tighter uppercase">Institui</span>
+          <div className="flex items-center">
+            <img src="/logo-institui.png" alt="Institui" className="h-10 w-auto object-contain" />
           </div>
           <div className="flex gap-6 items-center">
             <a href="#funcionalidades" className="hidden sm:inline text-sm font-medium hover:text-primary transition-colors">Funcionalidades</a>
@@ -628,11 +625,8 @@ const Index = () => {
       <footer className="py-10 border-t bg-background">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-sm font-black text-primary-foreground">I</span>
-              </div>
-              <span className="font-black tracking-tighter uppercase">Institui</span>
+            <div className="flex items-center">
+              <img src="/logo-institui.png" alt="Institui" className="h-8 w-auto object-contain" />
             </div>
             <div className="flex gap-6 text-sm text-muted-foreground">
               <a href="#funcionalidades" className="hover:text-primary transition-colors">Funcionalidades</a>
