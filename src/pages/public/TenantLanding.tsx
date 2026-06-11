@@ -195,7 +195,7 @@ const TenantLanding = () => {
             )}
 
             {/* Nav */}
-            <nav className={`fixed w-full bg-background/95 backdrop-blur-sm border-b border-border z-50 ${isAuthenticated ? "top-8" : "top-0"}`}>
+            <nav className={`fixed w-full bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50 ${isAuthenticated ? "top-8" : "top-0"}`}>
                 <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {tenant.logo_url ? (
@@ -205,12 +205,18 @@ const TenantLanding = () => {
                                 <span className="text-xl font-black text-primary">{tenant.nome.charAt(0)}</span>
                             </div>
                         )}
-                        <span className="font-black text-xl tracking-tighter uppercase">{tenant.nome}</span>
+                        <span className="font-black text-xl tracking-tighter uppercase text-gray-900">{tenant.nome}</span>
                     </div>
-                    <div className="flex gap-4 items-center">
-                        <a href="#atividades" className="text-sm font-medium hover:text-primary transition-colors">
+                    <div className="flex gap-3 items-center">
+                        <a href="#atividades" className="hidden sm:inline text-sm font-medium text-gray-600 hover:text-primary transition-colors">
                             Atividades
                         </a>
+                        <Link
+                            to="/login"
+                            className="text-sm font-medium text-gray-500 hover:text-primary transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100"
+                        >
+                            Entrar
+                        </Link>
                         <Button size="sm" asChild>
                             <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição</Link>
                         </Button>

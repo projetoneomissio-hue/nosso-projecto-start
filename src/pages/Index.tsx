@@ -256,7 +256,7 @@ const Index = () => {
       />
 
       {/* ── Nav ───────────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 w-full bg-background/95 backdrop-blur-sm border-b border-border z-50">
+      <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">
             <img src="/logo-institui.png" alt="Institui" className="h-14 w-auto object-contain" />
