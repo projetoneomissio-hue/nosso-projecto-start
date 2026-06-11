@@ -3,9 +3,24 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUnidade } from "@/contexts/UnidadeContext";
 
-export const LandingFooter = () => {
+interface LandingFooterTenant {
+    nome?: string;
+    logo_url?: string;
+    whatsapp?: string;
+    instagram_url?: string;
+    email_contato?: string;
+    endereco?: string;
+    bairro?: string;
+}
+
+interface LandingFooterProps {
+    tenant?: LandingFooterTenant;
+}
+
+export const LandingFooter = ({ tenant: tenantProp }: LandingFooterProps = {}) => {
     const { currentUnidade } = useUnidade();
-    const unitName = currentUnidade?.nome || "Neo Missio";
+    const resolved = tenantProp ?? currentUnidade;
+    const unitName = resolved?.nome || "Neo Missio";
     return (
         <>
             {/* CTA Section */}
@@ -29,7 +44,7 @@ export const LandingFooter = () => {
                                 </a>
                             </Button>
                             <Button asChild size="lg" variant="outline" className="gap-2 bg-transparent border-background/30 text-background hover:bg-background/10 h-14 px-8 text-base">
-                                <a href="https://wa.me/5541984406992" target="_blank" rel="noopener noreferrer">
+                                <a href={`https://wa.me/${(resolved?.whatsapp || "5541984406992").replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                                     Falar no WhatsApp
                                 </a>
                             </Button>
@@ -43,7 +58,7 @@ export const LandingFooter = () => {
                 <div className="container mx-auto px-4">
                     <div className="grid md:grid-cols-3 gap-8">
                         <div>
-                            {currentUnidade?.logo_url ? (
+                            {resolved?.logo_url ? (
                                 <img src={currentUnidade.logo_url} alt={unitName} className="h-12 w-auto mb-4 object-contain" />
                             ) : (
                                 <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
@@ -68,25 +83,25 @@ export const LandingFooter = () => {
                             <h3 className="font-semibold mb-4 text-foreground/80 lowercase tracking-widest font-mono text-xs uppercase">Contato Direto</h3>
                             <ul className="space-y-3 text-sm text-muted-foreground">
                                 <li className="hover:text-primary transition-colors">
-                                    {currentUnidade?.endereco || "Rua Camilo Castelo Branco, 523"}
+                                    {resolved?.endereco || "Rua Camilo Castelo Branco, 523"}
                                 </li>
                                 <li className="hover:text-primary transition-colors">
-                                    {currentUnidade?.bairro || "Vila Lindóia"}
+                                    {resolved?.bairro || "Vila Lindóia"}
                                 </li>
                                 <li className="font-bold text-foreground hover:text-green-500 transition-colors">
-                                    <a href={`https://wa.me/${(currentUnidade?.whatsapp || "41984406992").replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                                    <a href={`https://wa.me/${(resolved?.whatsapp || "41984406992").replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                                         <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                                        WhatsApp: {currentUnidade?.whatsapp || "(41) 98440-6992"}
+                                        WhatsApp: {resolved?.whatsapp || "(41) 98440-6992"}
                                     </a>
                                 </li>
-                                {currentUnidade?.instagram_url && (
+                                {resolved?.instagram_url && (
                                     <li className="text-pink-500 font-medium">
                                         <a href={`https://instagram.com/${currentUnidade.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
                                             Instagram: {currentUnidade.instagram_url}
                                         </a>
                                     </li>
                                 )}
-                                {currentUnidade?.email_contato && (
+                                {resolved?.email_contato && (
                                     <li className="italic opacity-80">
                                         {currentUnidade.email_contato}
                                     </li>

@@ -6,6 +6,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { UnidadeProvider } from "@/contexts/UnidadeContext";
+import { PublicTenantProvider } from "@/contexts/PublicTenantContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PostHogProvider } from "@/providers/PostHogProvider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -36,6 +37,7 @@ import NotFound from "./pages/NotFound";
 import { ReloadPrompt } from "./components/ReloadPrompt";
 import MatriculaOnline from "./pages/public/MatriculaOnline";
 import ResgatarConvite from "./pages/public/ResgatarConvite";
+import TenantLanding from "./pages/public/TenantLanding";
 import Ajuda from "./pages/Ajuda";
 
 // Direção
@@ -109,6 +111,7 @@ export const AppRoutes = () => {
       {/* <Route path="/planos" element={<Planos />} /> */}
       {/* <Route path="/checkout" element={<Checkout />} /> */}
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/org/:slug" element={<TenantLanding />} />
       <Route path="/matricula/:slug" element={<MatriculaOnline />} />
       <Route path="/resgatar-convite" element={<ResgatarConvite />} />
 
@@ -190,6 +193,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
       <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <PublicTenantProvider>
         <AuthProvider>
           <UnidadeProvider>
             <ThemeColorInjector />
@@ -206,6 +210,7 @@ const App = () => (
             </TooltipProvider>
           </UnidadeProvider>
         </AuthProvider>
+        </PublicTenantProvider>
       </ThemeProvider>
     </HelmetProvider>
   </QueryClientProvider>
