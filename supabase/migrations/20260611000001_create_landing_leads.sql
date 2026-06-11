@@ -9,6 +9,9 @@ create table if not exists landing_leads (
 
 alter table landing_leads enable row level security;
 
+drop policy if exists "anon_insert_leads" on landing_leads;
+drop policy if exists "staff_read_leads" on landing_leads;
+
 -- Qualquer visitante público pode registrar interesse
 create policy "anon_insert_leads" on landing_leads
   for insert with check (true);

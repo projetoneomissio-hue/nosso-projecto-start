@@ -43,9 +43,6 @@ AS $$
 $$;
 
 -- ── 2. Garantir unidade_id em TODAS as tabelas referenciadas ─────────────────
--- Idempotente: ADD COLUMN IF NOT EXISTS não falha se já existir.
--- Necessário porque em produção algumas migrations anteriores podem não
--- ter sido aplicadas ainda.
 
 DO $$
 DECLARE
@@ -57,17 +54,14 @@ BEGIN
     'atividades', 'comunicados', 'audit_logs'
   ]
   LOOP
-    -- Adiciona coluna se não existir
     EXECUTE format(
       'ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS unidade_id UUID REFERENCES public.unidades(id) DEFAULT %L',
       tbl, '00000000-0000-0000-0000-000000000001'
     );
-    -- Preenche NULL com Matriz
     EXECUTE format(
       'UPDATE public.%I SET unidade_id = %L WHERE unidade_id IS NULL',
       tbl, '00000000-0000-0000-0000-000000000001'
     );
-    -- Impõe NOT NULL
     EXECUTE format(
       'ALTER TABLE public.%I ALTER COLUMN unidade_id SET NOT NULL',
       tbl
@@ -81,6 +75,8 @@ $$;
 
 DROP POLICY IF EXISTS "Direção, coordenação e professores podem ver todos os alunos" ON public.alunos;
 DROP POLICY IF EXISTS "Direção pode gerenciar alunos" ON public.alunos;
+DROP POLICY IF EXISTS "Equipe da unidade pode ver alunos" ON public.alunos;
+DROP POLICY IF EXISTS "Direção da unidade gerencia alunos" ON public.alunos;
 
 CREATE POLICY "Equipe da unidade pode ver alunos"
 ON public.alunos FOR SELECT
@@ -109,6 +105,8 @@ WITH CHECK (
 
 DROP POLICY IF EXISTS "Todos podem ver turmas ativas" ON public.turmas;
 DROP POLICY IF EXISTS "Direção e coordenação podem gerenciar turmas" ON public.turmas;
+DROP POLICY IF EXISTS "Membros da unidade veem turmas" ON public.turmas;
+DROP POLICY IF EXISTS "Direção e coordenação da unidade gerenciam turmas" ON public.turmas;
 
 CREATE POLICY "Membros da unidade veem turmas"
 ON public.turmas FOR SELECT
@@ -139,6 +137,7 @@ WITH CHECK (
 -- ── 5. MATRÍCULAS ─────────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção e coordenação podem gerenciar matrículas" ON public.matriculas;
+DROP POLICY IF EXISTS "Equipe da unidade gerencia matrículas" ON public.matriculas;
 
 CREATE POLICY "Equipe da unidade gerencia matrículas"
 ON public.matriculas FOR ALL
@@ -159,6 +158,7 @@ WITH CHECK (
 -- ── 6. PAGAMENTOS ─────────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção e coordenação podem gerenciar pagamentos" ON public.pagamentos;
+DROP POLICY IF EXISTS "Direção e coordenação da unidade gerenciam pagamentos" ON public.pagamentos;
 
 CREATE POLICY "Direção e coordenação da unidade gerenciam pagamentos"
 ON public.pagamentos FOR ALL
@@ -178,6 +178,9 @@ WITH CHECK (
 
 DROP POLICY IF EXISTS "Direção pode gerenciar professores" ON public.professores;
 DROP POLICY IF EXISTS "Professores podem atualizar seus dados" ON public.professores;
+DROP POLICY IF EXISTS "Professor vê e atualiza seu próprio registro" ON public.professores;
+DROP POLICY IF EXISTS "Direção da unidade gerencia professores" ON public.professores;
+DROP POLICY IF EXISTS "Equipe da unidade vê professores" ON public.professores;
 
 CREATE POLICY "Professor vê e atualiza seu próprio registro"
 ON public.professores FOR ALL
@@ -210,6 +213,7 @@ USING (
 -- ── 8. CUSTOS PREDIO ──────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção possui acesso total aos custos" ON public.custos_predio;
+DROP POLICY IF EXISTS "Direção da unidade gerencia custos do prédio" ON public.custos_predio;
 
 CREATE POLICY "Direção da unidade gerencia custos do prédio"
 ON public.custos_predio FOR ALL
@@ -226,6 +230,7 @@ WITH CHECK (
 -- ── 9. FUNCIONARIOS ───────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção possui acesso total aos funcionários" ON public.funcionarios;
+DROP POLICY IF EXISTS "Direção da unidade gerencia funcionários" ON public.funcionarios;
 
 CREATE POLICY "Direção da unidade gerencia funcionários"
 ON public.funcionarios FOR ALL
@@ -242,6 +247,7 @@ WITH CHECK (
 -- ── 10. LOCACOES ──────────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção possui acesso total às locações" ON public.locacoes;
+DROP POLICY IF EXISTS "Direção da unidade gerencia locações" ON public.locacoes;
 
 CREATE POLICY "Direção da unidade gerencia locações"
 ON public.locacoes FOR ALL
@@ -258,6 +264,7 @@ WITH CHECK (
 -- ── 11. OBSERVAÇÕES ───────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção e coordenação podem ver todas as observações" ON public.observacoes;
+DROP POLICY IF EXISTS "Equipe da unidade vê observações" ON public.observacoes;
 
 CREATE POLICY "Equipe da unidade vê observações"
 ON public.observacoes FOR SELECT
@@ -278,6 +285,7 @@ USING (
 -- ── 12. PRESENÇAS ─────────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção e coordenação podem ver todas as presenças" ON public.presencas;
+DROP POLICY IF EXISTS "Equipe da unidade vê presenças" ON public.presencas;
 
 CREATE POLICY "Equipe da unidade vê presenças"
 ON public.presencas FOR SELECT
@@ -299,6 +307,7 @@ USING (
 
 DROP POLICY IF EXISTS "Direção e coordenação podem ver todas as anamneses" ON public.anamneses;
 DROP POLICY IF EXISTS "Professores podem ver anamneses" ON public.anamneses;
+DROP POLICY IF EXISTS "Equipe da unidade vê anamneses" ON public.anamneses;
 
 CREATE POLICY "Equipe da unidade vê anamneses"
 ON public.anamneses FOR SELECT
@@ -322,6 +331,8 @@ DROP POLICY IF EXISTS "Direção e coordenação podem gerenciar atividades" ON 
 DROP POLICY IF EXISTS "Usuários podem ver atividades conforme seu papel" ON public.atividades;
 DROP POLICY IF EXISTS "Professores veem atividades das turmas" ON public.atividades;
 DROP POLICY IF EXISTS "Secretaria can view atividades" ON public.atividades;
+DROP POLICY IF EXISTS "Membros da unidade veem atividades" ON public.atividades;
+DROP POLICY IF EXISTS "Direção e coordenação da unidade gerenciam atividades" ON public.atividades;
 
 CREATE POLICY "Membros da unidade veem atividades"
 ON public.atividades FOR SELECT
@@ -353,6 +364,8 @@ WITH CHECK (
 
 DROP POLICY IF EXISTS "Direção e coordenação podem gerenciar comunicados" ON public.comunicados;
 DROP POLICY IF EXISTS "Responsáveis podem ver comunicados destinados a eles" ON public.comunicados;
+DROP POLICY IF EXISTS "Direção e coordenação da unidade gerenciam comunicados" ON public.comunicados;
+DROP POLICY IF EXISTS "Responsáveis veem comunicados da sua unidade" ON public.comunicados;
 
 CREATE POLICY "Direção e coordenação da unidade gerenciam comunicados"
 ON public.comunicados FOR ALL
@@ -384,6 +397,7 @@ USING (
 
 DROP POLICY IF EXISTS "Management manage invitations" ON public.invitations;
 DROP POLICY IF EXISTS "Superadmin cria convites" ON public.invitations;
+DROP POLICY IF EXISTS "Equipe da unidade gerencia convites" ON public.invitations;
 
 -- Acesso anônimo para validar token permanece (login flow)
 -- "Anon validate tokens" — NÃO dropar
@@ -405,6 +419,7 @@ WITH CHECK (
 -- ── 17. AUDIT LOGS ────────────────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Direção pode ver logs" ON public.audit_logs;
+DROP POLICY IF EXISTS "Direção da unidade vê seus logs" ON public.audit_logs;
 
 CREATE POLICY "Direção da unidade vê seus logs"
 ON public.audit_logs FOR SELECT
