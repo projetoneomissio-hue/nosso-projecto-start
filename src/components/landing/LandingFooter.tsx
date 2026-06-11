@@ -59,7 +59,7 @@ export const LandingFooter = ({ tenant: tenantProp }: LandingFooterProps = {}) =
                     <div className="grid md:grid-cols-3 gap-8">
                         <div>
                             {resolved?.logo_url ? (
-                                <img src={currentUnidade.logo_url} alt={unitName} className="h-12 w-auto mb-4 object-contain" />
+                                <img src={resolved.logo_url} alt={unitName} className="h-12 w-auto mb-4 object-contain" />
                             ) : (
                                 <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                                     <span className="text-2xl font-black text-primary">{unitName.charAt(0)}</span>
@@ -96,14 +96,14 @@ export const LandingFooter = ({ tenant: tenantProp }: LandingFooterProps = {}) =
                                 </li>
                                 {resolved?.instagram_url && (
                                     <li className="text-pink-500 font-medium">
-                                        <a href={`https://instagram.com/${currentUnidade.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
-                                            Instagram: {currentUnidade.instagram_url}
+                                        <a href={`https://instagram.com/${resolved.instagram_url.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
+                                            Instagram: {resolved.instagram_url}
                                         </a>
                                     </li>
                                 )}
                                 {resolved?.email_contato && (
                                     <li className="italic opacity-80">
-                                        {currentUnidade.email_contato}
+                                        {resolved.email_contato}
                                     </li>
                                 )}
                             </ul>

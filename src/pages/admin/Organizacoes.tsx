@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2, Plus, Copy, Loader2, GraduationCap, Dumbbell, Heart, UserCircle } from "lucide-react";
+import { Building2, Plus, Copy, Loader2, GraduationCap, Dumbbell, Heart, UserCircle, Globe, Pencil, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -44,7 +44,9 @@ export default function Organizacoes() {
   const [orgName, setOrgName] = useState("");
   const [orgType, setOrgType] = useState<OrgType>("escola");
   const [directorEmail, setDirectorEmail] = useState("");
+  const [customDomain, setCustomDomain] = useState("");
   const [createdInvite, setCreatedInvite] = useState<{ token: string; email: string; org: string } | null>(null);
+  const [editingDomain, setEditingDomain] = useState<{ id: string; value: string } | null>(null);
 
   const { data: orgs, isLoading } = useQuery({
     queryKey: ["admin-organizacoes"],
@@ -67,9 +69,12 @@ export default function Organizacoes() {
       const selectedType = ORG_TYPES.find((t) => t.id === orgType)!;
 
       // 1. Criar unidade
+      const insertPayload: Record<string, unknown> = { nome: orgName.trim(), slug, feature_flags: selectedType.flags };
+      if (customDomain.trim()) insertPayload.custom_domain = customDomain.trim().toLowerCase();
+
       const { data: unidade, error: unidadeError } = await supabase
         .from("unidades")
-        .insert({ nome: orgName.trim(), slug, feature_flags: selectedType.flags })
+        .insert(insertPayload)
         .select()
         .single();
       if (unidadeError) throw unidadeError;
@@ -98,9 +103,28 @@ export default function Organizacoes() {
       setOrgName("");
       setOrgType("escola");
       setDirectorEmail("");
+      setCustomDomain("");
     },
     onError: (e: Error) => {
       toast({ title: "Erro ao criar organização", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const updateDomain = useMutation({
+    mutationFn: async ({ id, domain }: { id: string; domain: string }) => {
+      const { error } = await supabase
+        .from("unidades")
+        .update({ custom_domain: domain.trim().toLowerCase() || null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-organizacoes"] });
+      setEditingDomain(null);
+      toast({ title: "Domínio atualizado!" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Erro ao salvar domínio", description: e.message, variant: "destructive" });
     },
   });
 
@@ -147,21 +171,85 @@ export default function Organizacoes() {
             {orgs.map((org) => {
               const flags = (org as any).feature_flags as Record<string, boolean> | null;
               const activeCount = flags ? Object.values(flags).filter(Boolean).length : 0;
+              const customDomainValue = (org as any).custom_domain as string | null;
+              const isEditing = editingDomain?.id === org.id;
               return (
-                <Card key={org.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-base">{org.nome}</CardTitle>
-                      <Badge variant="outline" className="text-xs">{org.slug}</Badge>
+                <Card key={org.id} className="flex flex-col">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base leading-tight">{org.nome}</CardTitle>
+                      <Badge variant="secondary" className="text-[10px] font-mono shrink-0 mt-0.5">
+                        /org/{org.slug}
+                      </Badge>
                     </div>
                     <CardDescription className="text-xs">
-                      Desde {format(new Date(org.created_at), "dd/MM/yyyy")}
+                      Desde {format(new Date(org.created_at), "dd/MM/yyyy")} · {activeCount} módulos ativos
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">{activeCount}</span> módulos ativos
+
+                  <CardContent className="flex-1 space-y-3 pt-0">
+                    {/* Domínio customizado */}
+                    <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Globe className="h-3 w-3" /> Domínio Customizado
+                        </span>
+                        {!isEditing && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] text-primary hover:text-primary/80"
+                            onClick={() => setEditingDomain({ id: org.id, value: customDomainValue || "" })}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            {customDomainValue ? "Editar" : "Configurar"}
+                          </Button>
+                        )}
+                      </div>
+
+                      {isEditing ? (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            className="h-8 text-xs font-mono flex-1"
+                            value={editingDomain.value}
+                            onChange={(e) => setEditingDomain({ id: org.id, value: e.target.value })}
+                            placeholder="sistema.cliente.com.br"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") updateDomain.mutate({ id: org.id, domain: editingDomain.value });
+                              if (e.key === "Escape") setEditingDomain(null);
+                            }}
+                          />
+                          <Button
+                            size="icon"
+                            variant="default"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => updateDomain.mutate({ id: org.id, domain: editingDomain.value })}
+                            disabled={updateDomain.isPending}
+                          >
+                            {updateDomain.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setEditingDomain(null)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : customDomainValue ? (
+                        <p className="text-xs font-mono text-foreground truncate">{customDomainValue}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">Não configurado — clique em "Configurar"</p>
+                      )}
                     </div>
+
+                    {/* Link para landing */}
+                    <a
+                      href={`/org/${org.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <Globe className="h-3 w-3" />
+                      Ver landing pública ↗
+                    </a>
                   </CardContent>
                 </Card>
               );
@@ -248,6 +336,22 @@ export default function Organizacoes() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Um convite de 30 dias será gerado para este e-mail.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                  Domínio Customizado <span className="text-muted-foreground font-normal">(opcional)</span>
+                </Label>
+                <Input
+                  placeholder="sistema.cliente.com.br"
+                  value={customDomain}
+                  onChange={(e) => setCustomDomain(e.target.value)}
+                  disabled={createOrg.isPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  O cliente deve apontar um CNAME para <code className="font-mono">cname.vercel-dns.com</code>.
                 </p>
               </div>
 
