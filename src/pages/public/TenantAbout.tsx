@@ -339,11 +339,15 @@ const TenantAbout = () => {
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {equipe.map((membro, i) => (
                                 <div key={i} className="text-center group">
-                                    <div className="h-24 w-24 rounded-full mx-auto overflow-hidden bg-primary/10 flex items-center justify-center border-4 border-white shadow-md group-hover:shadow-lg group-hover:border-primary/30 transition-all mb-4">
-                                        {membro.foto_url ? (
-                                            <img src={membro.foto_url} alt={membro.nome} className="h-full w-full object-cover" />
-                                        ) : (
-                                            <span className="text-3xl font-black text-primary uppercase">{membro.nome.charAt(0)}</span>
+                                    <div className="relative h-24 w-24 rounded-full mx-auto overflow-hidden bg-primary/10 flex items-center justify-center border-4 border-white shadow-md group-hover:shadow-lg group-hover:border-primary/30 transition-all mb-4">
+                                        <span className="text-3xl font-black text-primary uppercase">{membro.nome.charAt(0)}</span>
+                                        {membro.foto_url && (
+                                            <img
+                                                src={membro.foto_url}
+                                                alt={membro.nome}
+                                                className="absolute inset-0 h-full w-full object-cover"
+                                                onError={e => e.currentTarget.remove()}
+                                            />
                                         )}
                                     </div>
                                     <p className="font-bold text-gray-900">{membro.nome}</p>

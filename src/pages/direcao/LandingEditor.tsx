@@ -1217,16 +1217,50 @@ const LandingEditor = () => {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Foto (URL ou deixe em branco para usar inicial do nome)</Label>
-                        <Input
-                          value={m.foto_url}
-                          onChange={e => {
-                            const eq = [...landingConfig.quem_somos.equipe];
-                            eq[i] = { ...eq[i], foto_url: e.target.value };
-                            setLandingConfig(c => ({ ...c, quem_somos: { ...c.quem_somos, equipe: eq } }));
-                          }}
-                          placeholder="https://..."
-                        />
+                        <Label className="text-xs">Foto (opcional — deixe em branco para usar inicial do nome)</Label>
+                        <div className="flex gap-2 items-center">
+                          {m.foto_url && (
+                            <div className="relative h-10 w-10 rounded-full overflow-hidden border shrink-0">
+                              <img src={m.foto_url} alt="" className="h-full w-full object-cover" onError={e => e.currentTarget.remove()} />
+                            </div>
+                          )}
+                          <Input
+                            value={m.foto_url}
+                            onChange={e => {
+                              const eq = [...landingConfig.quem_somos.equipe];
+                              eq[i] = { ...eq[i], foto_url: e.target.value };
+                              setLandingConfig(c => ({ ...c, quem_somos: { ...c.quem_somos, equipe: eq } }));
+                            }}
+                            placeholder="https://... ou use o botão para enviar"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0 h-9 w-9"
+                            disabled={uploadingField === `quem_somos.equipe.${i}.foto_url`}
+                            onClick={() => document.getElementById(`member-photo-upload-${i}`)?.click()}
+                          >
+                            {uploadingField === `quem_somos.equipe.${i}.foto_url`
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <ImageIcon className="h-4 w-4" />}
+                          </Button>
+                          <input
+                            id={`member-photo-upload-${i}`}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (file) uploadAparenciaImage(file, `quem_somos.equipe.${i}.foto_url`, url => {
+                                const eq = [...landingConfig.quem_somos.equipe];
+                                eq[i] = { ...eq[i], foto_url: url };
+                                setLandingConfig(c => ({ ...c, quem_somos: { ...c.quem_somos, equipe: eq } }));
+                              });
+                              e.target.value = "";
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
