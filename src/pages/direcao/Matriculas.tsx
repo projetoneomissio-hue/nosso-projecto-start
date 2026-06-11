@@ -87,13 +87,13 @@ const DetalhesMatriculaSheet = ({ matricula, open, onOpenChange }: any) => {
           .single();
         const diaVencimento = configData?.valor ? parseInt(configData.valor) : 5;
         const hoje = new Date();
-        let mesVencimento = hoje.getMonth() + 1;
+        let mesVencimento = hoje.getMonth() + 1; // próximo mês (0-indexed: getMonth()=5 → mesVencimento=6 = julho)
         let anoVencimento = hoje.getFullYear();
-        if (mesVencimento > 12) { mesVencimento = 1; anoVencimento++; }
-        const ultimoDia = new Date(anoVencimento, mesVencimento, 0).getDate();
+        if (mesVencimento > 11) { mesVencimento = 0; anoVencimento++; } // rola dezembro→janeiro
+        const ultimoDia = new Date(anoVencimento, mesVencimento + 1, 0).getDate();
         const diaFinal = Math.min(diaVencimento, ultimoDia);
-        const dataVencimento = new Date(anoVencimento, mesVencimento - 1, diaFinal);
-        const referencia = `${anoVencimento}-${String(mesVencimento).padStart(2, "0")}`;
+        const dataVencimento = new Date(anoVencimento, mesVencimento, diaFinal);
+        const referencia = `${anoVencimento}-${String(mesVencimento + 1).padStart(2, "0")}`;
         const { error: errMensalidade } = await supabase.from("pagamentos").insert({
           matricula_id: matricula.id,
           valor: valorMensal,

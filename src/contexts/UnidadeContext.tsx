@@ -84,7 +84,7 @@ export const UnidadeProvider = ({ children }: { children: ReactNode }) => {
             setUnidades(userUnidades);
 
             // Tenta recuperar do localStorage ou define a primeira/matriz
-            const storedId = localStorage.getItem("@zafen:unidade_id");
+            const storedId = localStorage.getItem("@institui:unidade_id");
             const found = userUnidades.find((u) => u.id === storedId);
 
             if (found) {
@@ -93,7 +93,7 @@ export const UnidadeProvider = ({ children }: { children: ReactNode }) => {
                 // Default: pega a primeira (geralmente Matriz se foi a inserida)
                 const defaultUnidade = userUnidades[0];
                 setCurrentUnidade(defaultUnidade);
-                localStorage.setItem("@zafen:unidade_id", defaultUnidade.id);
+                localStorage.setItem("@institui:unidade_id", defaultUnidade.id);
             }
         } catch (error) {
             console.error("Erro ao buscar unidades:", error);
@@ -122,7 +122,7 @@ export const UnidadeProvider = ({ children }: { children: ReactNode }) => {
         const target = unidades.find((u) => u.id === unidadeId);
         if (target) {
             setCurrentUnidade(target);
-            localStorage.setItem("@zafen:unidade_id", target.id);
+            localStorage.setItem("@institui:unidade_id", target.id);
             
             // Limpa o cache para evitar que dados de uma unidade apareçam em outra
             queryClient.clear();

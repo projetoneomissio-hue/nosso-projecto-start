@@ -351,7 +351,7 @@ const Onboarding = () => {
       </Card>
 
       <p className="mt-8 text-center text-sm text-slate-400">
-        {currentUnidade?.nome || "Zafen"} &copy; {new Date().getFullYear()}
+        {currentUnidade?.nome || "Institui"} &copy; {new Date().getFullYear()}
       </p>
     </div>
   );

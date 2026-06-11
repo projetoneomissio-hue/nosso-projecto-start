@@ -309,7 +309,7 @@ const Sidebar = ({ isCollapsed, toggleCollapsed }: { isCollapsed: boolean; toggl
     navigate("/login");
   };
 
-  const unitName = currentUnidade?.nome || "Zafen";
+  const unitName = currentUnidade?.nome || "Institui";
   const unitInitial = unitName.charAt(0).toUpperCase();
 
   return (
@@ -509,7 +509,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const { user } = useAuth();
   const { currentUnidade } = useUnidade();
-  const unitName = currentUnidade?.nome || "Zafen";
+  const unitName = currentUnidade?.nome || "Institui";
 
   // Auto-close mobile sidebar on route change
   useEffect(() => {
@@ -521,7 +521,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (
     <div className="flex h-screen bg-background overflow-hidden relative font-sans">
       <Helmet>
-        <title>{unitName} | Zafen</title>
+        <title>{unitName} | Institui</title>
       </Helmet>
       {/* Dynamic Background Glows */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />

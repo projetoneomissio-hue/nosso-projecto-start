@@ -279,7 +279,7 @@ const Dashboard = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-0.5 text-sm">
-              Bem-vindo ao sistema de gestão Zafen
+              Bem-vindo ao sistema de gestão Institui
             </p>
           </div>
         </div>

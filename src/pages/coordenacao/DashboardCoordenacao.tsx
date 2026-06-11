@@ -22,7 +22,7 @@ import { useUnidade } from "@/contexts/UnidadeContext";
 
 const DashboardCoordenacao = () => {
     const { currentUnidade } = useUnidade();
-    const unitName = currentUnidade?.nome || "Zafen";
+    const unitName = currentUnidade?.nome || "Institui";
 
     // Design system tokens
     const colors = {

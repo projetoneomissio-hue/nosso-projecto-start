@@ -15,7 +15,7 @@ export const SeoHead = ({
     url = window.location.href
 }: SeoHeadProps) => {
     const { currentUnidade } = useUnidade();
-    const siteTitle = currentUnidade?.nome || 'Zafen';
+    const siteTitle = currentUnidade?.nome || 'Institui';
     const fullTitle = `${title} | ${siteTitle}`;
 
     return (

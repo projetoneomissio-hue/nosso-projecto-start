@@ -41,7 +41,7 @@ interface ReceitaAtividade {
 const ManagementDashboard = () => {
     const navigate = useNavigate();
     const { currentUnidade } = useUnidade();
-    const unitName = currentUnidade?.nome || "Zafen";
+    const unitName = currentUnidade?.nome || "Institui";
 
     // Design System colors
     const colors = {

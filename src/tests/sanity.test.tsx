@@ -7,7 +7,7 @@ describe('Sanity Check', () => {
     });
 
     it('should be able to render a basic div', () => {
-        render(<div data-testid="test-div">Zafen</div>);
+        render(<div data-testid="test-div">Institui</div>);
         expect(screen.getByTestId('test-div')).toBeInTheDocument();
     });
 });

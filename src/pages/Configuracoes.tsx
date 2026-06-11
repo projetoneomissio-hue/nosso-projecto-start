@@ -752,7 +752,7 @@ const Configuracoes = () => {
                           onChange={(e) => setEmailFromName(e.target.value)}
                         />
                         <p className="text-xs text-muted-foreground">
-                          Aparece como: <code className="bg-muted px-1 rounded">{emailFromName || "Zafen"} &lt;noreply@zafen.com.br&gt;</code>
+                          Aparece como: <code className="bg-muted px-1 rounded">{emailFromName || "Institui"} &lt;noreply@institui.com.br&gt;</code>
                         </p>
                       </div>
 

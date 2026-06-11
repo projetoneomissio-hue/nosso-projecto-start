@@ -325,7 +325,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Zafen</CardTitle>
+          <CardTitle className="text-2xl">Institui</CardTitle>
           <CardDescription>Sistema de Gestão</CardDescription>
         </CardHeader>
         <CardContent>

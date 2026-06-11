@@ -29,17 +29,17 @@ const PublicTenantContext = createContext<PublicTenantContextType>({
 
 export const usePublicTenant = () => useContext(PublicTenantContext);
 
-// Domínios próprios do Zafen — nesses, "/" é a landing da plataforma.
-const ZAFEN_DOMAINS = [
-    "nosso-projecto-start.vercel.app",
-    "zafen.com.br",
-    "www.zafen.com.br",
+// Domínios próprios do Institui — nesses, "/" é a landing da plataforma.
+const INSTITUI_DOMAINS = [
+    "institui.vercel.app",
+    "institui.com.br",
+    "www.institui.com.br",
     "localhost",
     "127.0.0.1",
 ];
 
-function isZafenDomain(hostname: string): boolean {
-    return ZAFEN_DOMAINS.some(
+function isInstituiDomain(hostname: string): boolean {
+    return INSTITUI_DOMAINS.some(
         (d) => hostname === d || hostname.endsWith(`.${d}`)
     );
 }
@@ -52,8 +52,8 @@ export const PublicTenantProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const hostname = window.location.hostname;
 
-        if (isZafenDomain(hostname)) {
-            // Domínio Zafen: sem tenant pré-resolvido (landing da plataforma ou /org/:slug)
+        if (isInstituiDomain(hostname)) {
+            // Domínio Institui: sem tenant pré-resolvido (landing da plataforma ou /org/:slug)
             setIsLoading(false);
             return;
         }

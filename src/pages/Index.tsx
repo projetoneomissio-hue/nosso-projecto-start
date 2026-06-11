@@ -24,7 +24,7 @@ const Index = () => {
   return (
     <div className="light min-h-screen bg-white text-gray-900">
       <SeoHead
-        title="Zafen — Gestão para Organizações Sociais"
+        title="Institui — Gestão para Organizações Sociais"
         description="Sistema completo de gestão para escolas, ONGs e organizações educacionais. Matrículas, financeiro, presença e portal do responsável em um só lugar."
       />
 
@@ -33,9 +33,9 @@ const Index = () => {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-xl font-black text-primary-foreground">Z</span>
+              <span className="text-xl font-black text-primary-foreground">I</span>
             </div>
-            <span className="font-black text-xl tracking-tighter uppercase">Zafen</span>
+            <span className="font-black text-xl tracking-tighter uppercase">Institui</span>
           </div>
           <div className="flex gap-4 items-center">
             <a href="#funcionalidades" className="hidden sm:inline text-sm font-medium hover:text-primary transition-colors">
@@ -180,7 +180,7 @@ const Index = () => {
       </section>
 
       <footer className="py-8 border-t text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Zafen. Sistema de gestão para organizações sociais.</p>
+        <p>&copy; {new Date().getFullYear()} Institui. Sistema de gestão para organizações sociais.</p>
       </footer>
     </div>
   );

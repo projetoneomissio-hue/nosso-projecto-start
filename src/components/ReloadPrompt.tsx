@@ -23,7 +23,7 @@ export function ReloadPrompt() {
         if (offlineReady) {
             toast({
                 title: "App pronto para uso offline",
-                description: "Agora você pode usar o Zafen mesmo sem internet.",
+                description: "Agora você pode usar o Institui mesmo sem internet.",
             });
             setOfflineReady(false);
         }

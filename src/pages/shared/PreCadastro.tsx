@@ -258,7 +258,7 @@ export default function PreCadastro() {
                   Novo Pré-Cadastro
                 </Button>
                 <Button className="flex-1" asChild>
-                  <a href={`mailto:${responsavel.email}?subject=Convite de Acesso - ${currentUnidade?.nome || 'Zafen'}&body=Olá ${responsavel.nome}, aqui está seu link de acesso: ${invitationData.link}`}>
+                  <a href={`mailto:${responsavel.email}?subject=Convite de Acesso - ${currentUnidade?.nome || 'Institui'}&body=Olá ${responsavel.nome}, aqui está seu link de acesso: ${invitationData.link}`}>
                     <Mail className="mr-2 h-4 w-4" />
                     Enviar por Email
                   </a>

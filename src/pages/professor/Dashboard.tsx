@@ -77,7 +77,7 @@ const DashboardProfessor = () => {
             Dashboard <span className="text-primary">Professor</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Portal do Professor · {mesAtual} · {currentUnidade?.nome || "Zafen"}
+            Portal do Professor · {mesAtual} · {currentUnidade?.nome || "Institui"}
           </p>
         </div>
 

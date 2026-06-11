@@ -97,7 +97,7 @@ export function GerarCertificadosDialog({ open, onOpenChange, turma }: GerarCert
                     cargaHoraria: 20, // Placeholder ou pegar da atividade
                     dataEmissao: new Date(),
                     codigoValidacao: codigoValidacao,
-                    nomeUnidade: currentUnidade?.nome || "Zafen ONG",
+                    nomeUnidade: currentUnidade?.nome || "Institui",
                 });
             }
 

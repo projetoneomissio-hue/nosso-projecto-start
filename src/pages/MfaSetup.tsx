@@ -26,7 +26,7 @@ export default function MfaSetup() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { currentUnidade } = useUnidade();
-  const unitName = currentUnidade?.nome || "Zafen";
+  const unitName = currentUnidade?.nome || "Institui";
 
   useEffect(() => {
     if (!user) {

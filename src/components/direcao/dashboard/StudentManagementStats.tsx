@@ -125,7 +125,7 @@ export const StudentManagementStats = ({
                       const cleanPhone = (aluno.telefone || "").replace(/\D/g, "");
                       if (cleanPhone)
                         window.open(
-                          `https://wa.me/55${cleanPhone}?text=Olá! Vimos que você iniciou o cadastro de ${aluno.nome_completo.split(" ")[0]} no ${currentUnidade?.nome || "Zafen"}, mas ainda não escolheu as atividades. Podemos ajudar?`,
+                          `https://wa.me/55${cleanPhone}?text=Olá! Vimos que você iniciou o cadastro de ${aluno.nome_completo.split(" ")[0]} no ${currentUnidade?.nome || "Institui"}, mas ainda não escolheu as atividades. Podemos ajudar?`,
                           "_blank",
                         );
                     }}

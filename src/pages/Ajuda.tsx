@@ -13,7 +13,7 @@ import { BookOpen, HelpCircle, Route } from "lucide-react";
 const Ajuda = () => {
   const { activeRole } = useUserRole();
   const { currentUnidade } = useUnidade();
-  const unitName = currentUnidade?.nome || "Zafen";
+  const unitName = currentUnidade?.nome || "Institui";
 
   // Definição da hierarquia e visibilidade
   const tabsConfig = [

@@ -331,7 +331,7 @@ const GerenciarNotificacoes = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Utilize o número oficial da unidade {currentUnidade?.nome || 'Zafen'} para enviar lembretes personalizados:
+              Utilize o número oficial da unidade {currentUnidade?.nome || 'Institui'} para enviar lembretes personalizados:
             </p>
             <Button variant="outline" className="gap-2" asChild>
               <a

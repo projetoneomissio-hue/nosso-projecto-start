@@ -190,7 +190,7 @@ export const UnitSettingsForm = () => {
                 <FormItem>
                   <FormLabel className="font-medium uppercase text-[10px] text-primary">Nome da Unidade/ONG</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Escola Zafen" {...field} className="h-12 border-border focus:border-primary font-semibold text-lg" />
+                    <Input placeholder="Ex: Escola Institui" {...field} className="h-12 border-border focus:border-primary font-semibold text-lg" />
                   </FormControl>
                   <FormDescription className="text-[10px]">
                     Este nome será exibido em todos os cabeçalhos, e-mails e rodapés.
