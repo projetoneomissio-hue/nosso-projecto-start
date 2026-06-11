@@ -96,11 +96,14 @@ interface LandingConfig {
   quem_somos: {
     titulo: string;
     subtitulo: string;
+    foto_hero_url: string;
     historia: string;
     missao: string;
     visao: string;
     valores: string;
     mostrar_nav: boolean;
+    stats: Array<{ numero: string; label: string }>;
+    depoimento_destaque: { texto: string; autor: string };
     equipe: Array<{ nome: string; cargo: string; bio: string; foto_url: string }>;
   };
 }
@@ -113,8 +116,8 @@ const defaultLandingConfig: LandingConfig = {
   secoes_ativas: { sobre: false, depoimentos: false, galeria: false },
   secao_atividades: { titulo: "", subtitulo: "" },
   quem_somos: {
-    titulo: "", subtitulo: "", historia: "", missao: "", visao: "", valores: "",
-    mostrar_nav: false, equipe: [],
+    titulo: "", subtitulo: "", foto_hero_url: "", historia: "", missao: "", visao: "", valores: "",
+    mostrar_nav: false, stats: [], depoimento_destaque: { texto: "", autor: "" }, equipe: [],
   },
 };
 
@@ -187,7 +190,16 @@ const LandingEditor = () => {
         sobre: { ...defaultLandingConfig.sobre, ...(savedConfig.sobre || {}) },
         secoes_ativas: { ...defaultLandingConfig.secoes_ativas, ...(savedConfig.secoes_ativas || {}) },
         secao_atividades: { ...defaultLandingConfig.secao_atividades, ...((savedConfig as any).secao_atividades || {}) },
-        quem_somos: { ...defaultLandingConfig.quem_somos, ...((savedConfig as any).quem_somos || {}) },
+        quem_somos: {
+          ...defaultLandingConfig.quem_somos,
+          ...((savedConfig as any).quem_somos || {}),
+          depoimento_destaque: {
+            ...defaultLandingConfig.quem_somos.depoimento_destaque,
+            ...((savedConfig as any).quem_somos?.depoimento_destaque || {}),
+          },
+          equipe: (savedConfig as any).quem_somos?.equipe || [],
+          stats: (savedConfig as any).quem_somos?.stats || [],
+        },
         depoimentos: savedConfig.depoimentos || [],
         galeria: savedConfig.galeria || [],
       });
@@ -950,6 +962,116 @@ const LandingEditor = () => {
                   </div>
                 </div>
 
+                {/* Foto Hero */}
+                <div className="space-y-2">
+                  <Label>Foto de Capa da Página (opcional)</Label>
+                  {landingConfig.quem_somos.foto_hero_url ? (
+                    <div className="relative w-full max-w-md aspect-video rounded-xl overflow-hidden border">
+                      <img src={landingConfig.quem_somos.foto_hero_url} alt="" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setLandingConfig(c => ({ ...c, quem_somos: { ...c.quem_somos, foto_hero_url: "" } }))}
+                        className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 rounded-full p-1.5 text-white"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const inp = document.getElementById("qs-hero-upload") as HTMLInputElement;
+                        inp?.click();
+                      }}
+                      disabled={uploadingField === "quem_somos.foto_hero_url"}
+                      className="w-full max-w-md aspect-video rounded-xl border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 transition-colors"
+                    >
+                      {uploadingField === "quem_somos.foto_hero_url" ? <Loader2 className="h-8 w-8 animate-spin" /> : <ImageIcon className="h-8 w-8" />}
+                      <span className="text-sm">Foto da equipe, espaço ou atividade</span>
+                      <span className="text-xs opacity-60">ideal: 1920×600 px · JPG/PNG</span>
+                    </button>
+                  )}
+                  <input
+                    id="qs-hero-upload"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadAparenciaImage(file, "quem_somos.foto_hero_url", url =>
+                        setLandingConfig(c => ({ ...c, quem_somos: { ...c.quem_somos, foto_hero_url: url } }))
+                      );
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+
+                {/* Números de Impacto */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-semibold">Números de Impacto</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">Ex: "500+", "Alunos atendidos" — até 4 itens</p>
+                    </div>
+                    {landingConfig.quem_somos.stats.length < 4 && (
+                      <Button
+                        variant="outline" size="sm" className="gap-1.5"
+                        onClick={() => setLandingConfig(c => ({
+                          ...c,
+                          quem_somos: { ...c.quem_somos, stats: [...c.quem_somos.stats, { numero: "", label: "" }] },
+                        }))}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Adicionar
+                      </Button>
+                    )}
+                  </div>
+                  {landingConfig.quem_somos.stats.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">Nenhum número adicionado. Ex: anos de existência, alunos, voluntários...</p>
+                  )}
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {landingConfig.quem_somos.stats.map((s, i) => (
+                      <div key={i} className="flex gap-2 items-start border rounded-xl p-3 bg-muted/20">
+                        <div className="flex-1 grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Número</Label>
+                            <Input
+                              value={s.numero}
+                              onChange={e => {
+                                const st = [...landingConfig.quem_somos.stats];
+                                st[i] = { ...st[i], numero: e.target.value };
+                                setLandingConfig(c => ({ ...c, quem_somos: { ...c.quem_somos, stats: st } }));
+                              }}
+                              placeholder="500+"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Label</Label>
+                            <Input
+                              value={s.label}
+                              onChange={e => {
+                                const st = [...landingConfig.quem_somos.stats];
+                                st[i] = { ...st[i], label: e.target.value };
+                                setLandingConfig(c => ({ ...c, quem_somos: { ...c.quem_somos, stats: st } }));
+                              }}
+                              placeholder="Alunos atendidos"
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 mt-5 text-destructive hover:text-destructive shrink-0"
+                          onClick={() => setLandingConfig(c => ({
+                            ...c,
+                            quem_somos: { ...c.quem_somos, stats: c.quem_somos.stats.filter((_, idx) => idx !== i) },
+                          }))}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label>Nossa História</Label>
                   <Textarea
@@ -990,8 +1112,38 @@ const LandingEditor = () => {
                   </div>
                 </div>
 
+                {/* Depoimento Destaque */}
+                <div className="space-y-3 pt-2 border-t">
+                  <Label className="text-sm font-semibold">Depoimento em Destaque (opcional)</Label>
+                  <p className="text-xs text-muted-foreground">Uma frase de impacto — de um aluno, familiar ou parceiro. Aparece em bloco no meio da página.</p>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Citação</Label>
+                    <Textarea
+                      value={landingConfig.quem_somos.depoimento_destaque.texto}
+                      onChange={e => setLandingConfig(c => ({
+                        ...c,
+                        quem_somos: { ...c.quem_somos, depoimento_destaque: { ...c.quem_somos.depoimento_destaque, texto: e.target.value } },
+                      }))}
+                      rows={2}
+                      placeholder="Esse lugar transformou a vida do meu filho. Não é só uma escola, é uma família."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Autor</Label>
+                    <Input
+                      value={landingConfig.quem_somos.depoimento_destaque.autor}
+                      onChange={e => setLandingConfig(c => ({
+                        ...c,
+                        quem_somos: { ...c.quem_somos, depoimento_destaque: { ...c.quem_somos.depoimento_destaque, autor: e.target.value } },
+                      }))}
+                      placeholder="Maria Souza, mãe de aluno"
+                      className="max-w-sm"
+                    />
+                  </div>
+                </div>
+
                 {/* Equipe */}
-                <div className="space-y-3 pt-2">
+                <div className="space-y-3 pt-2 border-t">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold">Equipe</Label>
                     <Button

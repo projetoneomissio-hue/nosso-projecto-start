@@ -40,12 +40,15 @@ interface LandingConfig {
     quem_somos?: {
         titulo?: string;
         subtitulo?: string;
+        foto_hero_url?: string;
         historia?: string;
         missao?: string;
         visao?: string;
         valores?: string;
-        equipe?: Array<{ nome: string; cargo: string; bio?: string; foto_url?: string }>;
         mostrar_nav?: boolean;
+        stats?: Array<{ numero: string; label: string }>;
+        depoimento_destaque?: { texto: string; autor: string };
+        equipe?: Array<{ nome: string; cargo: string; bio?: string; foto_url?: string }>;
     };
 }
 

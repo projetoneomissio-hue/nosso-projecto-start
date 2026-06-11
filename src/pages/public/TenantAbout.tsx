@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Instagram, Youtube, Globe, Phone, Heart, Target, Eye, Star } from "lucide-react";
+import { Loader2, ArrowLeft, Instagram, Phone, Heart, Target, Eye, Quote, ChevronRight } from "lucide-react";
 import { hexToHSL } from "@/utils/colors";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,12 +19,15 @@ interface EquipeMembro {
 interface QuemSomosConfig {
     titulo?: string;
     subtitulo?: string;
+    foto_hero_url?: string;
     historia?: string;
     missao?: string;
     visao?: string;
     valores?: string;
     equipe?: EquipeMembro[];
     mostrar_nav?: boolean;
+    stats?: Array<{ numero: string; label: string }>;
+    depoimento_destaque?: { texto: string; autor: string };
 }
 
 interface LandingConfig {
@@ -88,7 +91,7 @@ const TenantAbout = () => {
     if (notFound || !tenant) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
-                <h1 className="text-3xl font-bold">Organização não encontrada</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Organização não encontrada</h1>
                 <Button asChild variant="outline"><Link to="/">Voltar ao início</Link></Button>
             </div>
         );
@@ -97,10 +100,15 @@ const TenantAbout = () => {
     const cfg = (tenant.landing_config || {}) as LandingConfig;
     const qs = cfg.quem_somos || {};
     const equipe = qs.equipe || [];
+    const stats = qs.stats || [];
+    const valores = qs.valores ? qs.valores.split(/[,\n]+/).map(v => v.trim()).filter(Boolean) : [];
     const landingUrl = slug ? `/org/${slug}` : "/";
 
     const seoTitle = `Quem Somos — ${tenant.nome}`;
     const seoDesc = qs.subtitulo || `Conheça a história, missão e equipe da ${tenant.nome}.`;
+
+    const hasMVV = qs.missao || qs.visao || qs.valores;
+    const hasDepoimento = qs.depoimento_destaque?.texto;
 
     return (
         <div className="light min-h-screen bg-white text-gray-900">
@@ -143,66 +151,176 @@ const TenantAbout = () => {
                 </div>
             </nav>
 
-            {/* Hero da página */}
-            <section className="pt-28 pb-16 bg-gradient-to-br from-primary/8 via-white to-primary/4">
-                <div className="container mx-auto px-4 max-w-3xl text-center space-y-4">
-                    <Badge variant="outline">Quem Somos</Badge>
-                    <h1 className="text-4xl sm:text-5xl font-bold leading-tight">
-                        {qs.titulo || `Conheça a ${tenant.nome}`}
-                    </h1>
-                    {qs.subtitulo && (
-                        <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                            {qs.subtitulo}
-                        </p>
-                    )}
-                </div>
+            {/* ── HERO ─────────────────────────────────────────────────────────── */}
+            <section className={`relative overflow-hidden ${isAuthenticated ? "pt-36 pb-20" : "pt-28 pb-20"}`}>
+                {qs.foto_hero_url ? (
+                    <>
+                        <div className="absolute inset-0">
+                            <img src={qs.foto_hero_url} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+                        </div>
+                        <div className="relative container mx-auto px-4 max-w-3xl text-center space-y-5">
+                            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">Quem Somos</Badge>
+                            <h1 className="text-4xl sm:text-5xl font-bold leading-tight text-white">
+                                {qs.titulo || `Conheça a ${tenant.nome}`}
+                            </h1>
+                            {qs.subtitulo && (
+                                <p className="text-lg text-white/80 leading-relaxed max-w-2xl mx-auto">{qs.subtitulo}</p>
+                            )}
+                            <div className="flex flex-wrap gap-3 justify-center pt-2">
+                                <Button asChild className="gap-2 shadow-lg">
+                                    <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
+                                </Button>
+                                <Button asChild variant="outline" className="gap-2 border-white/40 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm">
+                                    <a href="#historia">Nossa História</a>
+                                </Button>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-white to-primary/5" />
+                        <div className="relative container mx-auto px-4 max-w-3xl text-center space-y-5">
+                            <Badge variant="outline">Quem Somos</Badge>
+                            <h1 className="text-4xl sm:text-5xl font-bold leading-tight text-gray-900">
+                                {qs.titulo || `Conheça a ${tenant.nome}`}
+                            </h1>
+                            {qs.subtitulo && (
+                                <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">{qs.subtitulo}</p>
+                            )}
+                            <div className="flex flex-wrap gap-3 justify-center pt-2">
+                                <Button asChild className="gap-2">
+                                    <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
+                                </Button>
+                                <Button asChild variant="outline" className="gap-2">
+                                    <a href="#historia">Nossa História</a>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </section>
 
-            {/* Nossa História */}
-            {qs.historia && (
-                <section className="py-16">
-                    <div className="container mx-auto px-4 max-w-3xl">
-                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                            <span className="h-8 w-1 bg-primary rounded-full" />
-                            Nossa História
-                        </h2>
-                        <div className="text-gray-600 leading-relaxed whitespace-pre-line text-base space-y-4">
-                            {qs.historia}
+            {/* ── STATS BAR ────────────────────────────────────────────────────── */}
+            {stats.length > 0 && (
+                <section className="bg-primary text-white py-10">
+                    <div className="container mx-auto px-4">
+                        <div className={`grid gap-8 text-center ${stats.length === 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
+                            {stats.map((s, i) => (
+                                <div key={i} className="space-y-1">
+                                    <p className="text-4xl sm:text-5xl font-black">{s.numero}</p>
+                                    <p className="text-sm font-medium text-white/80 uppercase tracking-wide">{s.label}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>
             )}
 
-            {/* Missão / Visão / Valores */}
-            {(qs.missao || qs.visao || qs.valores) && (
+            {/* ── HISTÓRIA ─────────────────────────────────────────────────────── */}
+            {qs.historia && (
+                <section id="historia" className="py-20">
+                    <div className="container mx-auto px-4 max-w-3xl">
+                        <div className="flex items-start gap-4 mb-8">
+                            <span className="h-10 w-1 bg-primary rounded-full mt-1 shrink-0" />
+                            <div>
+                                <Badge variant="outline" className="mb-2">Nossa História</Badge>
+                                <h2 className="text-3xl font-bold text-gray-900">Como tudo começou</h2>
+                            </div>
+                        </div>
+                        <div className="prose prose-gray max-w-none">
+                            {qs.historia.split(/\n\n+/).map((p, i) => (
+                                <p key={i} className="text-gray-600 leading-relaxed text-base mb-4 last:mb-0">{p}</p>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* ── DEPOIMENTO DESTAQUE ───────────────────────────────────────────── */}
+            {hasDepoimento && (
                 <section className="py-16 bg-gray-50">
-                    <div className="container mx-auto px-4">
-                        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                    <div className="container mx-auto px-4 max-w-2xl">
+                        <div className="relative bg-white rounded-2xl p-8 sm:p-10 shadow-sm border border-gray-100 text-center">
+                            <Quote className="h-10 w-10 text-primary/20 mx-auto mb-4" />
+                            <blockquote className="text-xl sm:text-2xl font-medium text-gray-800 leading-relaxed italic mb-6">
+                                "{qs.depoimento_destaque!.texto}"
+                            </blockquote>
+                            {qs.depoimento_destaque!.autor && (
+                                <p className="text-sm font-semibold text-primary uppercase tracking-wide">
+                                    — {qs.depoimento_destaque!.autor}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* ── CTA INTERMEDIÁRIO ────────────────────────────────────────────── */}
+            {(qs.historia || hasDepoimento) && (
+                <section className="py-12 border-y border-gray-100">
+                    <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-4xl">
+                        <div>
+                            <p className="font-bold text-gray-900 text-lg">Quer fazer parte dessa história?</p>
+                            <p className="text-sm text-gray-500">Vagas limitadas. Inscreva-se agora.</p>
+                        </div>
+                        <Button asChild size="lg" className="gap-2 shrink-0">
+                            <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
+                        </Button>
+                    </div>
+                </section>
+            )}
+
+            {/* ── MISSÃO / VISÃO / VALORES ─────────────────────────────────────── */}
+            {hasMVV && (
+                <section className="py-20 bg-gray-50">
+                    <div className="container mx-auto px-4 max-w-5xl">
+                        <div className="text-center mb-12">
+                            <Badge variant="outline" className="mb-3">Propósito</Badge>
+                            <h2 className="text-3xl font-bold text-gray-900">O que nos move</h2>
+                        </div>
+                        <div className={`grid gap-6 ${[qs.missao, qs.visao, qs.valores].filter(Boolean).length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
                             {qs.missao && (
-                                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-3">
-                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                        <Target className="h-5 w-5 text-primary" />
+                                <div className="bg-white rounded-2xl p-7 border border-gray-100 shadow-sm space-y-4 group hover:border-primary/30 hover:shadow-md transition-all">
+                                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                                        <Target className="h-6 w-6 text-primary" />
                                     </div>
-                                    <h3 className="font-bold text-lg">Missão</h3>
-                                    <p className="text-sm text-gray-600 leading-relaxed">{qs.missao}</p>
+                                    <div>
+                                        <h3 className="font-bold text-lg mb-2">Missão</h3>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{qs.missao}</p>
+                                    </div>
                                 </div>
                             )}
                             {qs.visao && (
-                                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-3">
-                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                        <Eye className="h-5 w-5 text-primary" />
+                                <div className="bg-white rounded-2xl p-7 border border-gray-100 shadow-sm space-y-4 group hover:border-primary/30 hover:shadow-md transition-all">
+                                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                                        <Eye className="h-6 w-6 text-primary" />
                                     </div>
-                                    <h3 className="font-bold text-lg">Visão</h3>
-                                    <p className="text-sm text-gray-600 leading-relaxed">{qs.visao}</p>
+                                    <div>
+                                        <h3 className="font-bold text-lg mb-2">Visão</h3>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{qs.visao}</p>
+                                    </div>
                                 </div>
                             )}
                             {qs.valores && (
-                                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-3">
-                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                        <Heart className="h-5 w-5 text-primary" />
+                                <div className="bg-white rounded-2xl p-7 border border-gray-100 shadow-sm space-y-4 group hover:border-primary/30 hover:shadow-md transition-all">
+                                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                                        <Heart className="h-6 w-6 text-primary" />
                                     </div>
-                                    <h3 className="font-bold text-lg">Valores</h3>
-                                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{qs.valores}</p>
+                                    <div>
+                                        <h3 className="font-bold text-lg mb-2">Valores</h3>
+                                        {valores.length > 1 ? (
+                                            <div className="flex flex-wrap gap-2 mt-3">
+                                                {valores.map((v, i) => (
+                                                    <span key={i} className="px-3 py-1 bg-primary/8 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                                                        {v}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-gray-600 leading-relaxed">{qs.valores}</p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -210,30 +328,28 @@ const TenantAbout = () => {
                 </section>
             )}
 
-            {/* Equipe */}
+            {/* ── EQUIPE ───────────────────────────────────────────────────────── */}
             {equipe.length > 0 && (
-                <section className="py-16">
-                    <div className="container mx-auto px-4">
+                <section className="py-20">
+                    <div className="container mx-auto px-4 max-w-5xl">
                         <div className="text-center mb-12">
-                            <Badge variant="outline" className="mb-4">Nossa Equipe</Badge>
-                            <h2 className="text-3xl font-bold">As pessoas por trás da {tenant.nome}</h2>
+                            <Badge variant="outline" className="mb-3">Nossa Equipe</Badge>
+                            <h2 className="text-3xl font-bold text-gray-900">As pessoas por trás da {tenant.nome}</h2>
                         </div>
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-5xl mx-auto">
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {equipe.map((membro, i) => (
-                                <div key={i} className="text-center space-y-3 p-5 rounded-2xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-md transition-all">
-                                    <div className="h-20 w-20 rounded-full mx-auto overflow-hidden bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                                <div key={i} className="text-center group">
+                                    <div className="h-24 w-24 rounded-full mx-auto overflow-hidden bg-primary/10 flex items-center justify-center border-4 border-white shadow-md group-hover:shadow-lg group-hover:border-primary/30 transition-all mb-4">
                                         {membro.foto_url ? (
                                             <img src={membro.foto_url} alt={membro.nome} className="h-full w-full object-cover" />
                                         ) : (
-                                            <span className="text-2xl font-black text-primary uppercase">{membro.nome.charAt(0)}</span>
+                                            <span className="text-3xl font-black text-primary uppercase">{membro.nome.charAt(0)}</span>
                                         )}
                                     </div>
-                                    <div>
-                                        <p className="font-bold">{membro.nome}</p>
-                                        <p className="text-xs text-primary font-semibold uppercase tracking-wide">{membro.cargo}</p>
-                                    </div>
+                                    <p className="font-bold text-gray-900">{membro.nome}</p>
+                                    <p className="text-xs text-primary font-semibold uppercase tracking-wide mt-0.5">{membro.cargo}</p>
                                     {membro.bio && (
-                                        <p className="text-xs text-gray-500 leading-relaxed">{membro.bio}</p>
+                                        <p className="text-xs text-gray-500 leading-relaxed mt-2 max-w-[180px] mx-auto">{membro.bio}</p>
                                     )}
                                 </div>
                             ))}
@@ -242,35 +358,37 @@ const TenantAbout = () => {
                 </section>
             )}
 
-            {/* Canais / CTA */}
-            <section className="py-16 bg-gray-900 text-white">
+            {/* ── CTA FINAL / CANAIS ───────────────────────────────────────────── */}
+            <section className="py-20 bg-gray-900 text-white">
                 <div className="container mx-auto px-4 text-center max-w-xl space-y-6">
-                    <h2 className="text-3xl font-bold">Conecte-se com a gente</h2>
-                    <p className="text-gray-400">Siga nossas redes, mande uma mensagem ou venha conhecer pessoalmente.</p>
+                    <h2 className="text-3xl font-bold">Venha fazer parte</h2>
+                    <p className="text-gray-400 leading-relaxed">
+                        Siga nossas redes, mande uma mensagem ou venha pessoalmente conhecer nosso espaço.
+                    </p>
                     <div className="flex flex-wrap gap-3 justify-center">
                         {tenant.instagram_url && (
                             <Button variant="outline" className="gap-2 border-white/20 text-white bg-transparent hover:bg-white/10" asChild>
-                                <a href={tenant.instagram_url.startsWith("http") ? tenant.instagram_url : `https://instagram.com/${tenant.instagram_url.replace("@","")}`} target="_blank" rel="noopener noreferrer">
+                                <a href={tenant.instagram_url.startsWith("http") ? tenant.instagram_url : `https://instagram.com/${tenant.instagram_url.replace("@", "")}`} target="_blank" rel="noopener noreferrer">
                                     <Instagram className="h-4 w-4" /> Instagram
                                 </a>
                             </Button>
                         )}
                         {tenant.whatsapp && (
                             <Button variant="outline" className="gap-2 border-white/20 text-white bg-transparent hover:bg-white/10" asChild>
-                                <a href={`https://wa.me/${tenant.whatsapp.replace(/\D/g,"")}`} target="_blank" rel="noopener noreferrer">
+                                <a href={`https://wa.me/${tenant.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
                                     <Phone className="h-4 w-4" /> WhatsApp
                                 </a>
                             </Button>
                         )}
                         <Button className="gap-2" asChild>
-                            <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição</Link>
+                            <Link to={`/matricula/${tenant.slug}`}>Fazer Inscrição <ChevronRight className="h-4 w-4" /></Link>
                         </Button>
                     </div>
                 </div>
             </section>
 
             {/* Footer mínimo */}
-            <footer className="py-6 border-t text-center text-xs text-gray-400">
+            <footer className="py-6 border-t text-center text-xs text-gray-400 bg-white">
                 <Link to={landingUrl} className="hover:text-primary transition-colors">
                     ← Voltar para {tenant.nome}
                 </Link>
